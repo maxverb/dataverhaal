@@ -39,7 +39,7 @@ const S = {
   data:[],
   ct:'bar',
   pal:'blauw',
-  lay:'strak',
+  lay:'lijn',
   fmt:'ig_post',
 };
 
@@ -129,8 +129,8 @@ function draw(){
     p={...p, bg:'#0F172A', text:'#F1F5F9', muted:'#94A3B8'};
   }
 
-  // Padding
-  const padPct = S.lay==='strak' ? 0.09 : 0.10;
+  // Padding (30% less on sides)
+  const padPct = S.lay==='strak' ? 0.063 : 0.07;
   const px=W*padPct;
 
   // BG
@@ -153,14 +153,14 @@ function draw(){
   const showGrid=document.getElementById('fg-grid').checked;
   const showVal=document.getElementById('fg-val').checked;
   const showXL=document.getElementById('fg-xl').checked;
-  const showEy=document.getElementById('fg-ey').checked && eyebrow;
-  const showSub=document.getElementById('fg-sub').checked && subtitle;
+  const showEy=!!eyebrow;
+  const showSub=!!subtitle;
   const showBr=document.getElementById('fg-br').checked;
   const bron=document.getElementById('bron').value;
   const datum=document.getElementById('datum').value;
   const oneClr=true;
 
-  let cy=H*0.08;
+  let cy=H*0.064;
 
   // Eyebrow
   if(showEy){
@@ -268,32 +268,35 @@ function drawBar(ctx,data,x,y,w,h,O){
   const cH=h-lblH;
   const z0=y+cH-((-minV)/range)*cH;
 
+  // Grid label width
+  const glW=showGrid&&lay!=='strak'?W*0.05:0;
+
   // Grid
   if(showGrid&&lay!=='strak'){
     const ticks=niceTicks(minV,maxV,8);
+    const sz=W*0.016;
+    ctx.font=`400 ${sz}px Barlow`;
     ctx.strokeStyle=p.muted+'70';
     ctx.lineWidth=Math.max(1.5,W*0.0014);
     ctx.setLineDash([]);
     ticks.forEach(t=>{
       const ty=y+cH-((t-minV)/range)*cH;
-      ctx.beginPath();ctx.moveTo(x,ty);ctx.lineTo(x+w,ty);ctx.stroke();
-      const sz=W*0.016;
-      ctx.font=`400 ${sz}px Barlow`;
+      ctx.beginPath();ctx.moveTo(x+glW,ty);ctx.lineTo(x+w,ty);ctx.stroke();
       ctx.fillStyle=p.muted;
-      ctx.textAlign='left';
+      ctx.textAlign='right';
       ctx.textBaseline='middle';
-      ctx.fillText(fmtN(t),x,ty);
+      ctx.fillText(fmtN(t),x+glW-W*0.006,ty);
     });
     ctx.setLineDash([]);
   }
 
   const gap=n>10?0.10:n>6?0.14:0.18;
-  const gW=w/n;
+  const gW=(w-glW)/n;
   const bW=gW*(1-gap);
 
   data.forEach((d,i)=>{
     const v=d.values[0];
-    const bx=x+gW*i+gW*gap/2;
+    const bx=x+glW+gW*i+gW*gap/2;
     const bH=Math.abs((v/range)*cH);
     const by=v>=0?z0-bH:z0;
     const col=oneClr?p.bars[0]:p.bars[i%p.bars.length];
@@ -325,7 +328,7 @@ function drawBar(ctx,data,x,y,w,h,O){
   if(minV<0){
     ctx.strokeStyle=p.muted;
     ctx.lineWidth=Math.max(1.5,W*0.002);
-    ctx.beginPath();ctx.moveTo(x,z0);ctx.lineTo(x+w,z0);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(x+glW,z0);ctx.lineTo(x+w,z0);ctx.stroke();
   }
 }
 
@@ -386,20 +389,28 @@ function drawLine(ctx,data,x,y,w,h,O){
   const lblH=showXL?h*0.11:0;
   const cH=h-lblH;
 
+  const glW=showGrid&&lay!=='strak'?W*0.05:0;
+
   if(showGrid&&lay!=='strak'){
     const ticks=niceTicks(vMin,vMax,5);
+    const sz=W*0.016;
+    ctx.font=`400 ${sz}px Barlow`;
     ctx.strokeStyle=p.muted+'70';
     ctx.lineWidth=Math.max(1.5,W*0.0014);
     ctx.setLineDash([]);
     ticks.forEach(t=>{
       const ty=y+cH-((t-vMin)/vR)*cH;
-      ctx.beginPath();ctx.moveTo(x,ty);ctx.lineTo(x+w,ty);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(x+glW,ty);ctx.lineTo(x+w,ty);ctx.stroke();
+      ctx.fillStyle=p.muted;
+      ctx.textAlign='right';
+      ctx.textBaseline='middle';
+      ctx.fillText(fmtN(t),x+glW-W*0.006,ty);
     });
     ctx.setLineDash([]);
   }
 
   const pts=data.map((d,i)=>({
-    px:x+(i/(n-1))*w,
+    px:x+glW+(i/(n-1))*(w-glW),
     py:y+cH-((d.values[0]-vMin)/vR)*cH,
   }));
 
