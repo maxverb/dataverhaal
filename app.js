@@ -517,8 +517,23 @@ function rbar(ctx,x,y,w,h,tR,bR){
 
 function wrap(ctx,text,maxW){
   const words=text.split(' '),lines=[];let ln='';
-  words.forEach(w=>{const t=ln?ln+' '+w:w;if(ctx.measureText(t).width>maxW&&ln){lines.push(ln);ln=w;}else ln=t;});
-  if(ln)lines.push(ln);return lines;
+  words.forEach(w=>{
+    const t=ln?ln+' '+w:w;
+    if(ctx.measureText(t).width>maxW&&ln){lines.push(ln);ln=w;}
+    else ln=t;
+  });
+  if(ln)lines.push(ln);
+  // Safety: if a single line still exceeds maxW, force-break it
+  const out=[];
+  lines.forEach(l=>{
+    while(ctx.measureText(l).width>maxW&&l.length>1){
+      let i=l.length;
+      while(i>1&&ctx.measureText(l.slice(0,i)).width>maxW)i--;
+      out.push(l.slice(0,i));l=l.slice(i);
+    }
+    if(l)out.push(l);
+  });
+  return out;
 }
 
 function trunc(ctx,text,maxW){
