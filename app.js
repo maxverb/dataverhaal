@@ -580,8 +580,7 @@ function saveCfg(){
     bron:document.getElementById('bron').value,
     datum:document.getElementById('datum').value,
     fg:{grid:document.getElementById('fg-grid').checked,val:document.getElementById('fg-val').checked,
-        xl:document.getElementById('fg-xl').checked,ey:document.getElementById('fg-ey').checked,
-        sub:document.getElementById('fg-sub').checked,br:document.getElementById('fg-br').checked},
+        xl:document.getElementById('fg-xl').checked,br:document.getElementById('fg-br').checked},
   };
   const cfgs=getCfgs();cfgs[name]=cfg;
   localStorage.setItem('dv_cfgs',JSON.stringify(cfgs));
