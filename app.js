@@ -123,6 +123,9 @@ function draw(){
   cv.width=f.w; cv.height=f.h;
   const ctx=cv.getContext('2d');
   const W=f.w, H=f.h;
+  // Scale factor: wide formats (16:9) get smaller text
+  const ar=W/H;
+  const sf=ar>1.5?0.72:ar>1.2?0.85:1;
 
   // Palette — Omgekeerd forces dark bg/text
   let p={...PAL[S.pal]};
@@ -165,7 +168,7 @@ function draw(){
 
   // Eyebrow
   if(showEy){
-    const sz=W*0.024;
+    const sz=W*0.024*sf;
     ctx.font=`600 ${sz}px Barlow`;
     ctx.fillStyle=p.acc;
     ctx.textAlign='left';
@@ -182,7 +185,7 @@ function draw(){
 
   // Title
   if(title){
-    const sz=S.lay==='strak'?W*0.055:W*0.052;
+    const sz=(S.lay==='strak'?W*0.055:W*0.052)*sf;
     ctx.font=`700 ${sz}px Sora`;
     ctx.fillStyle=p.text;
     ctx.textAlign='left';
@@ -193,7 +196,7 @@ function draw(){
 
   // Subtitle
   if(showSub){
-    const sz=W*0.026;
+    const sz=W*0.026*sf;
     cy+=sz*0.3;
     ctx.font=`400 ${sz}px Barlow`;
     ctx.fillStyle=p.muted;
@@ -206,7 +209,8 @@ function draw(){
 
   // Chart area
   const chartTop=cy+(title?W*0.025:0);
-  const chartBot=H-H*(showBr?0.09:0.05);
+  const botMargin=showBr?0.09:0.05;
+  const chartBot=H-H*botMargin;
   const cH=chartBot-chartTop;
   const cW=W-2*px;
 
@@ -239,7 +243,7 @@ function draw(){
   // Bron + Datum onderaan links
   const bronDatum=[bron,datum].filter(Boolean).join(' · ');
   if(bronDatum){
-    const sz=W*0.021;
+    const sz=W*0.021*sf;
     ctx.font=`400 ${sz}px Barlow`;
     ctx.fillStyle=p.muted;
     ctx.textAlign='left';
@@ -249,7 +253,7 @@ function draw(){
 
   // Branding
   if(showBr){
-    const sz=W*0.022;
+    const sz=W*0.022*sf;
     ctx.font=`500 ${sz}px Barlow`;
     ctx.fillStyle=p.muted;
     ctx.textAlign='right';
