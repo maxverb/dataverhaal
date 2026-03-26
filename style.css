@@ -48,8 +48,6 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .cfg-list{display:flex;flex-direction:column;gap:3px;max-height:110px;overflow-y:auto}
 .cfi{display:flex;align-items:center;gap:5px;background:var(--ib);border:1px solid var(--ibr);border-radius:var(--r);padding:4px 7px}
 .cfn{flex:1;font-size:11.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#colsel{display:flex;flex-direction:column;gap:4px}
-#colsel:not(:empty){margin-top:5px;padding-top:5px;border-top:1px solid var(--pb)}
 .upz{border:1px dashed var(--ibr);border-radius:var(--r);padding:9px;text-align:center;cursor:pointer;font-size:11.5px;color:var(--pm);transition:border-color .15s}
 .upz:hover{border-color:var(--ac);color:var(--pt)}
 /* PREVIEW */
