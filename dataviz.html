@@ -266,10 +266,37 @@ async function loadFonts(){
 
 // ── DATA ───────────────────────────────────────────────────────────────────
 
+function parseHTML(raw){
+  const doc=new DOMParser().parseFromString(raw,'text/html');
+  const tbl=doc.querySelector('table');
+  if(!tbl)return null;
+  const out=[];
+  const trs=tbl.querySelectorAll('tr');
+  trs.forEach((tr,i)=>{
+    const cells=[...tr.querySelectorAll('th,td')].map(c=>c.textContent.trim());
+    if(cells.length<2)return;
+    // Skip header row
+    if(i===0&&isNaN(parseFloat(cells[1].replace(/[^\d.-]/g,''))))return;
+    const lbl=cells[0];
+    const vals=cells.slice(1).map(v=>{ const n=parseFloat(v.replace(/[^\d.-]/g,'')); return isNaN(n)?0:n; });
+    out.push({label:lbl,values:vals});
+  });
+  return out;
+}
+
 function parseData(){
   const raw=document.getElementById('di').value.trim();
   const ds=document.getElementById('ds');
   if(!raw){S.data=[];sched();ds.textContent='';return;}
+  // Detect HTML table input
+  if(/<\s*t(able|r|d|h)[\s>]/i.test(raw)){
+    const html=parseHTML(raw);
+    if(html&&html.length){
+      S.data=html;
+      ds.textContent=`✓ ${html.length} rijen (tabel)`;ds.style.color='#4ade80';
+      sched();return;
+    }
+  }
   const rows=raw.split('\n').map(r=>r.trim()).filter(r=>r);
   const out=[];
   rows.forEach((row,i)=>{
