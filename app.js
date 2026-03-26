@@ -357,7 +357,7 @@ function drawBar(ctx,data,x,y,w,h,O){
       ctx.fillStyle=p.muted;
       ctx.textAlign='center';
       ctx.textBaseline='top';
-      ctx.fillText(trunc(ctx,d.label,gW*0.9),bx+bW/2,y+cH+W*0.01);
+      ctx.fillText(trunc(ctx,shortLabel(d.label),gW*0.9),bx+bW/2,y+cH+W*0.01);
     }
   });
   if(minV<0){
@@ -402,7 +402,7 @@ function drawBarH(ctx,data,x,y,w,h,O){
     ctx.fillStyle=p.muted;
     ctx.textAlign='right';
     ctx.textBaseline='middle';
-    ctx.fillText(trunc(ctx,d.label,lblW-W*0.02),cX-W*0.015,by+bH/2);
+    ctx.fillText(trunc(ctx,shortLabel(d.label),lblW-W*0.02),cX-W*0.015,by+bH/2);
     if(showVal){
       ctx.font=`600 ${sz}px Barlow`;
       ctx.fillStyle=p.text;
@@ -460,16 +460,9 @@ function drawLine(ctx,data,x,y,w,h,O){
   gr.addColorStop(1,p.acc+'06');
   ctx.fillStyle=gr;ctx.fill();
 
-  // Line (catmull-rom smooth)
+  // Line (straight segments)
   ctx.beginPath();ctx.moveTo(pts[0].px,pts[0].py);
-  for(let i=0;i<n-1;i++){
-    const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(n-1,i+2)];
-    ctx.bezierCurveTo(
-      p1.px+(p2.px-p0.px)/6,p1.py+(p2.py-p0.py)/6,
-      p2.px-(p3.px-p1.px)/6,p2.py-(p3.py-p1.py)/6,
-      p2.px,p2.py
-    );
-  }
+  for(let i=1;i<n;i++) ctx.lineTo(pts[i].px,pts[i].py);
   ctx.strokeStyle=p.acc;ctx.lineWidth=Math.max(3,W*0.005);ctx.lineJoin='round';ctx.stroke();
 
   // Dots
@@ -482,7 +475,7 @@ function drawLine(ctx,data,x,y,w,h,O){
   if(showXL){
     const sz=Math.max(W*0.018,11);
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='center';ctx.textBaseline='top';
-    data.forEach((d,i)=>ctx.fillText(trunc(ctx,d.label,w/(n-1)*0.9),pts[i].px,y+cH+W*0.009));
+    data.forEach((d,i)=>ctx.fillText(trunc(ctx,shortLabel(d.label),w/(n-1)*0.9),pts[i].px,y+cH+W*0.009));
   }
   if(showVal){
     const sz=Math.max(W*0.018,11);
@@ -523,7 +516,7 @@ function drawDonut(ctx,data,x,y,w,h,O){
     ctx.fillStyle=p.bars[i%p.bars.length];
     ctx.fillRect(lx,ly-sz*0.45,sz*0.8,sz*0.8);
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='left';ctx.textBaseline='middle';
-    ctx.fillText(trunc(ctx,d.label,iW*0.8),lx+sz*1.1,ly);
+    ctx.fillText(trunc(ctx,shortLabel(d.label),iW*0.8),lx+sz*1.1,ly);
   });
 }
 
@@ -572,6 +565,17 @@ function wrap(ctx,text,maxW){
 function trunc(ctx,text,maxW){
   if(ctx.measureText(text).width<=maxW)return text;
   let t=text;while(t.length>1&&ctx.measureText(t+'…').width>maxW)t=t.slice(0,-1);return t+'…';
+}
+
+const MAAND=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+function shortLabel(lbl){
+  // dd/mm/yyyy or dd-mm-yyyy
+  let m=lbl.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m) return parseInt(m[1],10)+' '+MAAND[parseInt(m[2],10)-1];
+  // yyyy-mm-dd
+  m=lbl.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if(m) return parseInt(m[3],10)+' '+MAAND[parseInt(m[2],10)-1];
+  return lbl;
 }
 
 function niceTicks(min,max,count){
