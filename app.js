@@ -152,7 +152,7 @@ function draw(){
   const W=f.w, H=f.h;
   // Scale factor: wide formats (16:9) get smaller text
   const ar=W/H;
-  const sf=ar>1.5?0.72:ar>1.2?0.85:1;
+  const sf=ar>1.5?0.64:ar>1.2?0.85:1;
 
   // Palette — Omgekeerd forces dark bg/text
   let p={...PAL[S.pal]};
