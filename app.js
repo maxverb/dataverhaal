@@ -69,11 +69,13 @@ async function loadFonts(){
 // ── DATA ───────────────────────────────────────────────────────────────────
 
 function parseHTML(raw){
-  const doc=new DOMParser().parseFromString(raw,'text/html');
-  const tbl=doc.querySelector('table');
-  if(!tbl)return null;
+  // Wrap in <table> if not present so DOMParser keeps tr/td intact
+  let html=raw;
+  if(!/<\s*table[\s>]/i.test(html)) html='<table>'+html+'</table>';
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const trs=doc.querySelectorAll('tr');
+  if(!trs.length)return null;
   const out=[];
-  const trs=tbl.querySelectorAll('tr');
   trs.forEach((tr,i)=>{
     const cells=[...tr.querySelectorAll('th,td')].map(c=>c.textContent.trim());
     if(cells.length<2)return;
