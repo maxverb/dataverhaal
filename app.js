@@ -198,8 +198,9 @@ function draw(){
     ctx.fillStyle=p.muted;
     ctx.textAlign='left';
     ctx.textBaseline='top';
-    ctx.fillText(subtitle,px,cy);
-    cy+=sz*1.6;
+    const subLines=wrap(ctx,subtitle,W-2*px);
+    subLines.forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.4;});
+    cy+=sz*0.3;
   }
 
   // Chart area
