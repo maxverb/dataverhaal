@@ -15,6 +15,7 @@ const FMT = {
   ig_sq:    {w:1080,h:1080,label:'IG Vierkant',  ratio:'1:1'},
   story:    {w:1080,h:1920,label:'Story',         ratio:'9:16'},
   tiktok:   {w:1080,h:1920,label:'TikTok',        ratio:'9:16'},
+  slide:    {w:1920,h:1080,label:'Slide 16:9',    ratio:'16:9'},
 };
 
 const LAY = {
@@ -198,8 +199,9 @@ function draw(){
     ctx.fillStyle=p.muted;
     ctx.textAlign='left';
     ctx.textBaseline='top';
-    ctx.fillText(subtitle,px,cy);
-    cy+=sz*1.6;
+    const subLines=wrap(ctx,subtitle,W-2*px);
+    subLines.forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.4;});
+    cy+=sz*0.3;
   }
 
   // Chart area
@@ -543,10 +545,21 @@ function niceN(n){
 }
 
 function fmtN(n){
-  if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1).replace('.0','')+'M';
-  if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1).replace('.0','')+'k';
-  if(Number.isInteger(n))return n.toString();
-  return n.toFixed(1);
+  const u=document.getElementById('unit').value;
+  if(u==='auto'){
+    if(Math.abs(n)>=1e6)return(n/1e6).toFixed(1).replace('.0','')+'M';
+    if(Math.abs(n)>=1e3)return(n/1e3).toFixed(1).replace('.0','')+'k';
+    if(Number.isInteger(n))return n.toString();
+    return n.toFixed(1);
+  }
+  let v;
+  if(u==='k') v=(n/1e3).toFixed(1).replace('.0','')+'k';
+  else if(u==='M') v=(n/1e6).toFixed(1).replace('.0','')+'M';
+  else{v=Number.isInteger(n)?n.toString():n.toFixed(1);}
+  if(u==='pct') return v+'%';
+  if(u==='eur') return '€'+v;
+  if(u==='usd') return '$'+v;
+  return v;
 }
 
 // ── EXPORT ─────────────────────────────────────────────────────────────────
@@ -575,12 +588,12 @@ function saveCfg(){
     subtitle:document.getElementById('sub').value,
     srt:document.getElementById('srt').value,
     mr:document.getElementById('mr').value,
+    unit:document.getElementById('unit').value,
     data:document.getElementById('di').value,
     bron:document.getElementById('bron').value,
     datum:document.getElementById('datum').value,
     fg:{grid:document.getElementById('fg-grid').checked,val:document.getElementById('fg-val').checked,
-        xl:document.getElementById('fg-xl').checked,ey:document.getElementById('fg-ey').checked,
-        sub:document.getElementById('fg-sub').checked,br:document.getElementById('fg-br').checked},
+        xl:document.getElementById('fg-xl').checked,br:document.getElementById('fg-br').checked},
   };
   const cfgs=getCfgs();cfgs[name]=cfg;
   localStorage.setItem('dv_cfgs',JSON.stringify(cfgs));
@@ -595,6 +608,7 @@ function loadCfg(name){
   document.getElementById('sub').value=c.subtitle||'';
   document.getElementById('srt').value=c.srt||'none';
   document.getElementById('mr').value=c.mr||'all';
+  document.getElementById('unit').value=c.unit||'auto';
   document.getElementById('di').value=c.data||'';
   if(c.bron!==undefined)document.getElementById('bron').value=c.bron||'';
   if(c.datum!==undefined)document.getElementById('datum').value=c.datum||'';
