@@ -754,6 +754,12 @@ function init(){
   document.getElementById('pfl').textContent=f.label;
   document.getElementById('pdim').textContent=`${f.w} × ${f.h}`;
 
+  // Auto-update timestamp from last-modified header
+  const MND=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  const lm=new Date(document.lastModified);
+  document.getElementById('tb-updated').textContent=
+    `Bijgewerkt: ${lm.getDate()} ${MND[lm.getMonth()]} ${lm.getFullYear()}, ${String(lm.getHours()).padStart(2,'0')}:${String(lm.getMinutes()).padStart(2,'0')}`;
+
   renderCfgList();
   loadFonts();
   sched();
