@@ -38,6 +38,8 @@ const LICONS = {
 
 const S = {
   data:[],
+  colNames:[],
+  cols:[0],
   ct:'bar',
   pal:'blauw',
   lay:'lijn',
@@ -69,50 +71,77 @@ async function loadFonts(){
 // ── DATA ───────────────────────────────────────────────────────────────────
 
 function parseHTML(raw){
-  // Wrap in <table> if not present so DOMParser keeps tr/td intact
   let html=raw;
   if(!/<\s*table[\s>]/i.test(html)) html='<table>'+html+'</table>';
   const doc=new DOMParser().parseFromString(html,'text/html');
   const trs=doc.querySelectorAll('tr');
   if(!trs.length)return null;
-  const out=[];
+  const out=[],colNames=[];
   trs.forEach((tr,i)=>{
     const cells=[...tr.querySelectorAll('th,td')].map(c=>c.textContent.trim());
     if(cells.length<2)return;
-    // Skip header row
-    if(i===0&&isNaN(parseFloat(cells[1].replace(/[^\d.-]/g,''))))return;
+    if(i===0&&isNaN(parseFloat(cells[1].replace(/[^\d.-]/g,'')))){
+      cells.slice(1).forEach(c=>colNames.push(c));
+      return;
+    }
     const lbl=cells[0];
     const vals=cells.slice(1).map(v=>{ const n=parseFloat(v.replace(/[^\d.-]/g,'')); return isNaN(n)?0:n; });
     out.push({label:lbl,values:vals});
   });
-  return out;
+  return {data:out,colNames};
+}
+
+function setColumns(data,colNames){
+  S.data=data;
+  S.colNames=colNames;
+  const numCols=data.length?data[0].values.length:0;
+  S.cols=numCols>0?Array.from({length:numCols},(_,i)=>i):[0];
+  renderColSel();
+}
+
+function renderColSel(){
+  const el=document.getElementById('colsel');
+  const numCols=S.data.length?S.data[0].values.length:0;
+  if(numCols<=1){el.innerHTML='';return;}
+  el.innerHTML=S.colNames.map((name,i)=>
+    `<label class="chk"><input type="checkbox" ${S.cols.includes(i)?'checked':''} onchange="toggleCol(${i})"> ${name||'Kolom '+(i+1)}</label>`
+  ).join('');
+}
+
+function toggleCol(i){
+  if(S.cols.includes(i)) S.cols=S.cols.filter(c=>c!==i);
+  else S.cols.push(i);
+  S.cols.sort((a,b)=>a-b);
+  if(!S.cols.length)S.cols=[0];
+  sched();
 }
 
 function parseData(){
   const raw=document.getElementById('di').value.trim();
   const ds=document.getElementById('ds');
-  if(!raw){S.data=[];sched();ds.textContent='';return;}
-  // Detect HTML table input
+  if(!raw){S.data=[];S.colNames=[];S.cols=[0];document.getElementById('colsel').innerHTML='';sched();ds.textContent='';return;}
   if(/<\s*t(able|r|d|h)[\s>]/i.test(raw)){
-    const html=parseHTML(raw);
-    if(html&&html.length){
-      S.data=html;
-      ds.textContent=`✓ ${html.length} rijen (tabel)`;ds.style.color='#4ade80';
+    const res=parseHTML(raw);
+    if(res&&res.data.length){
+      setColumns(res.data,res.colNames);
+      ds.textContent=`✓ ${res.data.length} rijen (tabel)`;ds.style.color='#4ade80';
       sched();return;
     }
   }
   const rows=raw.split('\n').map(r=>r.trim()).filter(r=>r);
-  const out=[];
+  const out=[],colNames=[];
   rows.forEach((row,i)=>{
     const parts=row.includes('\t')?row.split('\t'):row.split(',');
     if(parts.length<2)return;
     const lbl=parts[0].trim();
-    // Skip header row
-    if(i===0&&isNaN(parseFloat(parts[1].replace(',','.'))))return;
+    if(i===0&&isNaN(parseFloat(parts[1].replace(',','.')))){
+      parts.slice(1).forEach(c=>colNames.push(c.trim()));
+      return;
+    }
     const vals=parts.slice(1).map(v=>{ const n=parseFloat(v.replace(/[^\d.-]/g,'')); return isNaN(n)?0:n; });
     out.push({label:lbl,values:vals});
   });
-  S.data=out;
+  setColumns(out,colNames);
   if(out.length){ds.textContent=`✓ ${out.length} rijen`;ds.style.color='#4ade80';}
   else{ds.textContent='Geen data gevonden';ds.style.color='#f87171';}
   sched();
@@ -259,10 +288,11 @@ function draw(){
     let data=[...S.data];
     const srt=document.getElementById('srt').value;
     const mr=document.getElementById('mr').value;
-    if(srt==='desc')data.sort((a,b)=>b.values[0]-a.values[0]);
-    if(srt==='asc') data.sort((a,b)=>a.values[0]-b.values[0]);
+    const sc=S.cols[0]||0;
+    if(srt==='desc')data.sort((a,b)=>(b.values[sc]||0)-(a.values[sc]||0));
+    if(srt==='asc') data.sort((a,b)=>(a.values[sc]||0)-(b.values[sc]||0));
     if(mr!=='all')data=data.slice(0,parseInt(mr));
-    const O={showGrid,showVal,showXL,lay:S.lay,W,p,oneClr};
+    const O={showGrid,showVal,showXL,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames};
     if(S.ct==='bar')    drawBar(ctx,data,px,chartTop,cW,cH,O);
     else if(S.ct==='barh') drawBarH(ctx,data,px,chartTop,cW,cH,O);
     else if(S.ct==='line') drawLine(ctx,data,px,chartTop,cW,cH,O);
@@ -293,20 +323,38 @@ function draw(){
 
 // ── CHART FUNCTIONS ────────────────────────────────────────────────────────
 
+function drawLegend(ctx,cols,colNames,p,W,x,y){
+  const sz=Math.max(W*0.016,11);
+  ctx.font=`600 ${sz}px Barlow`;
+  let lx=x;
+  cols.forEach((ci,j)=>{
+    const col=p.bars[j%p.bars.length];
+    ctx.fillStyle=col;
+    ctx.fillRect(lx,y,sz*0.8,sz*0.8);
+    ctx.fillStyle=p.muted;ctx.textAlign='left';ctx.textBaseline='middle';
+    const name=colNames[ci]||'Kolom '+(ci+1);
+    ctx.fillText(name,lx+sz*1.1,y+sz*0.4);
+    lx+=ctx.measureText(name).width+sz*2;
+  });
+}
+
 function drawBar(ctx,data,x,y,w,h,O){
-  const {showGrid,showVal,showXL,lay,W,p,oneClr}=O;
+  const {showGrid,showVal,showXL,lay,W,p,oneClr,cols,colNames}=O;
   const n=data.length;
-  const maxV=Math.max(...data.map(d=>Math.max(...d.values)));
-  const minV=Math.min(0,...data.map(d=>Math.min(...d.values)));
+  const nc=cols.length;
+  const allVals=data.flatMap(d=>cols.map(c=>d.values[c]||0));
+  const maxV=Math.max(...allVals);
+  const minV=Math.min(0,...allVals);
   const range=maxV-minV||1;
+  const legH=nc>1?W*0.04:0;
   const lblH=showXL?h*0.13:0;
-  const cH=h-lblH;
+  const cH=h-lblH-legH;
   const z0=y+cH-((-minV)/range)*cH;
 
-  // Grid label width
+  if(nc>1) drawLegend(ctx,cols,colNames,p,W,x,y+cH+lblH+legH*0.2);
+
   const glW=showGrid&&lay!=='strak'?W*0.05:0;
 
-  // Grid
   if(showGrid&&lay!=='strak'){
     const ticks=niceTicks(minV,maxV,8);
     const sz=W*0.016;
@@ -328,177 +376,160 @@ function drawBar(ctx,data,x,y,w,h,O){
   const gap=n>10?0.10:n>6?0.14:0.18;
   const gW=(w-glW)/n;
   const bW=gW*(1-gap);
+  const subW=bW/nc;
 
   data.forEach((d,i)=>{
-    const v=d.values[0];
     const bx=x+glW+gW*i+gW*gap/2;
-    const bH=Math.abs((v/range)*cH);
-    const by=v>=0?z0-bH:z0;
-    const col=oneClr?p.bars[0]:p.bars[i%p.bars.length];
-    ctx.fillStyle=col;
-    if(lay==='strak'){
-      ctx.fillRect(bx,by,bW,bH);
-    } else {
-      const rr=Math.min(bW*0.14,bH*0.15,W*0.006);
-      rbar(ctx,bx,by,bW,bH,v>=0?rr:0,v>=0?0:rr);
-    }
-    if(showVal&&bH>0){
-      const sz=Math.max(W*0.019,12);
-      ctx.font=`600 ${sz}px Barlow`;
-      ctx.fillStyle=p.text;
-      ctx.textAlign='center';
-      ctx.textBaseline='bottom';
-      const vy=v>=0?by-W*0.007:by+bH+sz+W*0.005;
-      ctx.fillText(fmtN(v),bx+bW/2,vy);
-    }
+    cols.forEach((ci,j)=>{
+      const v=d.values[ci]||0;
+      const bH=Math.abs((v/range)*cH);
+      const by=v>=0?z0-bH:z0;
+      const col=nc>1?p.bars[j%p.bars.length]:(oneClr?p.bars[0]:p.bars[i%p.bars.length]);
+      ctx.fillStyle=col;
+      const sx=bx+subW*j;
+      if(lay==='strak') ctx.fillRect(sx,by,subW-(nc>1?1:0),bH);
+      else{const rr=Math.min(subW*0.14,bH*0.15,W*0.006);rbar(ctx,sx,by,subW-(nc>1?1:0),bH,v>=0?rr:0,v>=0?0:rr);}
+      if(showVal&&bH>0&&nc===1){
+        const sz=Math.max(W*0.019,12);
+        ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.text;ctx.textAlign='center';ctx.textBaseline='bottom';
+        ctx.fillText(fmtN(v),sx+subW/2,v>=0?by-W*0.007:by+bH+sz+W*0.005);
+      }
+    });
     if(showXL){
       const sz=Math.max(W*0.018,11);
-      ctx.font=`500 ${sz}px Barlow`;
-      ctx.fillStyle=p.muted;
-      ctx.textAlign='center';
-      ctx.textBaseline='top';
-      ctx.fillText(trunc(ctx,d.label,gW*0.9),bx+bW/2,y+cH+W*0.01);
+      ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='center';ctx.textBaseline='top';
+      ctx.fillText(trunc(ctx,shortLabel(d.label),gW*0.9),bx+bW/2,y+cH+W*0.01);
     }
   });
   if(minV<0){
-    ctx.strokeStyle=p.muted;
-    ctx.lineWidth=Math.max(1.5,W*0.002);
+    ctx.strokeStyle=p.muted;ctx.lineWidth=Math.max(1.5,W*0.002);
     ctx.beginPath();ctx.moveTo(x+glW,z0);ctx.lineTo(x+w,z0);ctx.stroke();
   }
 }
 
 function drawBarH(ctx,data,x,y,w,h,O){
-  const {showGrid,showVal,lay,W,p,oneClr}=O;
+  const {showGrid,showVal,lay,W,p,oneClr,cols,colNames}=O;
   const n=data.length;
-  const maxV=Math.max(...data.map(d=>d.values[0]))||1;
+  const nc=cols.length;
+  const allVals=data.flatMap(d=>cols.map(c=>d.values[c]||0));
+  const maxV=Math.max(...allVals)||1;
   const lblW=w*0.3;
   const cX=x+lblW+W*0.012;
   const cW=w-lblW-W*0.012;
+  const legH=nc>1?W*0.04:0;
   const gap=n>8?0.10:0.18;
-  const gH=h/n;
+  const gH=(h-legH)/n;
   const bH=gH*(1-gap);
+  const subH=bH/nc;
+
+  if(nc>1) drawLegend(ctx,cols,colNames,p,W,cX,y+h-legH+legH*0.2);
 
   if(showGrid&&lay!=='strak'){
     const ticks=niceTicks(0,maxV,8);
-    ctx.strokeStyle=p.muted+'70';
-    ctx.lineWidth=Math.max(1.5,W*0.0014);
-    ctx.setLineDash([]);
-    ticks.forEach(t=>{
-      const tx=cX+(t/maxV)*cW;
-      ctx.beginPath();ctx.moveTo(tx,y);ctx.lineTo(tx,y+h);ctx.stroke();
-    });
+    ctx.strokeStyle=p.muted+'70';ctx.lineWidth=Math.max(1.5,W*0.0014);ctx.setLineDash([]);
+    ticks.forEach(t=>{const tx=cX+(t/maxV)*cW;ctx.beginPath();ctx.moveTo(tx,y);ctx.lineTo(tx,y+h-legH);ctx.stroke();});
     ctx.setLineDash([]);
   }
 
   data.forEach((d,i)=>{
-    const v=d.values[0];
-    const by=y+gH*i+gH*gap/2;
-    const bW=(v/maxV)*cW;
-    ctx.fillStyle=oneClr?p.bars[0]:p.bars[i%p.bars.length];
-    if(lay==='strak'){ctx.fillRect(cX,by,bW,bH);}
-    else{const rr=Math.min(bH*0.3,W*0.005);rbar(ctx,cX,by,bW,bH,0,rr);}
+    const by0=y+gH*i+gH*gap/2;
+    cols.forEach((ci,j)=>{
+      const v=d.values[ci]||0;
+      const by=by0+subH*j;
+      const bW=(v/maxV)*cW;
+      const col=nc>1?p.bars[j%p.bars.length]:(oneClr?p.bars[0]:p.bars[i%p.bars.length]);
+      ctx.fillStyle=col;
+      if(lay==='strak') ctx.fillRect(cX,by,bW,subH-(nc>1?1:0));
+      else{const rr=Math.min(subH*0.3,W*0.005);rbar(ctx,cX,by,bW,subH-(nc>1?1:0),0,rr);}
+      if(showVal&&nc===1){
+        const sz=Math.max(W*0.018,11);
+        ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.text;ctx.textAlign='left';
+        ctx.fillText(fmtN(v),cX+bW+W*0.012,by+subH/2);
+      }
+    });
     const sz=Math.max(W*0.018,11);
-    ctx.font=`500 ${sz}px Barlow`;
-    ctx.fillStyle=p.muted;
-    ctx.textAlign='right';
-    ctx.textBaseline='middle';
-    ctx.fillText(trunc(ctx,d.label,lblW-W*0.02),cX-W*0.015,by+bH/2);
-    if(showVal){
-      ctx.font=`600 ${sz}px Barlow`;
-      ctx.fillStyle=p.text;
-      ctx.textAlign='left';
-      ctx.fillText(fmtN(v),cX+bW+W*0.012,by+bH/2);
-    }
+    ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='right';ctx.textBaseline='middle';
+    ctx.fillText(trunc(ctx,shortLabel(d.label),lblW-W*0.02),cX-W*0.015,by0+bH/2);
   });
 }
 
 function drawLine(ctx,data,x,y,w,h,O){
-  const {showGrid,showVal,showXL,lay,W,p}=O;
+  const {showGrid,showVal,showXL,lay,W,p,cols,colNames}=O;
   const n=data.length;
+  const nc=cols.length;
   if(n<2){drawBar(ctx,data,x,y,w,h,O);return;}
-  const vals=data.map(d=>d.values[0]);
-  const maxV=Math.max(...vals), minV=Math.min(...vals);
+  const allVals=data.flatMap(d=>cols.map(c=>d.values[c]||0));
+  const maxV=Math.max(...allVals), minV=Math.min(...allVals);
   const pad=(maxV-minV)*0.15||maxV*0.1||1;
   const vMax=maxV+pad, vMin=minV-pad;
   const vR=vMax-vMin;
+  const legH=nc>1?W*0.04:0;
   const lblH=showXL?h*0.11:0;
-  const cH=h-lblH;
-
+  const cH=h-lblH-legH;
   const glW=showGrid&&lay!=='strak'?W*0.05:0;
 
   if(showGrid&&lay!=='strak'){
     const ticks=niceTicks(vMin,vMax,5);
     const sz=W*0.016;
-    ctx.font=`400 ${sz}px Barlow`;
-    ctx.strokeStyle=p.muted+'70';
-    ctx.lineWidth=Math.max(1.5,W*0.0014);
-    ctx.setLineDash([]);
+    ctx.font=`400 ${sz}px Barlow`;ctx.strokeStyle=p.muted+'70';ctx.lineWidth=Math.max(1.5,W*0.0014);ctx.setLineDash([]);
     ticks.forEach(t=>{
       const ty=y+cH-((t-vMin)/vR)*cH;
       ctx.beginPath();ctx.moveTo(x+glW,ty);ctx.lineTo(x+w,ty);ctx.stroke();
-      ctx.fillStyle=p.muted;
-      ctx.textAlign='right';
-      ctx.textBaseline='middle';
+      ctx.fillStyle=p.muted;ctx.textAlign='right';ctx.textBaseline='middle';
       ctx.fillText(fmtN(t),x+glW-W*0.006,ty);
     });
     ctx.setLineDash([]);
   }
 
-  const pts=data.map((d,i)=>({
-    px:x+glW+(i/(n-1))*(w-glW),
-    py:y+cH-((d.values[0]-vMin)/vR)*cH,
-  }));
+  const xPts=data.map((_,i)=>x+glW+(i/(n-1))*(w-glW));
 
-  // Fill
-  ctx.beginPath();
-  ctx.moveTo(pts[0].px,y+cH);
-  pts.forEach(pt=>ctx.lineTo(pt.px,pt.py));
-  ctx.lineTo(pts[n-1].px,y+cH);
-  ctx.closePath();
-  const gr=ctx.createLinearGradient(0,y,0,y+cH);
-  gr.addColorStop(0,p.acc+'50');
-  gr.addColorStop(1,p.acc+'06');
-  ctx.fillStyle=gr;ctx.fill();
+  cols.forEach((ci,j)=>{
+    const col=nc>1?p.bars[j%p.bars.length]:p.acc;
+    const pts=data.map((d,i)=>({px:xPts[i],py:y+cH-(((d.values[ci]||0)-vMin)/vR)*cH}));
 
-  // Line (catmull-rom smooth)
-  ctx.beginPath();ctx.moveTo(pts[0].px,pts[0].py);
-  for(let i=0;i<n-1;i++){
-    const p0=pts[Math.max(0,i-1)],p1=pts[i],p2=pts[i+1],p3=pts[Math.min(n-1,i+2)];
-    ctx.bezierCurveTo(
-      p1.px+(p2.px-p0.px)/6,p1.py+(p2.py-p0.py)/6,
-      p2.px-(p3.px-p1.px)/6,p2.py-(p3.py-p1.py)/6,
-      p2.px,p2.py
-    );
-  }
-  ctx.strokeStyle=p.acc;ctx.lineWidth=Math.max(3,W*0.005);ctx.lineJoin='round';ctx.stroke();
+    if(nc===1){
+      ctx.beginPath();ctx.moveTo(pts[0].px,y+cH);
+      pts.forEach(pt=>ctx.lineTo(pt.px,pt.py));
+      ctx.lineTo(pts[n-1].px,y+cH);ctx.closePath();
+      const gr=ctx.createLinearGradient(0,y,0,y+cH);
+      gr.addColorStop(0,col+'50');gr.addColorStop(1,col+'06');
+      ctx.fillStyle=gr;ctx.fill();
+    }
 
-  // Dots
-  pts.forEach(pt=>{
-    ctx.beginPath();ctx.arc(pt.px,pt.py,W*0.009,0,Math.PI*2);
-    ctx.fillStyle=p.acc;ctx.fill();
-    ctx.strokeStyle=p.bg;ctx.lineWidth=W*0.003;ctx.stroke();
+    ctx.beginPath();ctx.moveTo(pts[0].px,pts[0].py);
+    for(let i=1;i<n;i++) ctx.lineTo(pts[i].px,pts[i].py);
+    ctx.strokeStyle=col;ctx.lineWidth=Math.max(3,W*0.005);ctx.lineJoin='round';ctx.stroke();
+
+    pts.forEach(pt=>{
+      ctx.beginPath();ctx.arc(pt.px,pt.py,W*0.007,0,Math.PI*2);
+      ctx.fillStyle=col;ctx.fill();ctx.strokeStyle=p.bg;ctx.lineWidth=W*0.003;ctx.stroke();
+    });
+
+    if(showVal&&nc===1){
+      const sz=Math.max(W*0.018,11);
+      ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.text;ctx.textAlign='center';ctx.textBaseline='bottom';
+      pts.forEach((pt,i)=>ctx.fillText(fmtN(data[i].values[ci]||0),pt.px,pt.py-W*0.028));
+    }
   });
 
   if(showXL){
     const sz=Math.max(W*0.018,11);
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='center';ctx.textBaseline='top';
-    data.forEach((d,i)=>ctx.fillText(trunc(ctx,d.label,w/(n-1)*0.9),pts[i].px,y+cH+W*0.009));
+    data.forEach((d,i)=>ctx.fillText(trunc(ctx,shortLabel(d.label),w/(n-1)*0.9),xPts[i],y+cH+W*0.009));
   }
-  if(showVal){
-    const sz=Math.max(W*0.018,11);
-    ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.text;ctx.textAlign='center';ctx.textBaseline='bottom';
-    pts.forEach((pt,i)=>ctx.fillText(fmtN(data[i].values[0]),pt.px,pt.py-W*0.028));
-  }
+
+  if(nc>1) drawLegend(ctx,cols,colNames,p,W,x+glW,y+cH+lblH+legH*0.2);
 }
 
 function drawDonut(ctx,data,x,y,w,h,O){
-  const {showVal,W,p}=O;
-  const total=data.reduce((s,d)=>s+d.values[0],0)||1;
+  const {showVal,W,p,cols}=O;
+  const ci=cols[0]||0;
+  const total=data.reduce((s,d)=>s+(d.values[ci]||0),0)||1;
   const cx=x+w/2, cy=y+h*0.42;
   const R=Math.min(w,h*0.72)*0.4, iR=R*0.55;
   let angle=-Math.PI/2;
   data.forEach((d,i)=>{
-    const sl=(d.values[0]/total)*Math.PI*2;
+    const sl=((d.values[ci]||0)/total)*Math.PI*2;
     ctx.beginPath();
     ctx.moveTo(cx+Math.cos(angle)*iR,cy+Math.sin(angle)*iR);
     ctx.arc(cx,cy,R,angle,angle+sl);
@@ -507,14 +538,12 @@ function drawDonut(ctx,data,x,y,w,h,O){
     ctx.fillStyle=p.bars[i%p.bars.length];ctx.fill();
     angle+=sl;
   });
-  // Center label
   if(showVal&&data.length>0){
-    const pct=Math.round(data[0].values[0]/total*100)+'%';
+    const pct=Math.round((data[0].values[ci]||0)/total*100)+'%';
     ctx.font=`700 ${R*0.38}px Sora`;
     ctx.fillStyle=p.text;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText(pct,cx,cy);
   }
-  // Legend
   const legY=y+h*0.82, iW=w/Math.min(data.length,4);
   const sz=Math.max(W*0.018,11);
   data.slice(0,8).forEach((d,i)=>{
@@ -523,7 +552,7 @@ function drawDonut(ctx,data,x,y,w,h,O){
     ctx.fillStyle=p.bars[i%p.bars.length];
     ctx.fillRect(lx,ly-sz*0.45,sz*0.8,sz*0.8);
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='left';ctx.textBaseline='middle';
-    ctx.fillText(trunc(ctx,d.label,iW*0.8),lx+sz*1.1,ly);
+    ctx.fillText(trunc(ctx,shortLabel(d.label),iW*0.8),lx+sz*1.1,ly);
   });
 }
 
@@ -572,6 +601,15 @@ function wrap(ctx,text,maxW){
 function trunc(ctx,text,maxW){
   if(ctx.measureText(text).width<=maxW)return text;
   let t=text;while(t.length>1&&ctx.measureText(t+'…').width>maxW)t=t.slice(0,-1);return t+'…';
+}
+
+const MAAND=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+function shortLabel(lbl){
+  let m=lbl.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})$/);
+  if(m) return parseInt(m[1],10)+' '+MAAND[parseInt(m[2],10)-1];
+  m=lbl.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+  if(m) return parseInt(m[3],10)+' '+MAAND[parseInt(m[2],10)-1];
+  return lbl;
 }
 
 function niceTicks(min,max,count){
