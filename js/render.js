@@ -44,7 +44,8 @@ function draw(){
   const ctx=cv.getContext('2d');
   const W=f.w, H=f.h;
   const ar=W/H;
-  const sf=ar>1.5?0.64:ar>1.2?0.85:1;
+  const wide=ar>1.3;
+  const sf=wide?0.55:1;
 
   let p={...PAL[S.pal]};
   if(S.lay==='omgekeerd'&&S.pal!=='donker'){
@@ -77,36 +78,36 @@ function draw(){
   const datum=document.getElementById('datum').value;
   const oneClr=true;
 
-  let cy=H*0.064;
+  let cy=H*(wide?0.045:0.064);
 
   if(eyebrow){
     const sz=W*0.024*sf;
     ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.acc;ctx.textAlign='left';ctx.textBaseline='top';
     ctx.fillText(eyebrow.toUpperCase(),px,cy);
-    cy+=sz*1.35;
+    cy+=sz*(wide?1.15:1.35);
     if(S.lay==='lijn'){
       ctx.fillStyle=p.acc;
-      ctx.fillRect(px,cy,W-2*px,Math.max(4,W*0.006));
-      cy+=W*0.014;
+      ctx.fillRect(px,cy,W-2*px,Math.max(3,W*0.004));
+      cy+=W*(wide?0.008:0.014);
     }
   }
 
   if(title){
     const sz=(S.lay==='strak'?W*0.055:W*0.052)*sf;
     ctx.font=`700 ${sz}px Sora`;ctx.fillStyle=p.text;ctx.textAlign='left';ctx.textBaseline='top';
-    wrap(ctx,title,W-2*px).forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.2;});
+    wrap(ctx,title,W-2*px).forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.15;});
   }
 
   if(subtitle){
     const sz=W*0.026*sf;
-    cy+=sz*0.3;
+    cy+=sz*0.2;
     ctx.font=`400 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='left';ctx.textBaseline='top';
-    wrap(ctx,subtitle,W-2*px).forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.4;});
-    cy+=sz*0.3;
+    wrap(ctx,subtitle,W-2*px).forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.3;});
+    cy+=sz*0.15;
   }
 
-  const chartTop=cy+(title?W*0.025:0);
-  const botMargin=showBr?0.09:0.05;
+  const chartTop=cy+(title?W*(wide?0.012:0.025):0);
+  const botMargin=showBr?(wide?0.065:0.09):(wide?0.035:0.05);
   const chartBot=H-H*botMargin;
   const cH=chartBot-chartTop;
   const cW=W-2*px;
@@ -130,16 +131,17 @@ function draw(){
   }
 
   const bronDatum=[bron,datum].filter(Boolean).join(' · ');
+  const footY=H-H*(wide?0.018:0.025);
   if(bronDatum){
     const sz=W*0.021*sf;
     ctx.font=`400 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='left';ctx.textBaseline='bottom';
-    ctx.fillText(bronDatum,px*0.5,H-H*0.025);
+    ctx.fillText(bronDatum,px*0.5,footY);
   }
 
   if(showBr){
     const sz=W*0.022*sf;
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='right';ctx.textBaseline='bottom';
     const brTxt=branding==='maxverbeek'?'Max Verbeek':'dataverhaal.nl';
-    ctx.fillText(brTxt,W-px*0.5,H-H*0.025);
+    ctx.fillText(brTxt,W-px*0.5,footY);
   }
 }
