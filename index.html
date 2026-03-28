@@ -56,12 +56,7 @@
     <div class="sh" onclick="tog(this)"><span class="sl">Grafiek</span><span class="st open">▾</span></div>
     <div class="sc">
       <div><label>Type</label>
-        <div class="tg">
-          <button class="tb active" data-ct="bar" onclick="setCT('bar',this)">Bar</button>
-          <button class="tb" data-ct="barh" onclick="setCT('barh',this)">Horiz.</button>
-          <button class="tb" data-ct="line" onclick="setCT('line',this)">Lijn</button>
-          <button class="tb" data-ct="donut" onclick="setCT('donut',this)">Donut</button>
-        </div>
+        <div class="tg" id="ctg"></div>
       </div>
       <div><label>Sortering</label>
         <select id="srt" onchange="sched()">
@@ -146,6 +141,16 @@
 </div>
 </div>
 
-<script src="app.js"></script>
+<script src="js/core.js"></script>
+<script src="js/helpers.js"></script>
+<script src="js/parse.js"></script>
+<script src="js/render.js"></script>
+<script src="js/charts/bar.js"></script>
+<script src="js/charts/barh.js"></script>
+<script src="js/charts/line.js"></script>
+<script src="js/charts/donut.js"></script>
+<script src="js/charts/waterfall.js"></script>
+<script src="js/charts/heatmap.js"></script>
+<script src="js/ui.js"></script>
 </body>
 </html>

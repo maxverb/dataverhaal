@@ -4,10 +4,22 @@
 Client-side datavisualisatie-tool voor dataverhaal.nl. Geen framework, geen backend — puur HTML/CSS/vanilla JS.
 
 ## Bestanden
-- `index.html` — UI structuur, laadt extern `style.css` en `app.js`
+- `index.html` — UI structuur, laadt `style.css` en JS-modules
 - `style.css` — Dark-theme styling
-- `app.js` — Alle applicatielogica (parsing, rendering, export)
-- `dataviz.html` — **NIET GEBRUIKEN**. Verouderde alles-in-één versie, wordt niet meer onderhouden.
+- `js/core.js` — Constants (PAL, FMT, LAY), state (S), chart registry (CHARTS)
+- `js/helpers.js` — Canvas helpers (rrect, rbar), text (wrap, trunc, shortLabel), numbers (fmtN, niceTicks)
+- `js/parse.js` — Data parsing (HTML-tabellen, CSV, XLSX), kolom selectie
+- `js/render.js` — Gedeelde render helpers (drawGrid, drawLegend), main draw()
+- `js/charts/*.js` — Elk grafiektype in eigen bestand, registreert zichzelf via `registerChart(id, {label, draw})`
+- `js/ui.js` — UI setters, config opslaan/laden, export, init()
+- `dataviz.html` — **NIET GEBRUIKEN**. Verouderd.
+- `app.js` — **NIET GEBRUIKEN**. Vervangen door modulaire structuur in `js/`.
+
+## Nieuw grafiektype toevoegen
+1. Maak `js/charts/<naam>.js`
+2. Roep `registerChart('<id>', {label:'Label', draw:function(ctx,data,x,y,w,h,O){...}})` aan
+3. Voeg `<script src="js/charts/<naam>.js"></script>` toe in `index.html` vóór `js/ui.js`
+4. Het type verschijnt automatisch als knop in het panel
 
 ## Hosting
 - GitHub Pages op `main` branch: https://maxverb.github.io/dataverhaal/
