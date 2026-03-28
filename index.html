@@ -111,7 +111,13 @@
       <label class="chk"><input type="checkbox" id="fg-grid" checked onchange="sched()"> Rasterlijnen</label>
       <label class="chk"><input type="checkbox" id="fg-val" checked onchange="sched()"> Waarden op staven</label>
       <label class="chk"><input type="checkbox" id="fg-xl" checked onchange="sched()"> X-as labels</label>
-      <label class="chk"><input type="checkbox" id="fg-br" checked onchange="sched()"> dataverhaal.nl branding</label>
+      <div><label>Branding</label>
+        <select id="fg-br" onchange="sched()">
+          <option value="none">Geen</option>
+          <option value="dataverhaal" selected>dataverhaal.nl</option>
+          <option value="maxverbeek">Max Verbeek</option>
+        </select>
+      </div>
     </div>
   </div>
 

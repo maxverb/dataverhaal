@@ -70,7 +70,7 @@ function saveCfg(){
     bron:document.getElementById('bron').value,
     datum:document.getElementById('datum').value,
     fg:{grid:document.getElementById('fg-grid').checked,val:document.getElementById('fg-val').checked,
-        xl:document.getElementById('fg-xl').checked,br:document.getElementById('fg-br').checked},
+        xl:document.getElementById('fg-xl').checked,br:document.getElementById('fg-br').value},
   };
   const cfgs=getCfgs();cfgs[name]=cfg;
   localStorage.setItem('dv_cfgs',JSON.stringify(cfgs));
@@ -90,10 +90,12 @@ function loadCfg(name){
   if(c.bron!==undefined)document.getElementById('bron').value=c.bron||'';
   if(c.datum!==undefined)document.getElementById('datum').value=c.datum||'';
   if(c.fg){
-    ['grid','val','xl','ey','sub','br'].forEach(k=>{
+    ['grid','val','xl','ey','sub'].forEach(k=>{
       const el=document.getElementById('fg-'+k);
       if(el)el.checked=c.fg[k]!==false;
     });
+    const brEl=document.getElementById('fg-br');
+    if(brEl) brEl.value=typeof c.fg.br==='string'?c.fg.br:(c.fg.br!==false?'dataverhaal':'none');
   }
   setCT(c.ct||'bar');setPal(c.pal||'blauw');setLay(c.lay||'strak');setFmt(c.fmt||'ig_post');
   parseData();
