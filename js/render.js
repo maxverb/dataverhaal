@@ -71,7 +71,8 @@ function draw(){
   const showGrid=document.getElementById('fg-grid').checked;
   const showVal=document.getElementById('fg-val').checked;
   const showXL=document.getElementById('fg-xl').checked;
-  const showBr=document.getElementById('fg-br').checked;
+  const branding=document.getElementById('fg-br').value;
+  const showBr=branding!=='none';
   const bron=document.getElementById('bron').value;
   const datum=document.getElementById('datum').value;
   const oneClr=true;
@@ -138,6 +139,7 @@ function draw(){
   if(showBr){
     const sz=W*0.022*sf;
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='right';ctx.textBaseline='bottom';
-    ctx.fillText('dataverhaal.nl',W-px*0.5,H-H*0.025);
+    const brTxt=branding==='maxverbeek'?'Max Verbeek':'dataverhaal.nl';
+    ctx.fillText(brTxt,W-px*0.5,H-H*0.025);
   }
 }
