@@ -120,14 +120,23 @@ function draw(){
     ctx.font=`400 ${W*0.027}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='center';ctx.textBaseline='middle';
     ctx.fillText('Plak data in het linkerpaneel',W/2,chartTop+cH/2);
   } else {
-    let data=[...S.data];
+    let data=S.data.map(d=>({label:d.label,values:[...d.values]}));
     const srt=document.getElementById('srt').value;
     const mr=document.getElementById('mr').value;
+    const dispmode=(document.getElementById('dispmode')||{}).value||'abs';
     const sc=S.cols[0]||0;
     if(srt==='desc')data.sort((a,b)=>(b.values[sc]||0)-(a.values[sc]||0));
     if(srt==='asc') data.sort((a,b)=>(a.values[sc]||0)-(b.values[sc]||0));
     if(mr!=='all')data=data.slice(0,parseInt(mr));
-    const O={showGrid,showVal,showXL,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf};
+    // Percentage mode: convert values to % of column total
+    if(dispmode==='pct'){
+      const cols=S.cols;
+      cols.forEach(ci=>{
+        const total=data.reduce((s,d)=>s+(d.values[ci]||0),0)||1;
+        data.forEach(d=>{d.values[ci]=Math.round((d.values[ci]||0)/total*1000)/10;});
+      });
+    }
+    const O={showGrid,showVal,showXL,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf,dispmode};
     const chart=CHARTS[S.ct];
     if(chart) chart.draw(ctx,data,px,chartTop+valPad,cW,cH,O);
   }
