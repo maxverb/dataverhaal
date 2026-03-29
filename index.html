@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=7">
+<link rel="stylesheet" href="style.css?v=10">
 </head>
 <body>
 
@@ -59,7 +59,10 @@
     <div class="sh" onclick="tog(this)"><span class="sl">Grafiek</span><span class="st open">▾</span></div>
     <div class="sc">
       <div><label>Type</label>
-        <div class="tg" id="ctg"></div>
+        <div class="tg" id="ctg-main"></div>
+        <select id="ctg-more" onchange="setCT(this.value);this.value=''" style="margin-top:4px">
+          <option value="">Meer typen...</option>
+        </select>
       </div>
       <div><label>Sortering</label>
         <select id="srt" onchange="sched()">
@@ -184,6 +187,6 @@
 <script src="js/charts/table.js?v=6"></script>
 <script src="js/suggest.js?v=4"></script>
 <script src="js/interact.js?v=8"></script>
-<script src="js/ui.js?v=8"></script>
+<script src="js/ui.js?v=10"></script>
 </body>
 </html>
