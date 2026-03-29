@@ -72,6 +72,7 @@ function draw(){
   const showGrid=document.getElementById('fg-grid').checked;
   const showVal=document.getElementById('fg-val').checked;
   const showXL=document.getElementById('fg-xl').checked;
+  const showTrend=document.getElementById('fg-trend')?document.getElementById('fg-trend').checked:false;
   const branding=document.getElementById('fg-br').value;
   const showBr=branding!=='none';
   const bron=document.getElementById('bron').value;
@@ -136,7 +137,7 @@ function draw(){
         data.forEach(d=>{d.values[ci]=Math.round((d.values[ci]||0)/total*1000)/10;});
       });
     }
-    const O={showGrid,showVal,showXL,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf,dispmode};
+    const O={showGrid,showVal,showXL,showTrend,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf,dispmode};
     const chart=CHARTS[S.ct];
     if(chart) chart.draw(ctx,data,px,chartTop+valPad,cW,cH,O);
   }

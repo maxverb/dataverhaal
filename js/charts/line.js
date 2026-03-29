@@ -1,5 +1,5 @@
 registerChart('line',{label:'Lijn',draw:function(ctx,data,x,y,w,h,O){
-  const {showGrid,showVal,showXL,lay,W,p,cols,colNames}=O;
+  const {showGrid,showVal,showXL,showTrend,lay,W,p,cols,colNames}=O;
   const n=data.length, nc=cols.length;
   if(n<2){CHARTS.bar.draw(ctx,data,x,y,w,h,O);return;}
   const allVals=data.flatMap(d=>cols.map(c=>d.values[c]||0));
@@ -14,6 +14,7 @@ registerChart('line',{label:'Lijn',draw:function(ctx,data,x,y,w,h,O){
   if(showGrid&&lay!=='strak') drawGrid(ctx,x,y,w,cH,vMin,vMax,5,glW,O);
 
   const xPts=data.map((_,i)=>x+glW+(i/(n-1))*(w-glW));
+  const zones=[];
 
   cols.forEach((ci,j)=>{
     const col=nc>1?p.bars[j%p.bars.length]:p.acc;
@@ -32,9 +33,27 @@ registerChart('line',{label:'Lijn',draw:function(ctx,data,x,y,w,h,O){
     for(let i=1;i<n;i++) ctx.lineTo(pts[i].px,pts[i].py);
     ctx.strokeStyle=col;ctx.lineWidth=Math.max(3,W*0.005);ctx.lineJoin='round';ctx.stroke();
 
-    pts.forEach(pt=>{
-      ctx.beginPath();ctx.arc(pt.px,pt.py,W*0.007,0,Math.PI*2);
+    pts.forEach((pt,i)=>{
+      const isHi=S.highlight===i;
+      const dotR=isHi?W*0.011:W*0.007;
+      if(S.highlight!==null&&!isHi) ctx.globalAlpha=0.4;
+      ctx.beginPath();ctx.arc(pt.px,pt.py,dotR,0,Math.PI*2);
       ctx.fillStyle=col;ctx.fill();ctx.strokeStyle=p.bg;ctx.lineWidth=W*0.003;ctx.stroke();
+      ctx.globalAlpha=1;
+      if(j===0) zones.push({x:pt.px-W*0.015,y:pt.py-W*0.015,w:W*0.03,h:W*0.03,idx:i});
+
+      // Highlight callout
+      if(isHi){
+        const sz=Math.max(W*0.018,12);
+        ctx.font=`700 ${sz}px Barlow`;
+        const txt=`${shortLabel(data[i].label)}: ${fmtN(data[i].values[ci]||0)}`;
+        const tw=ctx.measureText(txt).width;
+        const px2=pt.px-tw/2-W*0.008, py2=pt.py-W*0.045;
+        ctx.fillStyle=p.text;
+        rrect(ctx,px2,py2,tw+W*0.016,sz*1.6,W*0.004);ctx.fill();
+        ctx.fillStyle=p.bg;ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(txt,pt.px,py2+sz*0.8);
+      }
     });
 
     if(showVal&&nc===1){
@@ -51,4 +70,11 @@ registerChart('line',{label:'Lijn',draw:function(ctx,data,x,y,w,h,O){
   }
 
   if(nc>1) drawLegend(ctx,cols,colNames,p,W,x+glW,y+cH+lblH+legH*0.2);
+
+  // Trendline
+  if(showTrend&&nc===1){
+    drawTrend(ctx,data,cols[0],xPts,v=>y+cH-((v-vMin)/vR)*cH,O);
+  }
+
+  registerHitZones(zones);
 }});

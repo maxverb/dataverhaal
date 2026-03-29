@@ -176,6 +176,7 @@ function init(){
     `Bijgewerkt: ${lm.getDate()} ${MND[lm.getMonth()]} ${lm.getFullYear()}, ${String(lm.getHours()).padStart(2,'0')}:${String(lm.getMinutes()).padStart(2,'0')}`;
 
   renderCfgList();
+  initClickHandler();
   loadFonts();
   sched();
 }

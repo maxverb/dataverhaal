@@ -34,8 +34,26 @@ function renderColSel(){
   const numCols=S.data.length?S.data[0].values.length:0;
   if(numCols<=1){el.innerHTML='';return;}
   el.innerHTML=S.colNames.map((name,i)=>
-    `<label class="chk"><input type="checkbox" ${S.cols.includes(i)?'checked':''} onchange="toggleCol(${i})"> ${name||'Kolom '+(i+1)}</label>`
+    `<div style="display:flex;align-items:center;gap:4px">
+      <input type="checkbox" ${S.cols.includes(i)?'checked':''} onchange="toggleCol(${i})" style="margin:0;accent-color:var(--ac)">
+      <span style="flex:1;font-size:12px">${name||'Kolom '+(i+1)}</span>
+      <button class="btn btn-sm" onclick="moveCol(${i},-1)" style="padding:1px 4px;font-size:10px" title="Omhoog">↑</button>
+      <button class="btn btn-sm" onclick="moveCol(${i},1)" style="padding:1px 4px;font-size:10px" title="Omlaag">↓</button>
+    </div>`
   ).join('');
+}
+
+function moveCol(i,dir){
+  const j=i+dir;
+  if(j<0||j>=S.colNames.length)return;
+  // Swap column names
+  [S.colNames[i],S.colNames[j]]=[S.colNames[j],S.colNames[i]];
+  // Swap values in all data rows
+  S.data.forEach(d=>{[d.values[i],d.values[j]]=[d.values[j],d.values[i]];});
+  // Update selected cols
+  S.cols=S.cols.map(c=>c===i?j:c===j?i:c);
+  renderColSel();
+  sched();
 }
 
 function toggleCol(i){
