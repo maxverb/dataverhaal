@@ -71,9 +71,11 @@ registerChart('line',{label:'Lijn',draw:function(ctx,data,x,y,w,h,O){
 
   if(nc>1) drawLegend(ctx,cols,colNames,p,W,x+glW,y+cH+lblH+legH*0.2);
 
-  // Trendline
-  if(showTrend&&nc===1){
-    drawTrend(ctx,data,cols[0],xPts,v=>y+cH-((v-vMin)/vR)*cH,O);
+  // Trendline & MA
+  if((showTrend||O.showMA)&&nc===1){
+    const yFn=v=>y+cH-((v-vMin)/vR)*cH;
+    if(showTrend) drawTrend(ctx,data,cols[0],xPts,yFn,O);
+    if(O.showMA) drawMA(ctx,data,cols[0],xPts,yFn,O,7);
   }
 
   registerHitZones(zones);

@@ -29,6 +29,35 @@ function reverseData(){
   sched();
 }
 
+// ── COPY TO CLIPBOARD ────────────────────────────────────────────────────
+function copyToClipboard(){
+  draw();
+  const cv=document.getElementById('cv');
+  cv.toBlob(function(blob){
+    navigator.clipboard.write([new ClipboardItem({'image/png':blob})]).then(()=>{
+      const btn=document.querySelector('[onclick="copyToClipboard()"]');
+      const orig=btn.textContent;
+      btn.textContent='✓ Gekopieerd';
+      setTimeout(()=>{btn.textContent=orig;},1500);
+    }).catch(()=>alert('Kopiëren mislukt — gebruik Download'));
+  });
+}
+
+// ── CUSTOM COLOR ─────────────────────────────────────────────────────────
+function setCustomClr(v){
+  if(!v||!v.match(/^#[0-9a-fA-F]{3,8}$/)){S.customClr=null;sched();return;}
+  S.customClr=v;
+  document.getElementById('cc-pick').value=v;
+  document.getElementById('cc-hex').value=v;
+  sched();
+}
+
+function clearCustomClr(){
+  S.customClr=null;
+  document.getElementById('cc-hex').value='';
+  sched();
+}
+
 // ── TRENDLINE ─────────────────────────────────────────────────────────────
 function drawTrend(ctx,data,ci,xPts,yFn,O){
   const {W,p}=O;
@@ -46,6 +75,31 @@ function drawTrend(ctx,data,ci,xPts,yFn,O){
   ctx.beginPath();
   ctx.moveTo(xPts[0],yFn(intercept));
   ctx.lineTo(xPts[n-1],yFn(slope*(n-1)+intercept));
+  ctx.stroke();
+  ctx.setLineDash([]);
+}
+
+// ── MOVING AVERAGE ───────────────────────────────────────────────────────
+function drawMA(ctx,data,ci,xPts,yFn,O,window){
+  const {W,p}=O;
+  const n=data.length;if(n<window)return;
+  const vals=data.map(d=>d.values[ci]||0);
+  const ma=[];
+  for(let i=0;i<n;i++){
+    if(i<window-1){ma.push(null);continue;}
+    let sum=0;for(let j=i-window+1;j<=i;j++)sum+=vals[j];
+    ma.push(sum/window);
+  }
+  ctx.strokeStyle=p.muted;
+  ctx.lineWidth=Math.max(2,W*0.003);
+  ctx.setLineDash([W*0.006,W*0.004]);
+  ctx.beginPath();
+  let started=false;
+  ma.forEach((v,i)=>{
+    if(v===null)return;
+    if(!started){ctx.moveTo(xPts[i],yFn(v));started=true;}
+    else ctx.lineTo(xPts[i],yFn(v));
+  });
   ctx.stroke();
   ctx.setLineDash([]);
 }

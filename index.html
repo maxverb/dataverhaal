@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link rel="stylesheet" href="style.css?v=7">
 </head>
 <body>
 
@@ -94,11 +94,17 @@
       </div>
     </div>
   </div>
+  <!-- STIJL -->
   <div class="psec">
     <div class="sh" onclick="tog(this)"><span class="sl">Stijl</span><span class="st open">▾</span></div>
     <div class="sc">
       <div><label>Kleurpalet</label><div class="pal-grid" id="pg"></div></div>
-      <div><label>Layout</label><div class="lay-grid" id="lg"></div></div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <label style="flex-shrink:0">Custom kleur</label>
+        <input type="color" id="cc-pick" value="#3b82f6" onchange="setCustomClr(this.value)" style="width:28px;height:28px;padding:0;border:1px solid var(--ibr);border-radius:4px;cursor:pointer">
+        <input type="text" id="cc-hex" placeholder="#3b82f6" oninput="setCustomClr(this.value)" style="flex:1;font-size:11px">
+        <button class="btn btn-sm" onclick="clearCustomClr()">✕</button>
+      </div>
     </div>
   </div>
 
@@ -118,6 +124,7 @@
       <label class="chk"><input type="checkbox" id="fg-val" checked onchange="sched()"> Waarden op staven</label>
       <label class="chk"><input type="checkbox" id="fg-xl" checked onchange="sched()"> X-as labels</label>
       <label class="chk"><input type="checkbox" id="fg-trend" onchange="sched()"> Trendlijn</label>
+      <label class="chk"><input type="checkbox" id="fg-ma" onchange="sched()"> Voortschr. gemiddelde (7)</label>
       <div><label>Branding</label>
         <select id="fg-br" onchange="sched()">
           <option value="none">Geen</option>
@@ -149,27 +156,29 @@
     <span class="pdim" id="pdim">1080 × 1350</span>
     <div class="psp"></div>
     <button class="btn btn-sm" onclick="reverseData()" title="Draai volgorde om">⇅ Volgorde</button>
+    <button class="btn btn-sm" onclick="copyToClipboard()" title="Kopieer naar klembord">📋 Kopieer</button>
     <button class="btn btn-p" onclick="exportPNG()">⬇ Download PNG</button>
   </div>
   <div class="cwrap"><canvas id="cv"></canvas></div>
 </div>
 </div>
 
-<script src="js/core.js?v=3"></script>
+<script src="js/core.js?v=7"></script>
 <script src="js/helpers.js?v=3"></script>
 <script src="js/parse.js?v=3"></script>
-<script src="js/render.js?v=6"></script>
-<script src="js/charts/bar.js?v=3"></script>
+<script src="js/render.js?v=7"></script>
+<script src="js/charts/bar.js?v=7"></script>
 <script src="js/charts/barh.js?v=3"></script>
-<script src="js/charts/line.js?v=3"></script>
+<script src="js/charts/line.js?v=7"></script>
 <script src="js/charts/donut.js?v=3"></script>
 <script src="js/charts/waterfall.js?v=3"></script>
 <script src="js/charts/heatmap.js?v=3"></script>
+<script src="js/charts/area.js?v=6"></script>
 <script src="js/charts/stacked.js?v=4"></script>
 <script src="js/charts/cards.js?v=5"></script>
 <script src="js/charts/table.js?v=6"></script>
 <script src="js/suggest.js?v=4"></script>
-<script src="js/interact.js?v=6"></script>
-<script src="js/ui.js?v=6"></script>
+<script src="js/interact.js?v=7"></script>
+<script src="js/ui.js?v=7"></script>
 </body>
 </html>
