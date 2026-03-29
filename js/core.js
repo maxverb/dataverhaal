@@ -43,6 +43,7 @@ const S = {
   data:[],
   colNames:[],
   cols:[0],
+  highlight:null,
   ct:'bar',
   pal:'blauw',
   lay:'lijn',
