@@ -50,6 +50,7 @@
       <div><label>Subtitel</label><input type="text" id="sub" placeholder="De stijging stagneerd met zo'n..." oninput="sched()"></div>
       <div><label>Bron</label><input type="text" id="bron" placeholder="Bron: CBS" oninput="sched()"></div>
       <div><label>Datum</label><input type="text" id="datum" placeholder="Bijv. 2025 of 1 jan 2025" oninput="sched()"></div>
+      <div><label>Notitie</label><input type="text" id="note" placeholder="Voetnoot of disclaimer" oninput="sched()"></div>
     </div>
   </div>
 
@@ -130,6 +131,9 @@
           <option value="none">Geen</option>
           <option value="dataverhaal" selected>dataverhaal.nl</option>
           <option value="maxverbeek">Max Verbeek</option>
+          <option value="rijnmond">rijnmond.nl</option>
+          <option value="west">omroepwest.nl</option>
+          <option value="dhfm">denhaagfm.nl</option>
         </select>
       </div>
     </div>
@@ -155,6 +159,7 @@
     <span class="pfl" id="pfl">IG Post 4:5</span>
     <span class="pdim" id="pdim">1080 × 1350</span>
     <div class="psp"></div>
+    <button class="btn btn-sm" onclick="shareURL()" title="Kopieer deellink">🔗 Link</button>
     <button class="btn btn-sm" onclick="reverseData()" title="Draai volgorde om">⇅ Volgorde</button>
     <button class="btn btn-sm" onclick="copyToClipboard()" title="Kopieer naar klembord">📋 Kopieer</button>
     <button class="btn btn-p" onclick="exportPNG()">⬇ Download PNG</button>
@@ -163,10 +168,10 @@
 </div>
 </div>
 
-<script src="js/core.js?v=7"></script>
+<script src="js/core.js?v=8"></script>
 <script src="js/helpers.js?v=3"></script>
 <script src="js/parse.js?v=3"></script>
-<script src="js/render.js?v=7"></script>
+<script src="js/render.js?v=8"></script>
 <script src="js/charts/bar.js?v=7"></script>
 <script src="js/charts/barh.js?v=3"></script>
 <script src="js/charts/line.js?v=7"></script>
@@ -174,11 +179,14 @@
 <script src="js/charts/waterfall.js?v=3"></script>
 <script src="js/charts/heatmap.js?v=3"></script>
 <script src="js/charts/area.js?v=6"></script>
+<script src="js/charts/stackarea.js?v=8"></script>
+<script src="js/charts/bump.js?v=8"></script>
+<script src="js/charts/dualaxis.js?v=8"></script>
 <script src="js/charts/stacked.js?v=4"></script>
 <script src="js/charts/cards.js?v=5"></script>
 <script src="js/charts/table.js?v=6"></script>
 <script src="js/suggest.js?v=4"></script>
-<script src="js/interact.js?v=7"></script>
-<script src="js/ui.js?v=7"></script>
+<script src="js/interact.js?v=8"></script>
+<script src="js/ui.js?v=8"></script>
 </body>
 </html>

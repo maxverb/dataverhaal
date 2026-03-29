@@ -149,18 +149,26 @@ function draw(){
     if(chart) chart.draw(ctx,data,px,chartTop+valPad,cW,cH,O);
   }
 
+  const note=(document.getElementById('note')||{}).value||'';
   const bronDatum=[bron,datum].filter(Boolean).join(' · ');
   const footY=H-H*(wide?0.018:0.025);
+  const noteY=footY-(note?W*0.02:0);
+  if(note){
+    const sz=W*0.016*sf;
+    ctx.font=`400 ${sz}px Barlow`;ctx.fillStyle=p.muted+'90';ctx.textAlign='left';ctx.textBaseline='bottom';
+    ctx.fillText(note,px*0.5,footY);
+  }
   if(bronDatum){
     const sz=W*0.021*sf;
     ctx.font=`400 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='left';ctx.textBaseline='bottom';
-    ctx.fillText(bronDatum,px*0.5,footY);
+    ctx.fillText(bronDatum,px*0.5,noteY);
   }
 
   if(showBr){
     const sz=W*0.022*sf;
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='right';ctx.textBaseline='bottom';
-    const brTxt=branding==='maxverbeek'?'Max Verbeek':'dataverhaal.nl';
+    const brMap={dataverhaal:'dataverhaal.nl',maxverbeek:'Max Verbeek',rijnmond:'rijnmond.nl',west:'omroepwest.nl',dhfm:'denhaagfm.nl'};
+    const brTxt=brMap[branding]||'dataverhaal.nl';
     ctx.fillText(brTxt,W-px*0.5,footY);
   }
 }

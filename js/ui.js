@@ -162,6 +162,7 @@ function init(){
 
   renderCfgList();
   initClickHandler();
+  loadFromURL();
   loadFonts();
   sched();
 }
