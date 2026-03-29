@@ -29,6 +29,62 @@ function reverseData(){
   sched();
 }
 
+// ── URL SHARE ────────────────────────────────────────────────────────────
+function shareURL(){
+  const cfg={
+    ct:S.ct,pal:S.pal,fmt:S.fmt,
+    ttl:document.getElementById('ttl').value,
+    ey:document.getElementById('eyebrow').value,
+    sub:document.getElementById('sub').value,
+    bron:document.getElementById('bron').value,
+    datum:document.getElementById('datum').value,
+    note:document.getElementById('note')?.value||'',
+    srt:document.getElementById('srt').value,
+    mr:document.getElementById('mr').value,
+    unit:document.getElementById('unit').value,
+    disp:(document.getElementById('dispmode')||{}).value||'abs',
+    br:document.getElementById('fg-br').value,
+    grid:document.getElementById('fg-grid').checked?1:0,
+    val:document.getElementById('fg-val').checked?1:0,
+    xl:document.getElementById('fg-xl').checked?1:0,
+    data:document.getElementById('di').value,
+  };
+  const hash='#'+btoa(unescape(encodeURIComponent(JSON.stringify(cfg))));
+  const url=location.origin+location.pathname+hash;
+  navigator.clipboard.writeText(url).then(()=>{
+    const btn=document.querySelector('[onclick="shareURL()"]');
+    const orig=btn.textContent;
+    btn.textContent='✓ Gekopieerd';
+    setTimeout(()=>{btn.textContent=orig;},1500);
+  });
+}
+
+function loadFromURL(){
+  if(!location.hash||location.hash.length<2)return false;
+  try{
+    const json=decodeURIComponent(escape(atob(location.hash.slice(1))));
+    const c=JSON.parse(json);
+    if(c.ttl!==undefined) document.getElementById('ttl').value=c.ttl;
+    if(c.ey!==undefined) document.getElementById('eyebrow').value=c.ey;
+    if(c.sub!==undefined) document.getElementById('sub').value=c.sub;
+    if(c.bron!==undefined) document.getElementById('bron').value=c.bron;
+    if(c.datum!==undefined) document.getElementById('datum').value=c.datum;
+    if(c.note!==undefined&&document.getElementById('note')) document.getElementById('note').value=c.note;
+    if(c.srt) document.getElementById('srt').value=c.srt;
+    if(c.mr) document.getElementById('mr').value=c.mr;
+    if(c.unit) document.getElementById('unit').value=c.unit;
+    if(c.disp&&document.getElementById('dispmode')) document.getElementById('dispmode').value=c.disp;
+    if(c.br) document.getElementById('fg-br').value=c.br;
+    if(c.grid!==undefined) document.getElementById('fg-grid').checked=!!c.grid;
+    if(c.val!==undefined) document.getElementById('fg-val').checked=!!c.val;
+    if(c.xl!==undefined) document.getElementById('fg-xl').checked=!!c.xl;
+    if(c.data) document.getElementById('di').value=c.data;
+    setCT(c.ct||'bar');setPal(c.pal||'blauw');setFmt(c.fmt||'ig_post');
+    parseData();
+    return true;
+  }catch(e){return false;}
+}
+
 // ── COPY TO CLIPBOARD ────────────────────────────────────────────────────
 function copyToClipboard(){
   draw();
