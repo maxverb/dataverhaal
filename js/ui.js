@@ -66,6 +66,7 @@ function saveCfg(){
     srt:document.getElementById('srt').value,
     mr:document.getElementById('mr').value,
     unit:document.getElementById('unit').value,
+    dispmode:document.getElementById('dispmode').value,
     data:document.getElementById('di').value,
     bron:document.getElementById('bron').value,
     datum:document.getElementById('datum').value,
@@ -86,6 +87,7 @@ function loadCfg(name){
   document.getElementById('srt').value=c.srt||'none';
   document.getElementById('mr').value=c.mr||'all';
   document.getElementById('unit').value=c.unit||'auto';
+  document.getElementById('dispmode').value=c.dispmode||'abs';
   document.getElementById('di').value=c.data||'';
   if(c.bron!==undefined)document.getElementById('bron').value=c.bron||'';
   if(c.datum!==undefined)document.getElementById('datum').value=c.datum||'';
