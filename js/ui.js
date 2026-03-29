@@ -1,9 +1,16 @@
 // ── UI SETTERS ─────────────────────────────────────────────────────────────
 
 function setCT(id,btn){
+  if(!id)return;
   S.ct=id;
   document.querySelectorAll('[data-ct]').forEach(b=>b.classList.remove('active'));
   (btn||document.querySelector(`[data-ct="${id}"]`))?.classList.add('active');
+  // Reset dropdown if a main button was clicked
+  const more=document.getElementById('ctg-more');
+  if(more){
+    const mainTypes=['bar','barh','line','donut','area'];
+    more.value=mainTypes.includes(id)?'':id;
+  }
   sched();
 }
 
@@ -134,15 +141,24 @@ async function loadFonts(){
 }
 
 function init(){
-  // Palettes
+  // Palettes — horizontal strips with name
   document.getElementById('pg').innerHTML=Object.entries(PAL).map(([id,p])=>
-    `<div class="psw${id===S.pal?' active':''}" data-pal="${id}" style="background:${p.sw}" title="${p.name}" onclick="setPal('${id}')"></div>`
+    `<div class="psw${id===S.pal?' active':''}" data-pal="${id}" style="background:${p.sw}" onclick="setPal('${id}')"><span class="pn">${p.name}</span></div>`
   ).join('');
 
-  // Chart type buttons — built from registry
-  document.getElementById('ctg').innerHTML=Object.entries(CHARTS).map(([id,c])=>
-    `<button class="tb${id===S.ct?' active':''}" data-ct="${id}" onclick="setCT('${id}',this)">${c.label}</button>`
+  // Chart type — 5 main buttons + dropdown for rest
+  const mainTypes=['bar','barh','line','donut','area'];
+  document.getElementById('ctg-main').innerHTML=mainTypes.filter(id=>CHARTS[id]).map(id=>
+    `<button class="tb${id===S.ct?' active':''}" data-ct="${id}" onclick="setCT('${id}',this)">${CHARTS[id].label}</button>`
   ).join('');
+  const moreEl=document.getElementById('ctg-more');
+  const extras=Object.entries(CHARTS).filter(([id])=>!mainTypes.includes(id));
+  if(extras.length){
+    moreEl.innerHTML='<option value="">Meer typen...</option>'+extras.map(([id,c])=>
+      `<option value="${id}"${id===S.ct?' selected':''}>${c.label}</option>`
+    ).join('');
+    moreEl.style.display='';
+  } else moreEl.style.display='none';
 
   // Formats
   document.getElementById('fg').innerHTML=Object.entries(FMT).map(([id,f])=>
