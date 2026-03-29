@@ -71,12 +71,21 @@ registerChart('line',{label:'Lijn',draw:function(ctx,data,x,y,w,h,O){
 
   if(nc>1) drawLegend(ctx,cols,colNames,p,W,x+glW,y+cH+lblH+legH*0.2);
 
-  // Trendline & MA
-  if((showTrend||O.showMA)&&nc===1){
-    const yFn=v=>y+cH-((v-vMin)/vR)*cH;
+  // Overlays
+  const yFn=v=>y+cH-((v-vMin)/vR)*cH;
+  if(nc===1){
     if(showTrend) drawTrend(ctx,data,cols[0],xPts,yFn,O);
     if(O.showMA) drawMA(ctx,data,cols[0],xPts,yFn,O,7);
+    if(O.showAvg) drawAvgLine(ctx,data,cols[0],x,glW,w,yFn,O);
+    if(O.showPctChg){
+      const positions=data.map((d,i)=>({px:xPts[i],py:y+cH-(((d.values[cols[0]]||0)-vMin)/vR)*cH}));
+      drawPctChange(ctx,data,cols[0],positions,O);
+    }
   }
+  if(!isNaN(O.refVal)) drawRefLine(ctx,O.refVal,O.refLbl,x,glW,w,yFn,O);
+
+  const aPos=data.map((d,i)=>({px:xPts[i],py:y+cH-(((d.values[cols[0]]||0)-vMin)/vR)*cH}));
+  drawAnnotations(ctx,O.annots,aPos,O);
 
   registerHitZones(zones);
 }});
