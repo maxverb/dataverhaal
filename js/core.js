@@ -22,21 +22,7 @@ const FMT = {
   slide:    {w:1920,h:1080,label:'Slide 16:9',    ratio:'16:9'},
 };
 
-const LAY = {
-  klassiek: {name:'Klassiek'},
-  kader:    {name:'Kader'},
-  lijn:     {name:'Lijn'},
-  omgekeerd:{name:'Omgek.'},
-  strak:    {name:'Strak'},
-};
-
-const LICONS = {
-  klassiek:`<svg viewBox="0 0 34 26" fill="none"><rect width="34" height="26" rx="2" fill="#1c1c1c"/><rect x="4" y="4" width="14" height="2.5" rx="1" fill="#444"/><rect x="5" y="14" width="5" height="8" fill="#3B82F6"/><rect x="12" y="11" width="5" height="11" fill="#3B82F6" opacity=".7"/><rect x="19" y="16" width="5" height="6" fill="#3B82F6" opacity=".5"/><rect x="26" y="12" width="5" height="10" fill="#3B82F6" opacity=".6"/><line x1="4" y1="22.5" x2="32" y2="22.5" stroke="#444" stroke-width="1"/></svg>`,
-  kader:`<svg viewBox="0 0 34 26" fill="none"><rect width="34" height="26" rx="2" fill="#1c1c1c"/><rect x="3" y="3" width="28" height="20" rx="2" stroke="#3B82F6" stroke-width="1.5" fill="none"/><rect x="7" y="6" width="10" height="2" rx="1" fill="#444"/><rect x="7" y="12" width="5" height="8" fill="#3B82F6"/><rect x="14" y="10" width="5" height="10" fill="#3B82F6" opacity=".7"/><rect x="21" y="14" width="5" height="6" fill="#3B82F6" opacity=".5"/></svg>`,
-  lijn:`<svg viewBox="0 0 34 26" fill="none"><rect width="34" height="26" rx="2" fill="#1c1c1c"/><rect x="4" y="4" width="12" height="2.5" rx="1" fill="#444"/><rect x="4" y="8.5" width="26" height="2" rx="1" fill="#3B82F6"/><rect x="5" y="13" width="5" height="9" fill="#3B82F6"/><rect x="12" y="11" width="5" height="11" fill="#3B82F6" opacity=".7"/><rect x="19" y="15" width="5" height="7" fill="#3B82F6" opacity=".5"/><rect x="26" y="12" width="5" height="10" fill="#3B82F6" opacity=".6"/></svg>`,
-  omgekeerd:`<svg viewBox="0 0 34 26" fill="none"><rect width="34" height="26" rx="2" fill="#0F172A"/><rect x="4" y="4" width="14" height="2.5" rx="1" fill="#94A3B8"/><rect x="5" y="14" width="5" height="8" fill="#38BDF8"/><rect x="12" y="11" width="5" height="11" fill="#38BDF8" opacity=".7"/><rect x="19" y="16" width="5" height="6" fill="#38BDF8" opacity=".5"/><rect x="26" y="12" width="5" height="10" fill="#38BDF8" opacity=".6"/></svg>`,
-  strak:`<svg viewBox="0 0 34 26" fill="none"><rect width="34" height="26" rx="2" fill="#f8f9fc"/><rect x="5" y="4" width="12" height="2.5" rx="1" fill="#d1d5db"/><rect x="6" y="12" width="5" height="10" fill="#1B4F8A"/><rect x="13" y="10" width="5" height="12" fill="#1B4F8A" opacity=".65"/><rect x="20" y="14" width="5" height="8" fill="#1B4F8A" opacity=".45"/><rect x="27" y="11" width="5" height="11" fill="#1B4F8A" opacity=".55"/></svg>`,
-};
+// Layout is fixed to 'lijn'
 
 // ── STATE ──────────────────────────────────────────────────────────────────
 const S = {
@@ -44,6 +30,7 @@ const S = {
   colNames:[],
   cols:[0],
   highlight:null,
+  customClr:null,
   ct:'bar',
   pal:'blauw',
   lay:'lijn',

@@ -61,10 +61,12 @@ registerChart('bar',{label:'Bar',draw:function(ctx,data,x,y,w,h,O){
   });
   if(minV<0){ctx.strokeStyle=p.muted;ctx.lineWidth=Math.max(1.5,W*0.002);ctx.beginPath();ctx.moveTo(x+glW,z0);ctx.lineTo(x+w,z0);ctx.stroke();}
 
-  // Trendline
-  if(showTrend&&nc===1){
+  // Trendline & MA
+  if((showTrend||O.showMA)&&nc===1){
     const xPts=data.map((_,i)=>x+glW+gW*i+gW/2);
-    drawTrend(ctx,data,cols[0],xPts,v=>y+cH-((v-minV)/range)*cH,O);
+    const yFn=v=>y+cH-((v-minV)/range)*cH;
+    if(showTrend) drawTrend(ctx,data,cols[0],xPts,yFn,O);
+    if(O.showMA) drawMA(ctx,data,cols[0],xPts,yFn,O,7);
   }
 
   registerHitZones(zones);

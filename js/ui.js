@@ -14,13 +14,6 @@ function setPal(id){
   sched();
 }
 
-function setLay(id){
-  S.lay=id;
-  document.querySelectorAll('.lbtn').forEach(b=>b.classList.remove('active'));
-  document.querySelector(`[data-lay="${id}"]`)?.classList.add('active');
-  sched();
-}
-
 function setFmt(id){
   S.fmt=id;
   document.querySelectorAll('.fmtb').forEach(b=>b.classList.remove('active'));
@@ -99,7 +92,7 @@ function loadCfg(name){
     const brEl=document.getElementById('fg-br');
     if(brEl) brEl.value=typeof c.fg.br==='string'?c.fg.br:(c.fg.br!==false?'dataverhaal':'none');
   }
-  setCT(c.ct||'bar');setPal(c.pal||'blauw');setLay(c.lay||'strak');setFmt(c.fmt||'ig_post');
+  setCT(c.ct||'bar');setPal(c.pal||'blauw');setFmt(c.fmt||'ig_post');
   parseData();
 }
 
@@ -144,14 +137,6 @@ function init(){
   // Palettes
   document.getElementById('pg').innerHTML=Object.entries(PAL).map(([id,p])=>
     `<div class="psw${id===S.pal?' active':''}" data-pal="${id}" style="background:${p.sw}" title="${p.name}" onclick="setPal('${id}')"></div>`
-  ).join('');
-
-  // Layouts
-  document.getElementById('lg').innerHTML=Object.entries(LAY).map(([id,l])=>
-    `<div class="lbtn${id===S.lay?' active':''}" data-lay="${id}" onclick="setLay('${id}')" title="${l.name}">
-      <div class="lic">${LICONS[id]}</div>
-      <span class="ln">${l.name}</span>
-    </div>`
   ).join('');
 
   // Chart type buttons — built from registry
