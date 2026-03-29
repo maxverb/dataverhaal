@@ -3,9 +3,9 @@ registerChart('line',{label:'Lijn',draw:function(ctx,data,x,y,w,h,O){
   const n=data.length, nc=cols.length;
   if(n<2){CHARTS.bar.draw(ctx,data,x,y,w,h,O);return;}
   const allVals=data.flatMap(d=>cols.map(c=>d.values[c]||0));
-  const maxV=Math.max(...allVals), minV=Math.min(...allVals);
-  const pad=(maxV-minV)*0.15||maxV*0.1||1;
-  const vMax=maxV+pad, vMin=minV-pad, vR=vMax-vMin;
+  const maxV=Math.max(...allVals);
+  const pad=maxV*0.1||1;
+  const vMax=maxV+pad, vMin=0, vR=vMax-vMin;
   const legH=nc>1?W*0.04:0;
   const lblH=showXL?h*0.11:0;
   const cH=h-lblH-legH;

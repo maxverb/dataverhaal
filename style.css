@@ -32,8 +32,8 @@ select{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%
 .tb{background:var(--btn);border:1px solid var(--ibr);border-radius:var(--r);color:var(--pm);font-family:'Barlow',sans-serif;font-size:11.5px;font-weight:500;padding:5px 0;cursor:pointer;transition:all .15s;flex:1;text-align:center}
 .tb.active{background:var(--ac);border-color:var(--ac);color:#fff}
 .tb:hover:not(.active){background:#333;color:var(--pt)}
-.pal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
-.psw{aspect-ratio:1;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s;position:relative}
+.pal-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px}
+.psw{aspect-ratio:2;border-radius:5px;cursor:pointer;border:2px solid transparent;transition:transform .15s,border-color .15s;position:relative}
 .psw::after{content:'✓';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;opacity:0;transition:opacity .15s;text-shadow:0 1px 3px rgba(0,0,0,.6)}
 .psw.active{border-color:#fff;transform:scale(1.08)}.psw.active::after{opacity:1}
 .lay-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px}

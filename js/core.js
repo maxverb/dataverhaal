@@ -16,11 +16,9 @@ const PAL = {
 };
 
 const FMT = {
-  twitter:  {w:1600,h:900, label:'Twitter/X',   ratio:'16:9'},
   ig_post:  {w:1080,h:1350,label:'IG Post 4:5',  ratio:'4:5'},
   ig_sq:    {w:1080,h:1080,label:'IG Vierkant',  ratio:'1:1'},
   story:    {w:1080,h:1920,label:'Story',         ratio:'9:16'},
-  tiktok:   {w:1080,h:1920,label:'TikTok',        ratio:'9:16'},
   slide:    {w:1920,h:1080,label:'Slide 16:9',    ratio:'16:9'},
 };
 
