@@ -106,10 +106,12 @@ function draw(){
     cy+=sz*0.15;
   }
 
-  const chartTop=cy+(title?W*(wide?0.012:0.025):0);
+  const chartTop=Math.max(cy+(title?W*(wide?0.012:0.025):0), H*0.08);
   const botMargin=showBr?(wide?0.065:0.09):(wide?0.035:0.05);
   const chartBot=H-H*botMargin;
-  const cH=chartBot-chartTop;
+  // Reserve space for value labels above bars
+  const valPad=showVal?W*0.035:0;
+  const cH=chartBot-chartTop-valPad;
   const cW=W-2*px;
 
   if(!S.data.length){
@@ -127,7 +129,7 @@ function draw(){
     if(mr!=='all')data=data.slice(0,parseInt(mr));
     const O={showGrid,showVal,showXL,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf};
     const chart=CHARTS[S.ct];
-    if(chart) chart.draw(ctx,data,px,chartTop,cW,cH,O);
+    if(chart) chart.draw(ctx,data,px,chartTop+valPad,cW,cH,O);
   }
 
   const bronDatum=[bron,datum].filter(Boolean).join(' · ');
