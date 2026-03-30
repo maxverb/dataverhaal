@@ -51,6 +51,7 @@
       <div><label>Bron</label><input type="text" id="bron" placeholder="Bron: CBS" oninput="sched()"></div>
       <div><label>Datum</label><input type="text" id="datum" placeholder="Bijv. 2025 of 1 jan 2025" oninput="sched()"></div>
       <div><label>Notitie</label><input type="text" id="note" placeholder="Voetnoot of disclaimer" oninput="sched()"></div>
+      <div><label>Annotatie (rij:tekst)</label><input type="text" id="annot" placeholder="3:Storing datacenter" oninput="sched()"></div>
     </div>
   </div>
 
@@ -124,11 +125,24 @@
   <div class="psec">
     <div class="sh" onclick="tog(this)"><span class="sl">Filters</span><span class="st open">▾</span></div>
     <div class="sc">
-      <label class="chk"><input type="checkbox" id="fg-grid" checked onchange="sched()"> Rasterlijnen</label>
-      <label class="chk"><input type="checkbox" id="fg-val" checked onchange="sched()"> Waarden op staven</label>
+      <label class="chk"><input type="checkbox" id="fg-val" checked onchange="sched()"> Waarden</label>
       <label class="chk"><input type="checkbox" id="fg-xl" checked onchange="sched()"> X-as labels</label>
+      <label class="chk"><input type="checkbox" id="fg-pctchg" onchange="sched()"> % verandering</label>
       <label class="chk"><input type="checkbox" id="fg-trend" onchange="sched()"> Trendlijn</label>
-      <label class="chk"><input type="checkbox" id="fg-ma" onchange="sched()"> Voortschr. gemiddelde (7)</label>
+      <label class="chk"><input type="checkbox" id="fg-ma" onchange="sched()"> Voortschr. gem. (7)</label>
+      <label class="chk"><input type="checkbox" id="fg-avg" onchange="sched()"> Gemiddelde-lijn</label>
+      <div><label>Rasterlijnen</label>
+        <select id="fg-grid-style" onchange="sched()">
+          <option value="solid">Doorgetrokken</option>
+          <option value="dashed" selected>Gestreept</option>
+          <option value="none">Geen</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:5px;align-items:center">
+        <label style="flex-shrink:0">Referentielijn</label>
+        <input type="number" id="fg-ref" placeholder="Waarde" oninput="sched()" style="flex:1;font-size:11px">
+        <input type="text" id="fg-ref-lbl" placeholder="Label" oninput="sched()" style="flex:1;font-size:11px">
+      </div>
       <div><label>Branding</label>
         <select id="fg-br" onchange="sched()">
           <option value="none">Geen</option>
@@ -171,10 +185,10 @@
 <script src="js/core.js?v=8"></script>
 <script src="js/helpers.js?v=3"></script>
 <script src="js/parse.js?v=3"></script>
-<script src="js/render.js?v=9"></script>
-<script src="js/charts/bar.js?v=7"></script>
+<script src="js/render.js?v=10"></script>
+<script src="js/charts/bar.js?v=10"></script>
 <script src="js/charts/barh.js?v=3"></script>
-<script src="js/charts/line.js?v=7"></script>
+<script src="js/charts/line.js?v=10"></script>
 <script src="js/charts/donut.js?v=3"></script>
 <script src="js/charts/waterfall.js?v=3"></script>
 <script src="js/charts/heatmap.js?v=3"></script>
@@ -186,6 +200,7 @@
 <script src="js/charts/cards.js?v=5"></script>
 <script src="js/charts/table.js?v=6"></script>
 <script src="js/suggest.js?v=4"></script>
+<script src="js/overlays.js?v=10"></script>
 <script src="js/interact.js?v=8"></script>
 <script src="js/ui.js?v=10"></script>
 </body>

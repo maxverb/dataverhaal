@@ -1,14 +1,15 @@
 // ── SHARED CHART RENDERING ─────────────────────────────────────────────────
 
 function drawGrid(ctx,x,y,w,cH,minV,maxV,count,glW,O){
-  const {W,p}=O;
+  const {W,p,gridStyle}=O;
   const ticks=niceTicks(minV,maxV,count);
   const range=maxV-minV||1;
   const sz=W*0.016;
   ctx.font=`400 ${sz}px Barlow`;
   ctx.strokeStyle=p.muted+'70';
   ctx.lineWidth=Math.max(1.5,W*0.0014);
-  ctx.setLineDash([]);
+  if(gridStyle==='dashed') ctx.setLineDash([W*0.006,W*0.004]);
+  else ctx.setLineDash([]);
   ticks.forEach(t=>{
     const ty=y+cH-((t-minV)/range)*cH;
     ctx.beginPath();ctx.moveTo(x+glW,ty);ctx.lineTo(x+w,ty);ctx.stroke();
@@ -69,11 +70,17 @@ function draw(){
   const eyebrow=document.getElementById('eyebrow').value;
   const title=document.getElementById('ttl').value;
   const subtitle=document.getElementById('sub').value;
-  const showGrid=document.getElementById('fg-grid').checked;
+  const gridStyle=(document.getElementById('fg-grid-style')||{}).value||'dashed';
+  const showGrid=gridStyle!=='none';
   const showVal=document.getElementById('fg-val').checked;
   const showXL=document.getElementById('fg-xl').checked;
+  const showPctChg=(document.getElementById('fg-pctchg')||{}).checked||false;
   const showTrend=document.getElementById('fg-trend')?document.getElementById('fg-trend').checked:false;
   const showMA=document.getElementById('fg-ma')?document.getElementById('fg-ma').checked:false;
+  const showAvg=(document.getElementById('fg-avg')||{}).checked||false;
+  const refVal=parseFloat((document.getElementById('fg-ref')||{}).value);
+  const refLbl=(document.getElementById('fg-ref-lbl')||{}).value||'';
+  const annotRaw=(document.getElementById('annot')||{}).value||'';
   const branding=document.getElementById('fg-br').value;
   const showBr=branding!=='none';
   const bron=document.getElementById('bron').value;
@@ -144,7 +151,9 @@ function draw(){
         data.forEach(d=>{d.values[ci]=Math.round((d.values[ci]||0)/total*1000)/10;});
       });
     }
-    const O={showGrid,showVal,showXL,showTrend,showMA,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf,dispmode};
+    const annots={};
+    annotRaw.split(';').forEach(a=>{const m=a.match(/^(\d+):(.+)$/);if(m)annots[parseInt(m[1])-1]=m[2].trim();});
+    const O={showGrid,gridStyle,showVal,showXL,showPctChg,showTrend,showMA,showAvg,refVal,refLbl,annots,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf,dispmode};
     const chart=CHARTS[S.ct];
     if(chart) chart.draw(ctx,data,px,chartTop+valPad,cW,cH,O);
   }

@@ -61,13 +61,23 @@ registerChart('bar',{label:'Bar',draw:function(ctx,data,x,y,w,h,O){
   });
   if(minV<0){ctx.strokeStyle=p.muted;ctx.lineWidth=Math.max(1.5,W*0.002);ctx.beginPath();ctx.moveTo(x+glW,z0);ctx.lineTo(x+w,z0);ctx.stroke();}
 
-  // Trendline & MA
-  if((showTrend||O.showMA)&&nc===1){
+  // Overlays
+  const yFn=v=>y+cH-((v-minV)/range)*cH;
+  if(nc===1){
     const xPts=data.map((_,i)=>x+glW+gW*i+gW/2);
-    const yFn=v=>y+cH-((v-minV)/range)*cH;
     if(showTrend) drawTrend(ctx,data,cols[0],xPts,yFn,O);
     if(O.showMA) drawMA(ctx,data,cols[0],xPts,yFn,O,7);
+    if(O.showAvg) drawAvgLine(ctx,data,cols[0],x,glW,w,yFn,O);
+    if(O.showPctChg){
+      const positions=data.map((_,i)=>({x:x+glW+gW*i+gW/2,y:y+cH}));
+      drawPctChange(ctx,data,cols[0],positions,O);
+    }
   }
+  if(!isNaN(O.refVal)) drawRefLine(ctx,O.refVal,O.refLbl,x,glW,w,yFn,O);
+
+  // Annotations
+  const aPos=data.map((_,i)=>{const v=data[i].values[cols[0]]||0;return{x:x+glW+gW*i+gW/2,y:y+cH-((v-minV)/range)*cH};});
+  drawAnnotations(ctx,O.annots,aPos,O);
 
   registerHitZones(zones);
 }});
