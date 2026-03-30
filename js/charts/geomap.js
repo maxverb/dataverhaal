@@ -1,13 +1,4 @@
-// Geographic choropleth map — renders real CBS gemeente boundaries
-
-function polyArea(pts,px,py){
-  let a=0;
-  for(let i=0,n=pts.length;i<n;i++){
-    const j=(i+1)%n;
-    a+=px(pts[i][0])*py(pts[j][1])-px(pts[j][0])*py(pts[i][1]);
-  }
-  return Math.abs(a/2);
-}
+// Geographic choropleth map — labels outside in two columns
 
 function polyBBox(pts,px,py){
   let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity;
@@ -19,12 +10,8 @@ function polyBBox(pts,px,py){
 }
 
 function normName(s){
-  return s.trim().toLowerCase()
-    .replace(/[''`]/g,"'")
-    .replace(/\s+/g,' ')
-    .replace(/\(zh\.\)/gi,'')
-    .replace(/^'s-/,"s-")
-    .trim();
+  return s.trim().toLowerCase().replace(/[''`]/g,"'").replace(/\s+/g,' ')
+    .replace(/\(zh\.\)/gi,'').replace(/^'s-/,"s-").trim();
 }
 
 function drawGeoMap(region,ctx,data,x,y,w,h,O){
@@ -35,24 +22,20 @@ function drawGeoMap(region,ctx,data,x,y,w,h,O){
   const [minLon,maxLon,minLat,maxLat]=reg.b;
   const gems=reg.g;
 
-  // Data lookup with normalized name matching
+  // Data lookup
   const lookup={};
   data.forEach(d=>{
     const key=normName(d.label);
     lookup[key]=d.values[ci]||0;
-    // Also store with common aliases
     if(GEO_ALIASES[d.label.trim().toLowerCase()])
       lookup[normName(GEO_ALIASES[d.label.trim().toLowerCase()])]=d.values[ci]||0;
   });
 
-  // Match function
   function matchVal(name){
     const k=normName(name);
     if(lookup[k]!==undefined) return lookup[k];
-    // Try without dashes/hyphens
     const k2=k.replace(/-/g,' ');
     if(lookup[k2]!==undefined) return lookup[k2];
-    // Try first word
     const k3=k.split(/[\s-]/)[0];
     for(const [lk,lv] of Object.entries(lookup)){
       if(lk.startsWith(k3)) return lv;
@@ -65,11 +48,14 @@ function drawGeoMap(region,ctx,data,x,y,w,h,O){
   const maxV=vals.length?Math.max(...vals):1;
   const range=maxV-minV||1;
 
-  // Projection
-  const mapH=h*0.92;
+  // Layout: labels left + right, map in center
+  const labelColW=showXL?W*0.14:0;
+  const mapX=x+labelColW;
+  const mapW=w-labelColW*2;
+  const mapH=h*0.95;
   const lonR=maxLon-minLon, latR=maxLat-minLat;
-  const scale=Math.min(w/lonR,mapH/latR)*0.92;
-  const offX=x+(w-lonR*scale)/2;
+  const scale=Math.min(mapW/lonR,mapH/latR)*0.92;
+  const offX=mapX+(mapW-lonR*scale)/2;
   const offY=y+(mapH-latR*scale)/2;
   const px2=lon=>offX+(lon-minLon)*scale;
   const py2=lat=>offY+(maxLat-lat)*scale;
@@ -107,112 +93,71 @@ function drawGeoMap(region,ctx,data,x,y,w,h,O){
     ctx.stroke();
 
     const bb=polyBBox(gem.p,px2,py2);
-    const area=bb.w*bb.h;
     const dark=hasData&&((val-minV)/range)>0.5;
-    gemInfo.push({name:gem.n,bb,area,hasData,val,dark});
+    gemInfo.push({name:gem.n,bb,hasData,val,dark});
   });
 
-  // Labels
-  if(showXL){
-    const minSz=Math.max(W*0.011,9);
-    const bigThreshold=W*W*0.00008;
-    const inlineGems=[], leaderGems=[];
-    gemInfo.forEach(gi=>{
-      if(gi.area>=bigThreshold) inlineGems.push(gi);
-      else leaderGems.push(gi);
-    });
+  // Labels outside the map in two columns
+  if(!showXL) return;
 
-    // Inline labels — use bounding box center, constrained to bbox
-    inlineGems.forEach(gi=>{
-      const bb=gi.bb;
-      const sz=Math.max(Math.min(Math.min(bb.w,bb.h)*0.22,W*0.016),minSz);
-      ctx.font=`600 ${sz}px Barlow`;
-      ctx.fillStyle=gi.dark?'#fff':p.text;
-      ctx.textAlign='center';ctx.textBaseline='middle';
+  const sz=Math.max(W*0.01,8);
+  const mapCx=offX+lonR*scale/2;
 
-      let lbl=gi.name;
-      const maxW=bb.w*0.85;
-      if(ctx.measureText(lbl).width>maxW)
-        lbl=lbl.replace(/aan den |aan de |aan het /g,'a/d ').replace(/-/g,'\u2011');
-      if(ctx.measureText(lbl).width>maxW)
-        lbl=gi.name.split(/[\s-]/)[0];
+  // Split into left and right based on position relative to map center
+  const leftGems=gemInfo.filter(g=>g.bb.cx<mapCx).sort((a,b)=>a.bb.cy-b.bb.cy);
+  const rightGems=gemInfo.filter(g=>g.bb.cx>=mapCx).sort((a,b)=>a.bb.cy-b.bb.cy);
 
-      const ly=gi.hasData&&showVal?bb.cy-sz*0.5:bb.cy;
-      ctx.fillText(lbl,bb.cx,ly);
+  function drawLabelColumn(gems,colX,align){
+    const lineH=sz*1.6;
+    const maxLabels=Math.floor(mapH/lineH);
+    const step=gems.length>maxLabels?gems.length/maxLabels:1;
 
-      if(gi.hasData&&showVal){
-        ctx.font=`400 ${sz*0.8}px Barlow`;
-        ctx.fillStyle=gi.dark?'rgba(255,255,255,0.85)':p.muted;
-        ctx.fillText(fmtN(gi.val),bb.cx,bb.cy+sz*0.45);
-      }
-    });
+    let slotY=y+sz;
+    gems.forEach((gi,i)=>{
+      if(step>1&&i%Math.ceil(step)!==0&&i!==gems.length-1) return;
+      if(slotY+lineH>y+h) return;
 
-    // Leader line labels
-    const placed=[];
-    leaderGems.forEach(gi=>{
-      const bb=gi.bb;
-      const sz=minSz;
-      ctx.font=`500 ${sz}px Barlow`;
+      // Label text
       let lbl=gi.name;
       if(lbl.length>18) lbl=lbl.replace(/aan den |aan de |aan het /g,'a/d ');
       if(lbl.length>18) lbl=gi.name.split(/[\s-]/)[0];
-
       const valTxt=gi.hasData&&showVal?' '+fmtN(gi.val):'';
-      const fullTxt=lbl+valTxt;
-      const tw=ctx.measureText(fullTxt).width;
-      const offset=W*0.03;
 
-      // Try 4 directions, pick first non-overlapping
-      const attempts=[
-        {lx:bb.cx+bb.w/2+offset,ly:bb.cy,align:'left'},
-        {lx:bb.cx-bb.w/2-offset,ly:bb.cy,align:'right'},
-        {lx:bb.cx+bb.w/2+offset,ly:bb.cy-sz*1.5,align:'left'},
-        {lx:bb.cx-bb.w/2-offset,ly:bb.cy+sz*1.5,align:'right'},
-      ];
-
-      let best=null;
-      for(const att of attempts){
-        const rx=att.align==='left'?att.lx:att.lx-tw;
-        const ry=att.ly-sz/2;
-        if(rx<x||rx+tw>x+w||ry<y||ry+sz>y+h) continue;
-        const overlap=placed.some(r=>
-          rx<r.x+r.w+4&&rx+tw+4>r.x&&ry<r.y+r.h+2&&ry+sz+2>r.y
-        );
-        if(!overlap){best=att;break;}
-      }
-      if(!best) return; // no room, skip
-
-      const {lx,ly,align}=best;
-      const rx=align==='left'?lx:lx-tw;
-      placed.push({x:rx,y:ly-sz/2,w:tw,h:sz*1.2});
-
-      // Leader line from bbox edge to label
-      ctx.strokeStyle=p.muted+'50';
-      ctx.lineWidth=Math.max(1,W*0.0006);
-      ctx.beginPath();
-      ctx.moveTo(bb.cx,bb.cy);
-      ctx.lineTo(align==='left'?lx-W*0.005:lx+W*0.005,ly);
-      ctx.stroke();
-
-      // Dot at centroid
-      ctx.beginPath();ctx.arc(bb.cx,bb.cy,W*0.002,0,Math.PI*2);
-      ctx.fillStyle=p.muted+'70';ctx.fill();
-
-      // Label
       ctx.font=`500 ${sz}px Barlow`;
       ctx.fillStyle=p.text;
-      ctx.textAlign=align;ctx.textBaseline='middle';
-      ctx.fillText(lbl,lx,ly);
+      ctx.textAlign=align;
+      ctx.textBaseline='middle';
+      ctx.fillText(lbl,colX,slotY);
 
       if(valTxt){
         const nw=ctx.measureText(lbl).width;
-        ctx.font=`400 ${sz*0.85}px Barlow`;
-        ctx.fillStyle=p.muted;
-        if(align==='left') ctx.fillText(valTxt,lx+nw,ly);
-        else ctx.fillText(valTxt,lx-nw,ly);
+        ctx.font=`600 ${sz*0.9}px Barlow`;
+        ctx.fillStyle=gi.hasData?p.acc:p.muted;
+        if(align==='right') ctx.fillText(valTxt,colX-nw,slotY);
+        else ctx.fillText(valTxt,colX+nw,slotY);
       }
+
+      // Leader line from label to gemeente bbox edge
+      const lineStartX=align==='right'?colX+W*0.005:colX-W*0.005;
+      const lineEndX=align==='right'?gi.bb.x:gi.bb.x+gi.bb.w;
+
+      ctx.strokeStyle=p.muted+'35';
+      ctx.lineWidth=Math.max(0.5,W*0.0004);
+      ctx.beginPath();
+      ctx.moveTo(lineStartX,slotY);
+      ctx.lineTo(lineEndX,gi.bb.cy);
+      ctx.stroke();
+
+      // Tiny dot on gemeente
+      ctx.beginPath();ctx.arc(gi.bb.cx,gi.bb.cy,W*0.0015,0,Math.PI*2);
+      ctx.fillStyle=p.muted+'50';ctx.fill();
+
+      slotY+=lineH;
     });
   }
+
+  drawLabelColumn(leftGems, x+labelColW-W*0.008, 'right');
+  drawLabelColumn(rightGems, x+w-labelColW+W*0.008, 'left');
 }
 
 registerChart('geo_rijnmond',{label:'Geo Rijnmond',draw:function(ctx,d,x,y,w,h,O){drawGeoMap('rijnmond',ctx,d,x,y,w,h,O);}});
