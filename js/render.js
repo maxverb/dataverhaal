@@ -70,8 +70,8 @@ function draw(){
   const eyebrow=document.getElementById('eyebrow').value;
   const title=document.getElementById('ttl').value;
   const subtitle=document.getElementById('sub').value;
-  const gridStyle=(document.getElementById('fg-grid-style')||{}).value||'dashed';
-  const showGrid=gridStyle!=='none';
+  const gridStyle='dashed';
+  const showGrid=true;
   const showVal=document.getElementById('fg-val').checked;
   const showXL=document.getElementById('fg-xl').checked;
   const showPctChg=(document.getElementById('fg-pctchg')||{}).checked||false;
