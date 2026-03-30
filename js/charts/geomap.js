@@ -1,17 +1,18 @@
-// Geographic map chart — renders actual gemeente shapes on canvas
+// Geographic choropleth map — renders real CBS gemeente boundaries
 
 function drawGeoMap(region,ctx,data,x,y,w,h,O){
   const {showVal,W,p,cols}=O;
   const ci=cols[0]||0;
-  const gems=GEO_DATA[region];
-  const bounds=GEO_BOUNDS[region];
-  if(!gems||!bounds)return;
+  const reg=GEO_REGIONS[region];
+  if(!reg)return;
+  const [minLon,maxLon,minLat,maxLat]=reg.b;
+  const gems=reg.g;
 
-  // Data lookup
+  // Data lookup (fuzzy)
   const lookup={};
   data.forEach(d=>{
     let key=d.label.trim().toLowerCase();
-    if(MAP_ALIASES[key]) key=MAP_ALIASES[key].toLowerCase();
+    if(GEO_ALIASES[key]) key=GEO_ALIASES[key].toLowerCase();
     lookup[key]=d.values[ci]||0;
   });
 
@@ -20,82 +21,75 @@ function drawGeoMap(region,ctx,data,x,y,w,h,O){
   const maxV=vals.length?Math.max(...vals):1;
   const range=maxV-minV||1;
 
-  // Projection: lon/lat → canvas coords
-  const mapH=h*0.85;
-  const lonR=bounds.maxLon-bounds.minLon;
-  const latR=bounds.maxLat-bounds.minLat;
-  const scale=Math.min(w/lonR,mapH/latR)*0.92;
+  // Projection
+  const mapH=h*0.84;
+  const lonR=maxLon-minLon, latR=maxLat-minLat;
+  const scale=Math.min(w/lonR,mapH/latR)*0.94;
   const offX=x+(w-lonR*scale)/2;
   const offY=y+(mapH-latR*scale)/2;
+  const px=lon=>offX+(lon-minLon)*scale;
+  const py=lat=>offY+(maxLat-lat)*scale;
 
-  function projX(lon){return offX+(lon-bounds.minLon)*scale;}
-  function projY(lat){return offY+(bounds.maxLat-lat)*scale;} // flip Y
+  // Color interpolation
+  const r1=parseInt(p.acc.slice(1,3),16),g1=parseInt(p.acc.slice(3,5),16),b1=parseInt(p.acc.slice(5,7),16);
+  const bgHex=p.bg.length>=7?p.bg:'#f8f9fc';
+  const r0=parseInt(bgHex.slice(1,3),16),g0=parseInt(bgHex.slice(3,5),16),b0=parseInt(bgHex.slice(5,7),16);
 
-  // Parse accent color
-  const r1=parseInt(p.acc.slice(1,3),16);
-  const g1=parseInt(p.acc.slice(3,5),16);
-  const b1=parseInt(p.acc.slice(5,7),16);
-  const bgR=parseInt(p.bg.length>=7?p.bg.slice(1,3):'f8',16);
-  const bgG=parseInt(p.bg.length>=7?p.bg.slice(3,5):'f9',16);
-  const bgB=parseInt(p.bg.length>=7?p.bg.slice(5,7):'fc',16);
-
-  // Draw gemeente shapes
+  // Draw gemeenten
   gems.forEach(gem=>{
-    const key=gem.name.toLowerCase();
+    let key=gem.n.toLowerCase();
+    if(GEO_ALIASES[key]) key=GEO_ALIASES[key].toLowerCase();
     const val=lookup[key];
     const hasData=val!==undefined;
 
+    // Draw polygon
     ctx.beginPath();
-    gem.path.forEach(([lon,lat],i)=>{
-      const px=projX(lon),py=projY(lat);
-      if(i===0)ctx.moveTo(px,py);else ctx.lineTo(px,py);
+    gem.p.forEach(([lon,lat],i)=>{
+      if(i===0) ctx.moveTo(px(lon),py(lat));
+      else ctx.lineTo(px(lon),py(lat));
     });
     ctx.closePath();
 
-    // Fill
     if(hasData){
-      const t=(val-minV)/range;
-      const r=Math.round(bgR+(r1-bgR)*t);
-      const g=Math.round(bgG+(g1-bgG)*t);
-      const b=Math.round(bgB+(b1-bgB)*t);
+      const t=Math.max(0.08,(val-minV)/range); // min 8% so it's visible
+      const r=Math.round(r0+(r1-r0)*t);
+      const g=Math.round(g0+(g1-g0)*t);
+      const b=Math.round(b0+(b1-b0)*t);
       ctx.fillStyle=`rgb(${r},${g},${b})`;
     } else {
-      ctx.fillStyle=p.muted+'20';
+      ctx.fillStyle=p.muted+'15';
     }
     ctx.fill();
-
-    // Border
-    ctx.strokeStyle=p.muted+'50';
-    ctx.lineWidth=Math.max(1,W*0.001);
+    ctx.strokeStyle=p.muted+'40';
+    ctx.lineWidth=Math.max(1,W*0.0008);
     ctx.stroke();
 
-    // Label
-    const cx=gem.path.reduce((s,pt)=>s+pt[0],0)/gem.path.length;
-    const cy2=gem.path.reduce((s,pt)=>s+pt[1],0)/gem.path.length;
-    const sx=projX(cx),sy=projY(cy2);
+    // Label + value at centroid
+    const cx2=gem.p.reduce((s,pt)=>s+pt[0],0)/gem.p.length;
+    const cy2=gem.p.reduce((s,pt)=>s+pt[1],0)/gem.p.length;
+    const sx=px(cx2), sy=py(cy2);
 
-    const sz=Math.min(W*0.013,scale*0.02);
-    ctx.font=`600 ${sz}px Barlow`;
-    const dark=hasData&&((val-minV)/range)>0.5;
-    ctx.fillStyle=dark?'#fff':p.text;
-    ctx.textAlign='center';ctx.textBaseline='middle';
+    // Only show labels if there's enough space (region not too big)
+    if(gems.length<=50){
+      const sz=Math.max(Math.min(W*0.012, scale*0.015),8);
+      ctx.font=`600 ${sz}px Barlow`;
+      const dark=hasData&&((val-minV)/range)>0.5;
+      ctx.fillStyle=dark?'#fff':p.text;
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      let lbl=gem.n;
+      if(lbl.length>15) lbl=lbl.replace(/aan den |aan de /g,'a/d ');
+      ctx.fillText(trunc(ctx,lbl,scale*lonR*0.08),sx,sy-(hasData&&showVal?sz*0.55:0));
 
-    let lbl=gem.name;
-    if(lbl.length>14) lbl=lbl.replace(/aan den |aan de /g,'a/d ');
-    ctx.fillText(trunc(ctx,lbl,scale*0.06),sx,sy-(hasData&&showVal?sz*0.6:0));
-
-    if(hasData&&showVal){
-      const vsz=sz*0.8;
-      ctx.font=`400 ${vsz}px Barlow`;
-      ctx.fillStyle=dark?'rgba(255,255,255,0.8)':p.muted;
-      ctx.fillText(fmtN(val),sx,sy+sz*0.6);
+      if(hasData&&showVal){
+        ctx.font=`400 ${sz*0.85}px Barlow`;
+        ctx.fillStyle=dark?'rgba(255,255,255,0.85)':p.muted;
+        ctx.fillText(fmtN(val),sx,sy+sz*0.55);
+      }
     }
   });
 
-  // Legend
-  const legY=y+h*0.88;
-  const legW=w*0.5;
-  const legH=W*0.012;
+  // Legend bar
+  const legY=y+h*0.88, legW=w*0.5, legH=W*0.012;
   const legX=x+(w-legW)/2;
   const gr=ctx.createLinearGradient(legX,0,legX+legW,0);
   gr.addColorStop(0,p.bg);gr.addColorStop(1,p.acc);
@@ -104,11 +98,12 @@ function drawGeoMap(region,ctx,data,x,y,w,h,O){
   const lsz=W*0.012;
   ctx.font=`500 ${lsz}px Barlow`;ctx.fillStyle=p.muted;
   ctx.textAlign='left';ctx.textBaseline='top';
-  ctx.fillText(fmtN(minV),legX,legY+legH+2);
+  ctx.fillText(fmtN(minV),legX,legY+legH+3);
   ctx.textAlign='right';
-  ctx.fillText(fmtN(maxV),legX+legW,legY+legH+2);
+  ctx.fillText(fmtN(maxV),legX+legW,legY+legH+3);
 }
 
-registerChart('geo_rijnmond',{label:'Geo Rijnmond',draw:function(ctx,data,x,y,w,h,O){drawGeoMap('rijnmond',ctx,data,x,y,w,h,O);}});
-registerChart('geo_west',{label:'Geo West',draw:function(ctx,data,x,y,w,h,O){drawGeoMap('west',ctx,data,x,y,w,h,O);}});
-registerChart('geo_zh',{label:'Geo Z-H',draw:function(ctx,data,x,y,w,h,O){drawGeoMap('zuidholland',ctx,data,x,y,w,h,O);}});
+registerChart('geo_rijnmond',{label:'Geo Rijnmond',draw:function(ctx,d,x,y,w,h,O){drawGeoMap('rijnmond',ctx,d,x,y,w,h,O);}});
+registerChart('geo_west',{label:'Geo West',draw:function(ctx,d,x,y,w,h,O){drawGeoMap('west',ctx,d,x,y,w,h,O);}});
+registerChart('geo_zh',{label:'Geo Z-H',draw:function(ctx,d,x,y,w,h,O){drawGeoMap('zuidholland',ctx,d,x,y,w,h,O);}});
+registerChart('geo_nl',{label:'Geo NL',draw:function(ctx,d,x,y,w,h,O){drawGeoMap('nederland',ctx,d,x,y,w,h,O);}});
