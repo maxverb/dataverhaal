@@ -18,6 +18,66 @@
   <span class="tb-sub">dataverhaal.nl</span>
   <div class="tb-sp"></div>
   <span class="tb-sub" id="tb-updated"></span>
+  <button class="btn btn-sm" onclick="document.getElementById('help-modal').style.display='flex'" style="font-size:11px">? Handleiding</button>
+</div>
+
+<!-- HELP MODAL -->
+<div id="help-modal" style="display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.7);align-items:center;justify-content:center" onclick="if(event.target===this)this.style.display='none'">
+<div style="background:var(--p);border-radius:8px;max-width:640px;max-height:80vh;overflow-y:auto;padding:24px;color:var(--pt);font-family:Barlow,sans-serif;font-size:13px;line-height:1.6">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+<span style="font-family:'Barlow Condensed';font-size:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ac)">Handleiding</span>
+<button onclick="document.getElementById('help-modal').style.display='none'" style="background:none;border:none;color:var(--pt);font-size:18px;cursor:pointer">✕</button>
+</div>
+
+<p><b>Data plakken</b><br>
+Plak tab-gescheiden of komma-gescheiden data. Eerste kolom = label, rest = waarden.<br>
+<code>Amsterdam	45	12</code><br>
+<code>Rotterdam	38	15</code><br>
+HTML-tabellen (<code>&lt;table&gt;</code>) worden ook herkend. Header-rij wordt automatisch overgeslagen.</p>
+
+<p><b>Datums</b><br>
+Datums als <code>01/03/2026</code> of <code>2026-03-01</code> worden automatisch afgekort naar <code>1 mrt</code>.</p>
+
+<p><b>Multi-kolom</b><br>
+Bij meerdere kolommen verschijnen checkboxes om te kiezen welke kolommen getoond worden. ↑↓ knoppen om volgorde te wisselen.</p>
+
+<p><b>Grafiektypen</b><br>
+Bar, Horiz., Lijn, Donut, Area — hoofdknoppen.<br>
+"Meer typen" dropdown: Waterval, Heatmap, Gestapeld, Area+, Kaarten, Tabel, Bump, Dual-as, Cumulatief, Geo-kaarten.</p>
+
+<p><b>Geo-kaarten</b><br>
+Plak gemeentenamen + waarde. Kies Geo Rijnmond / West / Z-H / NL.<br>
+Naamherkenning: "Den Haag", "Rotterdam", "Voorne aan Zee" etc.<br>
+Labels passen automatisch — kleine gemeenten krijgen afkortingen of worden overgeslagen.<br>
+Gebruik "X-as labels" toggle om labels aan/uit te zetten.</p>
+
+<p><b>Kaarten (cartogram)</b><br>
+Dezelfde data maar als blokjes-grid. Kies Kaart Rijnmond / West / Z-H / NL.</p>
+
+<p><b>Filters</b><br>
+• Waarden — getallen op bars/punten<br>
+• X-as labels — labels onder de grafiek / op de kaart<br>
+• % verandering — toont +/-% tussen datapunten<br>
+• Trendlijn — lineaire regressielijn<br>
+• Voortschr. gem. — 7-punts gemiddelde<br>
+• Gemiddelde-lijn — horizontale lijn op het gemiddelde<br>
+• Referentielijn — eigen waarde + label als gestreepte lijn</p>
+
+<p><b>Annotaties</b><br>
+Typ in het annotatie-veld: <code>3:Tekst hier</code> voor een pijl+tooltip bij rij 3. Meerdere: <code>3:Storing;7:Piek</code></p>
+
+<p><b>Custom kleur</b><br>
+Colorpicker of hex-code overschrijft de eerste kleur van het palet.</p>
+
+<p><b>Export</b><br>
+📋 Kopieer — plak direct in Slack/Mail/Keynote<br>
+⬇ Download PNG — sla op als bestand<br>
+🔗 Link — kopieer een deellink met alle instellingen</p>
+
+<p><b>Configuraties</b><br>
+Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browser (localStorage).</p>
+
+</div>
 </div>
 
 <div class="app">
@@ -196,7 +256,7 @@
 <script src="js/charts/table.js?v=10"></script>
 <script src="js/charts/cumulative.js?v=10"></script>
 <script src="js/charts/map.js?v=11"></script>
-<script src="js/charts/geomap.js?v=12"></script>
+<script src="js/charts/geomap.js?v=14"></script>
 <script src="js/suggest.js?v=4"></script>
 <script src="js/overlays.js?v=10"></script>
 <script src="js/interact.js?v=8"></script>
