@@ -1,6 +1,7 @@
 // ── ARTICLE SCRAPER — regiogroei CMS (Rijnmond/West/DHFM) ──
 
 const SCRAPER_PROXIES=[
+  url=>`https://dataverhaal-scraper.maxverb.workers.dev/?url=${encodeURIComponent(url)}`,
   url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
   url=>`https://corsproxy.io/?${encodeURIComponent(url)}`,
 ];
