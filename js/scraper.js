@@ -159,6 +159,14 @@ function parseArticle(html,sourceUrl){
       rawParts.push('[EMBED TWITTER]'+(tweetId?' https://x.com/i/status/'+tweetId:''));
       return;
     }
+    // YouTube
+    if(lc.querySelector('[__component="api.api-youtube"], [type="youtube"]')){
+      const ytIframe=lc.querySelector('iframe[src*="youtube"]');
+      const ytMatch=ytIframe?.src?.match(/\/embed\/([A-Za-z0-9_-]+)/);
+      const ytId=ytMatch?ytMatch[1]:'';
+      rawParts.push('[EMBED YOUTUBE]'+(ytId?' https://www.youtube.com/watch?v='+ytId:''));
+      return;
+    }
     // Related articles (Lees ook)
     const related=lc.querySelector('.news-category-list');
     if(related){
@@ -249,6 +257,21 @@ function parseArticle(html,sourceUrl){
   twMatches.forEach(m=>{
     const url=`https://x.com/i/status/${m[1]}`;
     if(!twFound.has(url)){twFound.add(url);addEmbed('twitter',url,'Twitter/X post');}
+  });
+
+  // YouTube — DOM + NUXT fallback
+  const ytFound=new Set();
+  root.querySelectorAll('[__component="api.api-youtube"], [type="youtube"]').forEach(el=>{
+    const iframe=el.querySelector('iframe[src*="youtube"]');
+    const m=iframe?.src?.match(/\/embed\/([A-Za-z0-9_-]+)/);
+    if(m){const url=`https://www.youtube.com/watch?v=${m[1]}`;ytFound.add(url);addEmbed('youtube',url,'YouTube video');}
+    else addEmbed('youtube','youtube embed gedetecteerd','');
+  });
+  // Raw HTML fallback
+  const ytMatches=[...decodedHtml.matchAll(/youtube\.com\/embed\/([A-Za-z0-9_-]+)/g)];
+  ytMatches.forEach(m=>{
+    const url=`https://www.youtube.com/watch?v=${m[1]}`;
+    if(!ytFound.has(url)){ytFound.add(url);addEmbed('youtube',url,'YouTube video');}
   });
 
   // ── ARTIKEL-ID uit URL ──
