@@ -124,36 +124,29 @@ function parseArticle(html,sourceUrl){
     addEmbed('instagram','instagram embed gedetecteerd','Embed niet volledig geladen');
   });
 
-  // Audio — Blue Billywig player (regiogroei)
-  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>{
-    const audioEl=el.querySelector('audio');
-    const audioSrc=audioEl?.src||audioEl?.getAttribute('src')||'';
+  // Audio/Video — Blue Billywig player (regiogroei)
+  function parseBBMedia(el,type){
+    const mediaEl=el.querySelector(type==='audio'?'audio':'video');
+    const mediaSrc=mediaEl?.src||mediaEl?.getAttribute('src')||'';
+    // Extract numeric media ID from URL like .../2175880_audio-mp3.mp3 or .../1234567_video.mp4
+    const idMatch=mediaSrc.match(/\/(\d{5,})_/);
+    const mediaId=idMatch?idMatch[1]:'';
     const dataSid=el.querySelector('[data-sid]')?.getAttribute('data-sid')||'';
-    const poster=el.querySelector('.bb-poster-image')?.src||'';
+    const poster=el.querySelector('.bb-poster-image')?.src||el.querySelector('img.bb-poster-image')?.src||'';
     const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||'';
     const duration=el.querySelector('[data-duration]')?.getAttribute('data-duration');
     const durStr=duration?Math.floor(duration/60)+'m'+('0'+duration%60).slice(-2)+'s':'';
-    const parts=[desc];
-    if(audioSrc) parts.push('URL: '+audioSrc);
-    if(dataSid) parts.push('ID: '+dataSid);
+    const parts=[];
+    if(desc) parts.push(desc);
+    if(mediaId) parts.push('Media-ID: '+mediaId);
+    if(mediaSrc) parts.push('URL: '+mediaSrc);
+    if(dataSid) parts.push('SID: '+dataSid);
     if(durStr) parts.push('Duur: '+durStr);
     if(poster) parts.push('Thumbnail: '+poster);
-    addEmbed('audio',parts.join('\n'),desc||'Audio fragment');
-  });
-
-  // Video — Blue Billywig or native
-  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>{
-    const videoEl=el.querySelector('video');
-    const videoSrc=videoEl?.src||videoEl?.querySelector('source')?.src||'';
-    const dataSid=el.querySelector('[data-sid]')?.getAttribute('data-sid')||'';
-    const poster=el.querySelector('.bb-poster-image')?.src||'';
-    const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||'';
-    const parts=[desc];
-    if(videoSrc) parts.push('URL: '+videoSrc);
-    if(dataSid) parts.push('ID: '+dataSid);
-    if(poster) parts.push('Thumbnail: '+poster);
-    addEmbed('video',parts.join('\n'),desc||'Video fragment');
-  });
+    addEmbed(type,parts.join('\n'),desc||type+' fragment');
+  }
+  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>parseBBMedia(el,'audio'));
+  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>parseBBMedia(el,'video'));
 
   // YouTube
   root.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach(el=>{
@@ -185,7 +178,33 @@ function parseArticle(html,sourceUrl){
 
 function renderTable(a){
   const out=document.getElementById('scrape-results');
-  let html=`<table class="sr-table">
+
+  // ── STATS DASHBOARD ──
+  const kopWoorden=a.headline?a.headline.split(/\s+/).length:0;
+  const introWoorden=a.intro?a.intro.split(/\s+/).length:0;
+  const tekstWoorden=a.bodyText?a.bodyText.replace(/\[TUSSENKOP\][^\n]*/g,'').split(/\s+/).filter(w=>w).length:0;
+  const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
+  const alineas=a.bodyText.split(/\n\n+/).filter(p=>p.trim()&&!p.includes('[TUSSENKOP]')).length;
+  const audioCount=a.embeds.filter(e=>e.type==='audio').length;
+  const videoCount=a.embeds.filter(e=>e.type==='video').length;
+  const embedCount=a.embeds.filter(e=>e.type!=='audio'&&e.type!=='video').length;
+
+  let html=`<div class="sr-stats">`;
+  html+=`<span>${kopWoorden} wrd kop</span>`;
+  html+=`<span>${introWoorden} wrd intro</span>`;
+  html+=`<span>${tekstWoorden} wrd tekst</span>`;
+  html+=`<span>${alineas} alinea's</span>`;
+  html+=`<span>${tussenkoppen} tussenkoppen</span>`;
+  html+=`<span>${a.images.length} afbeeldingen</span>`;
+  html+=`<span>${a.links.length} links</span>`;
+  html+=`<span>${a.related.length} lees ook</span>`;
+  if(audioCount) html+=`<span>${audioCount} audio</span>`;
+  if(videoCount) html+=`<span>${videoCount} video</span>`;
+  if(embedCount) html+=`<span>${embedCount} embeds</span>`;
+  html+=`</div>`;
+
+  // ── TABLE ──
+  html+=`<table class="sr-table">
     <thead><tr><th>Element</th><th>Inhoud</th><th></th></tr></thead><tbody>`;
   html+=srRow('Kop',a.headline);
   if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
