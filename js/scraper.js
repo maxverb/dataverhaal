@@ -1,4 +1,4 @@
-// ── ARTICLE SCRAPER ──────────────────────────────────────────────────────
+// ── ARTICLE SCRAPER — optimized for regiogroei CMS (Rijnmond/West/DHFM) ──
 
 const SCRAPER_PROXIES=[
   url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -30,144 +30,146 @@ function scrapeFromPaste(){
 function parseArticle(html,sourceUrl){
   const doc=new DOMParser().parseFromString(html,'text/html');
 
-  // ── Find main content container ──
-  // Priority: Rijnmond/West specific → generic article selectors
-  const contentEl=
-    doc.querySelector('.article-content')||
-    doc.querySelector('.layout-components-group.article-content')||
-    doc.querySelector('[class*="article-content"]')||
-    doc.querySelector('.article__body')||
-    doc.querySelector('.article-body')||
-    doc.querySelector('[class*="article__content"]')||
-    doc.querySelector('article')||
-    doc.querySelector('main')||
-    doc.body;
+  // Find main content — regiogroei uses .article-content
+  const root=doc.querySelector('.article-content')||doc.querySelector('article')||doc.querySelector('main')||doc.body;
 
-  // ── HEADLINE ──
-  const headline=
-    doc.querySelector('h1')?.textContent?.trim()||
+  // ── KOP ──
+  const headline=(root.querySelector('h1.heading')||root.querySelector('h1')||doc.querySelector('h1'))?.textContent?.trim()||
     doc.querySelector('meta[property="og:title"]')?.content||'';
 
-  // ── INTRO ──
-  const intro=
-    doc.querySelector('.article__intro')?.textContent?.trim()||
-    doc.querySelector('[class*="intro"]')?.textContent?.trim()||
-    doc.querySelector('[class*="lead"]')?.textContent?.trim()||
-    doc.querySelector('meta[property="og:description"]')?.content||
-    doc.querySelector('meta[name="description"]')?.content||'';
+  // ── AUTEUR ──
+  const author=(root.querySelector('.groei-wa-author-links a')||root.querySelector('[class*="author"] a')||doc.querySelector('meta[name="author"]'))?.textContent?.trim()||
+    doc.querySelector('meta[name="author"]')?.content||'';
 
-  // ── BODY TEXT — all text content from paragraphs within content container ──
-  const paragraphs=[];
-  contentEl.querySelectorAll('p').forEach(p=>{
-    const t=p.textContent.trim();
-    if(t.length>15) paragraphs.push(t);
+  // ── DATUM ──
+  const dateEl=root.querySelector('.groei-wa-article-info');
+  const pubDate=dateEl?dateEl.textContent.replace(/\s+/g,' ').trim():'';
+
+  // ── INTRO — first highlight text block ──
+  const introEl=root.querySelector('.layout-component.highlight .api-text .text')||
+    root.querySelector('.layout-component.highlight .text')||
+    root.querySelector('[class*="intro"]');
+  const intro=introEl?.textContent?.trim()||
+    doc.querySelector('meta[property="og:description"]')?.content||'';
+
+  // ── TEKST — all api-text .text blocks (excluding the intro) ──
+  const textBlocks=[];
+  root.querySelectorAll('.api-text .text, [__component="api.api-text"] .text').forEach(el=>{
+    if(el===introEl) return; // skip intro
+    const t=el.textContent.trim();
+    if(t.length>10) textBlocks.push(t);
   });
-  // Also grab text from divs that might contain article text (Rijnmond uses divs)
-  if(paragraphs.length<2){
-    contentEl.querySelectorAll('div').forEach(div=>{
-      // Skip containers that have many child elements (layout divs)
-      if(div.children.length>3) return;
-      const t=div.textContent.trim();
-      if(t.length>30&&!paragraphs.includes(t)) paragraphs.push(t);
+  // Fallback: all p tags if no api-text found
+  if(!textBlocks.length){
+    root.querySelectorAll('p').forEach(p=>{
+      const t=p.textContent.trim();
+      if(t.length>20) textBlocks.push(t);
     });
   }
-  const bodyText=paragraphs.join('\n\n');
+  const bodyText=textBlocks.join('\n\n');
 
-  // ── IMAGES — search everywhere in content container + og:image ──
+  // ── TUSSENKOPPEN ──
+  const subheadings=[];
+  root.querySelectorAll('.modern-header .heading, h2.heading, h2').forEach(el=>{
+    const t=el.textContent.trim();
+    if(t&&t!==headline) subheadings.push(t);
+  });
+
+  // ── AFBEELDINGEN — URLs + beschrijving ──
   const images=[];
-  function addImg(src){
+  function addImg(src,desc){
     if(!src||src.startsWith('data:')) return;
+    // Clean up regiogroei image URLs — use data-src for best quality
     if(src.startsWith('/')&&sourceUrl!=='(geplakt)'){try{src=new URL(sourceUrl).origin+src;}catch(e){}}
-    if(!images.includes(src)) images.push(src);
+    if(!images.some(i=>i.src===src)) images.push({src,desc:desc||''});
   }
+  // og:image first
   const ogImg=doc.querySelector('meta[property="og:image"]');
-  if(ogImg?.content) addImg(ogImg.content);
-  contentEl.querySelectorAll('img').forEach(el=>{
-    addImg(el.src||el.getAttribute('data-src')||el.getAttribute('data-lazy-src')||el.getAttribute('srcset')?.split(' ')[0]||'');
-  });
-  // Also check outside content container for hero images
-  doc.querySelectorAll('.article-header img, .hero img, [class*="hero"] img, [class*="header"] img').forEach(el=>{
-    addImg(el.src||el.getAttribute('data-src')||'');
+  if(ogImg?.content) addImg(ogImg.content,'OG afbeelding');
+  // Article images with figcaptions
+  root.querySelectorAll('[__component="api.api-image"], figure.responsive-image').forEach(fig=>{
+    const img=fig.querySelector('img');
+    const src=img?.getAttribute('data-src')||img?.src||'';
+    const desc=fig.querySelector('.description')?.textContent?.trim()||img?.alt||'';
+    const cr=fig.querySelector('.copyright')?.textContent?.trim()||'';
+    addImg(src,desc+(cr?' '+cr:''));
   });
 
-  // ── EMBEDS — everything that's not plain text/images ──
+  // ── EMBEDS — Instagram, YouTube, Twitter, video, audio ──
   const embeds=[];
-  function addEmbed(type,val){
-    if(val&&!embeds.some(e=>e.val===val)) embeds.push({type,val});
+  function addEmbed(type,val,detail){
+    if(val&&!embeds.some(e=>e.val===val)) embeds.push({type,val,detail:detail||''});
   }
 
-  // Search in content container AND the whole document (embeds can be outside)
-  const searchRoots=[contentEl,doc.body];
-  searchRoots.forEach(root=>{
-    // iframes
-    root.querySelectorAll('iframe').forEach(el=>{
-      const src=el.src||el.getAttribute('data-src')||'';
-      if(!src) return;
-      let type='iframe';
-      if(src.includes('youtube')||src.includes('youtu.be')) type='youtube';
-      else if(src.includes('vimeo')) type='vimeo';
-      else if(src.includes('twitter')||src.includes('x.com')) type='twitter';
-      else if(src.includes('instagram')) type='instagram';
-      else if(src.includes('tiktok')) type='tiktok';
-      else if(src.includes('soundcloud')||src.includes('spotify')) type='audio';
-      else if(src.includes('facebook')) type='facebook';
-      addEmbed(type,src);
-    });
-
-    // Blockquotes (Twitter/Instagram embeds)
-    root.querySelectorAll('blockquote').forEach(el=>{
-      const cls=(el.className||'').toLowerCase();
-      const html=el.innerHTML||'';
-      if(cls.includes('twitter')||cls.includes('tweet')||html.includes('twitter.com')||html.includes('x.com')){
-        const link=el.querySelector('a[href*="twitter.com"], a[href*="x.com"]');
-        addEmbed('twitter',link?.href||el.textContent.trim().slice(0,200));
-      } else if(cls.includes('instagram')||html.includes('instagram.com')){
-        const link=el.querySelector('a[href*="instagram.com"]');
-        addEmbed('instagram',link?.href||el.textContent.trim().slice(0,200));
-      } else if(cls.includes('tiktok')||html.includes('tiktok.com')){
-        const link=el.querySelector('a[href*="tiktok.com"]');
-        addEmbed('tiktok',link?.href||'tiktok embed');
-      }
-    });
-
-    // Video/audio elements
-    root.querySelectorAll('video').forEach(el=>{
-      const src=el.src||el.querySelector('source')?.src||'';
-      addEmbed('video',src||'video element');
-    });
-    root.querySelectorAll('audio').forEach(el=>{
-      const src=el.src||el.querySelector('source')?.src||'';
-      addEmbed('audio',src||'audio element');
-    });
-
-    // Social embed scripts/containers (Rijnmond uses these)
-    root.querySelectorAll('[class*="embed"], [class*="social"], [data-type]').forEach(el=>{
-      const dataType=(el.getAttribute('data-type')||'').toLowerCase();
-      const cls=(el.className||'').toLowerCase();
-      if(dataType.includes('instagram')||cls.includes('instagram')){
-        const link=el.querySelector('a[href*="instagram.com"]');
-        addEmbed('instagram',link?.href||'instagram embed');
-      } else if(dataType.includes('twitter')||cls.includes('twitter')){
-        const link=el.querySelector('a[href*="twitter.com"], a[href*="x.com"]');
-        addEmbed('twitter',link?.href||'twitter embed');
-      } else if(dataType.includes('youtube')||cls.includes('youtube')){
-        addEmbed('youtube',el.querySelector('iframe')?.src||'youtube embed');
-      }
-    });
+  // Instagram — regiogroei uses __component="api.api-instagram"
+  root.querySelectorAll('[__component="api.api-instagram"], [type="instagram"]').forEach(el=>{
+    const iframe=el.querySelector('iframe');
+    const src=iframe?.src||'';
+    // Extract the reel/post URL from the iframe src
+    const match=src.match(/instagram\.com\/(reel|p)\/([^/]+)/);
+    const url=match?`https://www.instagram.com/${match[1]}/${match[2]}/`:src;
+    addEmbed('instagram',url,'Instagram embed');
   });
 
-  return {headline,intro,bodyText,images,embeds};
+  // YouTube
+  root.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach(el=>{
+    addEmbed('youtube',el.src,'YouTube video');
+  });
+
+  // Twitter/X
+  root.querySelectorAll('blockquote[class*="twitter"], [class*="twitter-tweet"]').forEach(el=>{
+    const link=el.querySelector('a[href*="twitter.com"], a[href*="x.com"]');
+    addEmbed('twitter',link?.href||'twitter embed','Twitter/X post');
+  });
+
+  // TikTok
+  root.querySelectorAll('blockquote[class*="tiktok"], [class*="tiktok"]').forEach(el=>{
+    const link=el.querySelector('a[href*="tiktok.com"]');
+    addEmbed('tiktok',link?.href||'tiktok embed','TikTok video');
+  });
+
+  // Generic video/audio
+  root.querySelectorAll('video').forEach(el=>{
+    addEmbed('video',el.src||el.querySelector('source')?.src||'video','Video');
+  });
+  root.querySelectorAll('audio').forEach(el=>{
+    addEmbed('audio',el.src||el.querySelector('source')?.src||'audio','Audio');
+  });
+
+  // Any remaining iframes
+  root.querySelectorAll('iframe').forEach(el=>{
+    const src=el.src||'';
+    if(!src||embeds.some(e=>e.val===src)) return;
+    if(src.includes('instagram')||src.includes('youtube')||src.includes('twitter')) return;
+    addEmbed('iframe',src,'Overig embed');
+  });
+
+  // ── GERELATEERDE ARTIKELEN ──
+  const related=[];
+  root.querySelectorAll('.news-category-list .groei-wa-news-article a, .news-list-item a').forEach(a=>{
+    const title=a.querySelector('h3')?.textContent?.trim();
+    let href=a.getAttribute('href')||'';
+    if(href.startsWith('/')&&sourceUrl!=='(geplakt)'){try{href=new URL(sourceUrl).origin+href;}catch(e){}}
+    if(title&&!related.some(r=>r.title===title)) related.push({title,href});
+  });
+
+  return {headline,author,pubDate,intro,bodyText,subheadings,images,embeds,related};
 }
 
 function renderTable(a){
   const out=document.getElementById('scrape-results');
   let html=`<table class="sr-table">
     <thead><tr><th>Element</th><th>Inhoud</th><th></th></tr></thead><tbody>`;
+
   html+=srRow('Kop',a.headline);
+  if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
   html+=srRow('Intro',a.intro);
+  if(a.subheadings.length) html+=srRow('Tussenkoppen',a.subheadings.join(' | '));
   html+=srRow('Tekst',a.bodyText);
-  html+=srRow('Afbeeldingen',a.images.join('\n'));
-  a.embeds.forEach(e=>{ html+=srRow(e.type.toUpperCase(),e.val); });
+  html+=srRow('Afbeeldingen',a.images.map(i=>i.src+(i.desc?' — '+i.desc:'')).join('\n'));
+  a.embeds.forEach(e=>html+=srRow(e.type.toUpperCase(),e.val));
+  if(a.related.length) html+=srRow('Gerelateerd',a.related.map(r=>r.title+' → '+r.href).join('\n'));
+
   html+=`</tbody></table>`;
   out.innerHTML=html;
 }
@@ -175,7 +177,7 @@ function renderTable(a){
 function srRow(label,content){
   if(!content) return `<tr class="sr-row"><td class="sr-td-label">${esc(label)}</td><td class="sr-td-content sr-empty">—</td><td class="sr-td-copy"></td></tr>`;
   const id='sr-'+Math.random().toString(36).slice(2,8);
-  const short=content.length>300?content.slice(0,300)+'…':content;
+  const short=content.length>400?content.slice(0,400)+'…':content;
   return `<tr class="sr-row">
     <td class="sr-td-label">${esc(label)}</td>
     <td class="sr-td-content" id="${id}">${esc(short).replace(/\n/g,'<br>')}</td>
