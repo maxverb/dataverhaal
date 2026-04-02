@@ -184,32 +184,14 @@ function parseArticle(html,sourceUrl){
     addEmbed('instagram','instagram embed gedetecteerd','Embed niet volledig geladen');
   });
 
-  // Audio/Video — Blue Billywig player (regiogroei)
-  // First: scan entire raw HTML for ALL BB media IDs (works regardless of rendering)
-  const bbMediaIds=[];
-  const bbPatterns=[
-    /sourceid_string_(\d+)/g,
-    /\/(\d{7,})_(?:audio|video)[^"']*/g,
-    /mediaclip\/(\d+)/g,
-    /data-src="[^"]*\/(\d{7,})_/g,
-  ];
-  bbPatterns.forEach(p=>{let m;while((m=p.exec(rawHtml))!==null){if(!bbMediaIds.includes(m[1]))bbMediaIds.push(m[1]);}});
-
-  // Also find all BB CDN URLs
-  const bbUrls=[];
-  const urlPattern=/https?:\/\/[^"'\s]*bluebillywig[^"'\s]*\.mp[34][^"'\s]*/g;
-  let um;while((um=urlPattern.exec(rawHtml))!==null){if(!bbUrls.includes(um[0]))bbUrls.push(um[0]);}
-  // Also regiogroei CDN
-  const rgUrlPattern=/https?:\/\/[^"'\s]*regiogroei[^"'\s]*\.mp[34][^"'\s]*/g;
-  while((um=rgUrlPattern.exec(rawHtml))!==null){if(!bbUrls.includes(um[0]))bbUrls.push(um[0]);}
-
-  // Extract article ID from source URL as ultimate fallback for media IDs
+  // ── ARTIKEL-ID uit URL ──
   const urlArticleId=(sourceUrl.match(/\/nieuws\/(\d+)\//)||[])[1]||'';
 
-  function parseBBMedia(el,type,idx){
+  // Audio/Video — Blue Billywig player (regiogroei)
+  function parseBBMedia(el,type){
     let mediaId='', mediaSrc='', dataSid='', poster='', durStr='';
 
-    // DOM methods (work when HTML is pasted from browser)
+    // These only work when HTML is PASTED from browser (client-side rendered)
     const mediaEl=el.querySelector(type==='audio'?'audio':'video');
     if(mediaEl) mediaSrc=mediaEl.src||mediaEl.getAttribute('src')||'';
     const wrapperEl=el.querySelector('[id*="sourceid_string_"]');
@@ -219,32 +201,6 @@ function parseArticle(html,sourceUrl){
     poster=el.querySelector('.bb-poster-image')?.src||el.querySelector('img[class*="poster"]')?.src||'';
     const dur=el.querySelector('[data-duration]')?.getAttribute('data-duration');
     if(dur) durStr=Math.floor(dur/60)+'m'+('0'+dur%60).slice(-2)+'s';
-
-    // Fallback 1: pre-scanned IDs/URLs from raw HTML
-    if(!mediaId&&bbMediaIds[idx]) mediaId=bbMediaIds[idx];
-    if(!mediaSrc&&bbUrls[idx]) mediaSrc=bbUrls[idx];
-
-    // Fallback 2: try the component's own ID attribute — regiogroei sometimes uses
-    // the article ID as the BB sourceid for the audio player
-    if(!mediaId){
-      const compId=el.id||'';
-      // Search for any numeric sequence in nearby script tags or data attrs
-      const elHtml=el.outerHTML||'';
-      const numMatch=elHtml.match(/(?:sourceid|sourceId|clipid|clip_id|mediaId|media_id|playout_id)[\W]*['"]?(\d{5,})/i);
-      if(numMatch) mediaId=numMatch[1];
-    }
-
-    // Fallback 3: article URL ID — regiogroei often uses the same ID
-    if(!mediaId&&urlArticleId) mediaId=urlArticleId;
-
-    // Construct URLs from media ID
-    if(!mediaSrc&&mediaId){
-      mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_audio-mp3.mp3`;
-    }
-    // BB thumbnail URL pattern
-    if(!poster&&mediaId){
-      poster=`https://rijnmond.bbvms.com/mediaclip/${mediaId}/pthumbnail/576/324.webp`;
-    }
 
     const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
       el.querySelector('.figcaption')?.textContent?.trim()||'';
@@ -256,12 +212,11 @@ function parseArticle(html,sourceUrl){
     if(dataSid) parts.push('SID: '+dataSid);
     if(durStr) parts.push('Duur: '+durStr);
     if(poster) parts.push('Thumbnail: '+poster);
-    if(!parts.length) parts.push(type+' embed gedetecteerd');
+    if(!mediaId&&!mediaSrc) parts.push('⚠ Plak HTML broncode voor media-ID en URL');
     addEmbed(type,parts.join('\n'),desc||type+' fragment');
   }
-  let bbIdx=0;
-  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>parseBBMedia(el,'audio',bbIdx++));
-  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>parseBBMedia(el,'video',bbIdx++));
+  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>parseBBMedia(el,'audio'));
+  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>parseBBMedia(el,'video'));
 
   // YouTube
   root.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach(el=>{
@@ -288,7 +243,7 @@ function parseArticle(html,sourceUrl){
     if(title&&!related.some(r=>r.title===title)) related.push({title,href});
   });
 
-  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,rawText:rawParts.join('\n')};
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,urlArticleId,rawText:rawParts.join('\n')};
 }
 
 function renderTable(a){
@@ -323,6 +278,7 @@ function renderTable(a){
   html+=`<table class="sr-table">
     <thead><tr><th>Element</th><th>Inhoud</th><th></th></tr></thead><tbody>`;
   html+=srRow('Kop',a.headline);
+  if(a.urlArticleId) html+=srRow('Artikel-ID',a.urlArticleId);
   if(a.ogImage) html+=srRow('OG Image',a.ogImage);
   if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
   html+=srRow('Intro',a.intro);
