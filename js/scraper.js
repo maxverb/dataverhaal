@@ -131,7 +131,7 @@ function parseArticle(html,sourceUrl){
       const src=makeAbs(img?.getAttribute('data-src')||img?.src||'',sourceUrl);
       const desc=imgComp.querySelector('.description')?.textContent?.trim()||img?.alt||'';
       const cr=imgComp.querySelector('.copyright')?.textContent?.trim()||'';
-      if(src&&!src.includes('avatar.png')) rawParts.push('[AFBEELDING] '+src.split('?')[0]+(desc?' — '+desc:'')+(cr?' '+cr:''));
+      if(src&&!src.includes('avatar.png')&&!src.includes('editorAvatar')) rawParts.push('[AFBEELDING] '+src.split('?')[0]+(desc?' — '+desc:'')+(cr?' '+cr:''));
       return;
     }
     // Audio
@@ -184,7 +184,7 @@ function parseArticle(html,sourceUrl){
   const images=[];
   function addImg(src,desc){
     src=makeAbs(src,sourceUrl);
-    if(!src||src.includes('avatar.png')||src.includes('placeholder')) return;
+    if(!src||src.includes('avatar.png')||src.includes('placeholder')||src.includes('editorAvatar')) return;
     // Strip query params for cleaner URLs
     const cleanSrc=src.split('?')[0];
     // Skip if same base image as OG
@@ -208,32 +208,34 @@ function parseArticle(html,sourceUrl){
     if(val&&!embeds.some(e=>e.val===val)) embeds.push({type,val,detail:detail||''});
   }
 
-  // Instagram — try DOM first, then raw HTML regex
+  // Decode NUXT escaped slashes for all embed searches
+  const decodedHtml=rawHtml.replace(/\\u002F/g,'/');
+
+  // Instagram — try DOM first, then NUXT fallback
   const igFound=new Set();
+  let igPlaceholders=0;
   root.querySelectorAll('[__component="api.api-instagram"], [type="instagram"], .api-instagram').forEach(el=>{
     const iframe=el.querySelector('iframe');
     if(iframe?.src){
       const match=iframe.src.match(/instagram\.com\/(reel|p)\/([^/]+)/);
-      if(match){const url=`https://www.instagram.com/${match[1]}/${match[2]}/`;igFound.add(url);addEmbed('instagram',url,'Instagram embed');}
+      if(match){const url=`https://www.instagram.com/${match[1]}/${match[2]}/`;igFound.add(url);addEmbed('instagram',url,'Instagram post');}
       else{igFound.add(iframe.src);addEmbed('instagram',iframe.src,'Instagram embed');}
       return;
     }
     const link=el.querySelector('a[href*="instagram.com"]');
-    if(link){igFound.add(link.href);addEmbed('instagram',link.href,'Instagram embed');return;}
-    // Component exists but no iframe/link — mark for raw HTML fallback
-    addEmbed('instagram','instagram embed gedetecteerd','');
+    if(link){igFound.add(link.href);addEmbed('instagram',link.href,'Instagram post');return;}
+    igPlaceholders++;
   });
-  // Raw HTML fallback: search for instagram URLs in entire page
-  // NUXT data uses \u002F for / so decode first, then search
-  const decodedHtml=rawHtml.replace(/\\u002F/g,'/');
   const igMatches=[...decodedHtml.matchAll(/instagram\.com\/(reel|p)\/([A-Za-z0-9_-]+)/g)];
   igMatches.forEach(m=>{
     const url=`https://www.instagram.com/${m[1]}/${m[2]}/`;
-    if(!igFound.has(url)){igFound.add(url);addEmbed('instagram',url,'Instagram post');}
+    if(!igFound.has(url)){igFound.add(url);addEmbed('instagram',url,'Instagram post');igPlaceholders=Math.max(0,igPlaceholders-1);}
   });
+  for(let i=0;i<igPlaceholders;i++) addEmbed('instagram','instagram embed gedetecteerd','');
 
   // Twitter — DOM + NUXT fallback
   const twFound=new Set();
+  let twPlaceholders=0;
   root.querySelectorAll('[__component="api.api-twitter"], [type="twitter"]').forEach(el=>{
     const iframe=el.querySelector('iframe[data-tweet-id]');
     if(iframe){
@@ -242,7 +244,6 @@ function parseArticle(html,sourceUrl){
       twFound.add(url);addEmbed('twitter',url,'Twitter/X post');
       return;
     }
-    // Try iframe src for id param
     const iframeSrc=el.querySelector('iframe')?.src||'';
     const idMatch=iframeSrc.match(/[&?]id=(\d+)/);
     if(idMatch){
@@ -250,14 +251,16 @@ function parseArticle(html,sourceUrl){
       twFound.add(url);addEmbed('twitter',url,'Twitter/X post');
       return;
     }
-    addEmbed('twitter','twitter embed gedetecteerd','');
+    twPlaceholders++;
   });
-  // Raw HTML fallback: search for twitter/x.com status URLs
+  // Raw HTML fallback: search for twitter/x.com status URLs in NUXT data
   const twMatches=[...decodedHtml.matchAll(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/g)];
   twMatches.forEach(m=>{
     const url=`https://x.com/i/status/${m[1]}`;
-    if(!twFound.has(url)){twFound.add(url);addEmbed('twitter',url,'Twitter/X post');}
+    if(!twFound.has(url)){twFound.add(url);addEmbed('twitter',url,'Twitter/X post');twPlaceholders=Math.max(0,twPlaceholders-1);}
   });
+  // Only add placeholders for unresolved twitter embeds
+  for(let i=0;i<twPlaceholders;i++) addEmbed('twitter','twitter embed gedetecteerd','');
 
   // YouTube — DOM + NUXT fallback
   const ytFound=new Set();
