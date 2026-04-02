@@ -17,7 +17,7 @@
   <div class="tb-div"></div>
   <nav class="tb-tabs">
     <button class="tb-tab active" onclick="switchTab('grafiek',this)">Grafiek</button>
-    <button class="tb-tab" onclick="switchTab('tab2',this)">Tabblad 2</button>
+    <button class="tb-tab" onclick="switchTab('tab2',this)">Scraper</button>
     <button class="tb-tab" onclick="switchTab('tab3',this)">Tabblad 3</button>
     <button class="tb-tab" onclick="switchTab('tab4',this)">Tabblad 4</button>
   </nav>
@@ -245,11 +245,36 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 
 <!-- TAB: TABBLAD 2 -->
 <div class="tab-content" id="tab-tab2">
-  <div class="tab-empty">
-    <span class="tab-empty-icon">2</span>
-    <p>Tabblad 2</p>
-    <p style="color:var(--pm);font-size:13px">Nog geen inhoud</p>
+<div class="scraper-layout">
+  <div class="scraper-input">
+    <div class="psec">
+      <div class="sh"><span class="sl">Artikel scrapen</span></div>
+      <div class="sc">
+        <div><label>URL van artikel</label>
+          <div style="display:flex;gap:5px">
+            <input type="text" id="scrape-url" placeholder="https://www.rijnmond.nl/nieuws/..." style="flex:1">
+            <button class="btn btn-p" onclick="scrapeURL()">Ophalen</button>
+          </div>
+        </div>
+        <div id="scrape-status" style="font-size:11px;color:var(--pm)"></div>
+      </div>
+    </div>
+    <div class="psec">
+      <div class="sh" onclick="tog(this)"><span class="sl">Of plak HTML broncode</span><span class="st">▾</span></div>
+      <div class="sc hidden">
+        <textarea id="scrape-paste" placeholder="Plak hier de HTML broncode..." style="min-height:120px;font-size:11px"></textarea>
+        <button class="btn btn-sm" onclick="scrapeFromPaste()">Parseer HTML</button>
+      </div>
+    </div>
   </div>
+  <div class="scraper-output" id="scrape-results">
+    <div class="tab-empty">
+      <span class="tab-empty-icon">📰</span>
+      <p>Voer een URL in of plak HTML</p>
+      <p style="color:var(--pm);font-size:13px">Kop, intro, tekst, afbeeldingen, video's en embeds worden herkend</p>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- TAB: TABBLAD 3 -->
@@ -303,6 +328,7 @@ function switchTab(id,btn){
 <script src="js/suggest.js?v=4"></script>
 <script src="js/overlays.js?v=10"></script>
 <script src="js/interact.js?v=8"></script>
+<script src="js/scraper.js?v=20"></script>
 <script src="js/ui.js?v=10"></script>
 </body>
 </html>
