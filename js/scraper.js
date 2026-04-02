@@ -34,6 +34,7 @@ function makeAbs(src,sourceUrl){
 }
 
 function parseArticle(html,sourceUrl){
+  const rawHtml=html; // keep raw string for regex fallbacks
   const doc=new DOMParser().parseFromString(html,'text/html');
   const root=doc.querySelector('.article-content')||doc.querySelector('article')||doc.querySelector('main')||doc.body;
 
@@ -126,45 +127,43 @@ function parseArticle(html,sourceUrl){
 
   // Audio/Video — Blue Billywig player (regiogroei)
   function parseBBMedia(el,type){
-    // Method 1: direct audio/video element (when pasted from browser)
+    let mediaId='', mediaSrc='', dataSid='', poster='', durStr='';
+
+    // DOM methods — work when HTML is pasted from browser
     const mediaEl=el.querySelector(type==='audio'?'audio':'video');
-    let mediaSrc=mediaEl?.src||mediaEl?.getAttribute('src')||'';
+    if(mediaEl) mediaSrc=mediaEl.src||mediaEl.getAttribute('src')||'';
+    const wrapperEl=el.querySelector('[id*="sourceid_string_"]');
+    if(wrapperEl){const m=wrapperEl.id.match(/sourceid_string_(\d+)/);if(m)mediaId=m[1];}
+    if(!mediaId&&mediaSrc){const m=mediaSrc.match(/\/(\d{5,})_/);if(m)mediaId=m[1];}
+    dataSid=el.querySelector('[data-sid]')?.getAttribute('data-sid')||'';
+    poster=el.querySelector('.bb-poster-image')?.src||el.querySelector('img[class*="poster"]')?.src||'';
+    const dur=el.querySelector('[data-duration]')?.getAttribute('data-duration');
+    if(dur) durStr=Math.floor(dur/60)+'m'+('0'+dur%60).slice(-2)+'s';
 
-    // Method 2: extract ID from BB wrapper div ID
-    // Pattern: bb-iawr-regiogroei_rijnmond_web_audioplayer-sourceid_string_2175880
-    let mediaId='';
-    const wrapperEl=el.querySelector('[id*="sourceid_string_"]')||el.querySelector('[id*="bb-iawr-"]');
-    if(wrapperEl){
-      const wrapMatch=wrapperEl.id.match(/sourceid_string_(\d+)/);
-      if(wrapMatch) mediaId=wrapMatch[1];
-    }
-    // Method 3: from media src URL
-    if(!mediaId&&mediaSrc){
-      const idMatch=mediaSrc.match(/\/(\d{5,})_/);
-      if(idMatch) mediaId=idMatch[1];
-    }
-    // Method 4: from the component ID itself (regiogroei uses numeric IDs in some cases)
+    // Raw HTML regex fallback — works when fetched via proxy
     if(!mediaId){
-      const compId=el.id||'';
-      // Try sourceid from any nested element
-      const allIds=[...el.querySelectorAll('[id]')].map(e=>e.id).join(' ');
-      const anyMatch=allIds.match(/(\d{7,})/);
-      if(anyMatch) mediaId=anyMatch[1];
+      // Search raw HTML for sourceid patterns near the component
+      const elHtml=el.outerHTML||el.innerHTML||'';
+      const patterns=[
+        /sourceid_string_(\d+)/,
+        /sourceid['":\s]+['"]?(\d{5,})/i,
+        /mediaclip\/(\d+)/,
+        /\/(\d{7,})_(?:audio|video)/,
+        /clipId['":\s]+['"]?(\d+)/i,
+      ];
+      for(const p of patterns){const m=(elHtml||rawHtml).match(p);if(m){mediaId=m[1];break;}}
     }
-
-    // Construct CDN URL if we have the ID but not the direct src
-    if(mediaId&&!mediaSrc){
-      // Regiogroei BB CDN pattern
-      mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_${type}-mp3.mp3`;
+    if(!mediaSrc&&mediaId){
+      // Search raw HTML for the CDN URL
+      const cdnMatch=rawHtml.match(new RegExp(`https?://[^"'\\s]*${mediaId}[^"'\\s]*\\.mp[34]`));
+      if(cdnMatch) mediaSrc=cdnMatch[0];
+      else mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_audio-mp3.mp3`;
     }
+    if(!dataSid){const m=(el.outerHTML||'').match(/data-sid="([^"]+)"/);if(m)dataSid=m[1];}
+    if(!poster){const m=(el.outerHTML||'').match(/pthumbnail\/[^"'\s]+\.webp/);if(m)poster='https://rijnmond.bbvms.com/'+m[0];}
 
-    const dataSid=el.querySelector('[data-sid]')?.getAttribute('data-sid')||'';
-    const poster=el.querySelector('.bb-poster-image')?.src||el.querySelector('img.bb-poster-image')?.src||
-      el.querySelector('img[class*="poster"]')?.src||'';
     const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
       el.querySelector('.figcaption')?.textContent?.trim()||'';
-    const duration=el.querySelector('[data-duration]')?.getAttribute('data-duration');
-    const durStr=duration?Math.floor(duration/60)+'m'+('0'+duration%60).slice(-2)+'s':'';
 
     const parts=[];
     if(desc) parts.push(desc);
