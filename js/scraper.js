@@ -187,11 +187,13 @@ function parseArticle(html,sourceUrl){
     // Component exists but no iframe/link — mark for raw HTML fallback
     addEmbed('instagram','instagram embed gedetecteerd','');
   });
-  // Raw HTML fallback: search for instagram.com/reel/ or /p/ URLs in the entire page
-  const igMatches=[...rawHtml.matchAll(/instagram\.com\/(reel|p)\/([A-Za-z0-9_-]+)/g)];
+  // Raw HTML fallback: search for instagram URLs in entire page
+  // NUXT data uses \u002F for / so decode first, then search
+  const decodedHtml=rawHtml.replace(/\\u002F/g,'/');
+  const igMatches=[...decodedHtml.matchAll(/instagram\.com\/(reel|p)\/([A-Za-z0-9_-]+)/g)];
   igMatches.forEach(m=>{
     const url=`https://www.instagram.com/${m[1]}/${m[2]}/`;
-    if(!igFound.has(url)){igFound.add(url);addEmbed('instagram',url,'Instagram (uit pagina-data)');}
+    if(!igFound.has(url)){igFound.add(url);addEmbed('instagram',url,'Instagram post');}
   });
 
   // ── ARTIKEL-ID uit URL ──
