@@ -84,6 +84,26 @@ function parseArticle(html,sourceUrl){
       }
       return;
     }
+    // Textbox (kader)
+    const textboxEl=lc.querySelector('[type="textbox"], [__component="api.api-textbox"]');
+    if(textboxEl){
+      const boxText=[...textboxEl.querySelectorAll('p')].map(p=>p.textContent.trim()).filter(t=>t.length>5).join('\n');
+      if(boxText){
+        textParts.push('\n[KADER]\n'+boxText+'\n[/KADER]\n');
+        rawParts.push('[KADER] '+boxText);
+      }
+      // Links inside textbox
+      textboxEl.querySelectorAll('a[href]').forEach(a=>{
+        let href=a.getAttribute('href')||'';
+        href=makeAbs(href,sourceUrl);
+        const linkText=a.textContent.trim();
+        if(href&&linkText){
+          links.push({text:linkText,href});
+          rawParts.push('[LINK] '+linkText+' → '+href);
+        }
+      });
+      return;
+    }
     // Text block
     const textEl=lc.querySelector('.api-text .text');
     if(textEl){
@@ -287,7 +307,8 @@ function renderTable(a){
   const introWoorden=a.intro?a.intro.split(/\s+/).length:0;
   const tekstWoorden=a.bodyText?a.bodyText.replace(/\[TUSSENKOP\][^\n]*/g,'').split(/\s+/).filter(w=>w).length:0;
   const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
-  const alineas=a.bodyText.split(/\n\n+/).filter(p=>p.trim()&&!p.includes('[TUSSENKOP]')).length;
+  const kaders=(a.bodyText.match(/\[KADER\]/g)||[]).length;
+  const alineas=a.bodyText.split(/\n\n+/).filter(p=>p.trim()&&!p.includes('[TUSSENKOP]')&&!p.includes('[KADER]')&&!p.includes('[/KADER]')).length;
   const audioCount=a.embeds.filter(e=>e.type==='audio').length;
   const videoCount=a.embeds.filter(e=>e.type==='video').length;
   const embedCount=a.embeds.filter(e=>e.type!=='audio'&&e.type!=='video').length;
@@ -299,6 +320,7 @@ function renderTable(a){
   html+=stat(tekstWoorden,'wrd tekst');
   html+=stat(alineas,"alinea's");
   html+=stat(tussenkoppen,'tussenkoppen');
+  if(kaders) html+=stat(kaders,'kaders');
   html+=stat(a.images.length,'afbeeldingen');
   html+=stat(a.links.length,'links');
   html+=stat(a.related.length,'lees ook');
