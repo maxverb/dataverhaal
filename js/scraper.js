@@ -197,87 +197,57 @@ function parseArticle(html,sourceUrl){
   // ── ARTIKEL-ID uit URL ──
   const urlArticleId=(sourceUrl.match(/\/nieuws\/(\d+)\//)||[])[1]||'';
 
-  // ── Audio/Video — Blue Billywig (search ENTIRE document, not just component) ──
-  // Scan all BB wrapper divs in the full document for sourceids
-  const bbPlayers=[];
-  doc.querySelectorAll('[id*="sourceid_string_"]').forEach(el=>{
-    const m=el.id.match(/sourceid_string_(\d+)/);
-    if(!m) return;
-    const mediaId=m[1];
-    const wrapper=el.closest('.bb-media')||el.querySelector('.bb-media')||el;
-    const dataSid=wrapper.getAttribute('data-sid')||'';
-    const dur=wrapper.getAttribute('data-duration');
-    const durStr=dur?Math.floor(dur/60)+'m'+('0'+dur%60).slice(-2)+'s':'';
-    // Find audio/video src
-    const audioEl=el.querySelector('audio')||doc.querySelector(`#${el.id} audio`);
-    const videoEl=el.querySelector('video')||doc.querySelector(`#${el.id} video`);
-    const mediaSrc=audioEl?.src||audioEl?.getAttribute('src')||videoEl?.src||videoEl?.getAttribute('src')||'';
-    const type=el.id.includes('audioplayer')?'audio':'video';
-    // Poster image
-    const posterEl=el.querySelector('.bb-poster-image')||el.querySelector('img[class*="poster"]');
-    const poster=posterEl?.src||posterEl?.getAttribute('src')||'';
-    // Also search via raw HTML regex for this specific ID
-    let cdnUrl=mediaSrc;
-    if(!cdnUrl){
-      const cdnMatch=rawHtml.match(new RegExp(`https?://[^"'\\s]*/${mediaId}_[^"'\\s]*\\.mp[34]`));
-      if(cdnMatch) cdnUrl=cdnMatch[0];
-    }
-    if(!poster){
-      const posterMatch=rawHtml.match(new RegExp(`https?://[^"'\\s]*mediaclip/\\d+/pthumbnail[^"'\\s]*`));
-      if(posterMatch) bbPlayers.poster=posterMatch[0];
-    }
-    bbPlayers.push({mediaId,type,mediaSrc:cdnUrl,dataSid,durStr,poster});
-  });
+  // ── Audio/Video — read Worker meta tag + DOM fallback ──
+  let workerMedia={sourceIds:[],cdnUrls:[],sids:[],durations:[],posters:[]};
+  const metaEl=doc.querySelector('meta[name="dataverhaal-media"]');
+  if(metaEl){try{workerMedia=JSON.parse(metaEl.content);}catch(e){}}
 
-  // Also scan raw HTML for sourceid patterns not in DOM
-  if(!bbPlayers.length){
-    const rawMatches=[...rawHtml.matchAll(/sourceid_string_(\d+)/g)];
-    const seen=new Set();
-    rawMatches.forEach(m=>{
-      if(seen.has(m[1]))return;seen.add(m[1]);
-      const type=rawHtml.includes(m[1]+'.*audioplayer')||rawHtml.includes('audioplayer.*'+m[1])?'audio':'audio';
-      const cdnMatch=rawHtml.match(new RegExp(`https?://[^"'\\s]*/${m[1]}_[^"'\\s]*\\.mp[34]`));
-      const sidMatch=rawHtml.match(new RegExp(`data-sid="([^"]+)"[^>]*${m[1]}|${m[1]}[^>]*data-sid="([^"]+)"`));
-      const durMatch=rawHtml.match(new RegExp(`data-duration="(\\d+)"[^>]*${m[1]}|${m[1]}[^>]*data-duration="(\\d+)"`));
-      const posterMatch=rawHtml.match(/mediaclip\/\d+\/pthumbnail\/[^"'\s]+/);
-      bbPlayers.push({
-        mediaId:m[1],type,
-        mediaSrc:cdnMatch?cdnMatch[0]:'',
-        dataSid:sidMatch?(sidMatch[1]||sidMatch[2]):'',
-        durStr:durMatch?Math.floor((durMatch[1]||durMatch[2])/60)+'m'+('0'+(durMatch[1]||durMatch[2])%60).slice(-2)+'s':'',
-        poster:posterMatch?'https://rijnmond.bbvms.com/'+posterMatch[0]:''
-      });
-    });
-  }
-
-  // Match BB players to audio/video components
   let bbIdx=0;
-  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>{
+  function parseBBComponent(el,type){
     const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
       el.querySelector('.figcaption')?.textContent?.trim()||'';
-    const bb=bbPlayers[bbIdx++]||{};
     const parts=[];
     if(desc) parts.push(desc);
-    if(bb.mediaId) parts.push('Media-ID: '+bb.mediaId);
-    if(bb.mediaSrc) parts.push('URL: '+bb.mediaSrc);
-    if(bb.dataSid) parts.push('SID: '+bb.dataSid);
-    if(bb.durStr) parts.push('Duur: '+bb.durStr);
-    if(bb.poster) parts.push('Thumbnail: '+bb.poster);
-    addEmbed('audio',parts.join('\n'),desc||'Audio fragment');
-  });
-  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>{
-    const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
-      el.querySelector('.figcaption')?.textContent?.trim()||'';
-    const bb=bbPlayers[bbIdx++]||{};
-    const parts=[];
-    if(desc) parts.push(desc);
-    if(bb.mediaId) parts.push('Media-ID: '+bb.mediaId);
-    if(bb.mediaSrc) parts.push('URL: '+bb.mediaSrc);
-    if(bb.dataSid) parts.push('SID: '+bb.dataSid);
-    if(bb.durStr) parts.push('Duur: '+bb.durStr);
-    if(bb.poster) parts.push('Thumbnail: '+bb.poster);
-    addEmbed('video',parts.join('\n'),desc||'Video fragment');
-  });
+
+    // Try Worker meta tag data first
+    const wId=workerMedia.sourceIds[bbIdx]||'';
+    const wUrl=workerMedia.cdnUrls[bbIdx]||'';
+    const wSid=workerMedia.sids[bbIdx]||'';
+    const wDur=workerMedia.durations[bbIdx]||'';
+    const wPoster=workerMedia.posters[bbIdx]||'';
+
+    // Try DOM (works when pasted from browser)
+    const wrapperEl=el.querySelector('[id*="sourceid_string"]')||doc.querySelector('[id*="sourceid_string_'+(wId||'NONE')+'"]');
+    const domId=wrapperEl?((wrapperEl.id.match(/sourceid_string[_:](\d+)/)||[])[1]):'';
+    const wrapper=wrapperEl?.closest('.bb-media')||wrapperEl;
+    const domSid=wrapper?.getAttribute('data-sid')||'';
+    const domDur=wrapper?.getAttribute('data-duration')||'';
+    const audioEl=el.querySelector('audio')||doc.querySelector('audio[src*="'+(wId||domId||'NONE')+'"]');
+    const domSrc=audioEl?.src||audioEl?.getAttribute('src')||'';
+    const posterEl=el.querySelector('.bb-poster-image')||el.querySelector('img[class*="poster"]');
+    const domPoster=posterEl?.src||posterEl?.getAttribute('src')||'';
+
+    // Merge: prefer DOM, fallback to Worker meta
+    const mediaId=domId||wId;
+    const mediaSrc=domSrc||wUrl;
+    const sid=domSid||wSid;
+    const dur=domDur||wDur;
+    const poster=domPoster||wPoster;
+
+    if(mediaId) parts.push('Media-ID: '+mediaId);
+    if(mediaSrc) parts.push('URL: '+mediaSrc);
+    if(sid) parts.push('SID: '+sid);
+    if(dur){
+      const d=parseInt(dur);
+      if(d) parts.push('Duur: '+Math.floor(d/60)+'m'+('0'+d%60).slice(-2)+'s');
+    }
+    if(poster) parts.push('Thumbnail: '+poster);
+
+    addEmbed(type,parts.join('\n'),desc||type+' fragment');
+    bbIdx++;
+  }
+  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>parseBBComponent(el,'audio'));
+  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>parseBBComponent(el,'video'));
 
   // YouTube
   root.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach(el=>{
