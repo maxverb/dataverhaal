@@ -151,6 +151,14 @@ function parseArticle(html,sourceUrl){
       rawParts.push('[EMBED INSTAGRAM]');
       return;
     }
+    // Twitter
+    if(lc.querySelector('[__component="api.api-twitter"], [type="twitter"]')){
+      // Try to get tweet ID from iframe
+      const twIframe=lc.querySelector('iframe[data-tweet-id]');
+      const tweetId=twIframe?.getAttribute('data-tweet-id')||'';
+      rawParts.push('[EMBED TWITTER]'+(tweetId?' https://x.com/i/status/'+tweetId:''));
+      return;
+    }
     // Related articles (Lees ook)
     const related=lc.querySelector('.news-category-list');
     if(related){
@@ -214,6 +222,33 @@ function parseArticle(html,sourceUrl){
   igMatches.forEach(m=>{
     const url=`https://www.instagram.com/${m[1]}/${m[2]}/`;
     if(!igFound.has(url)){igFound.add(url);addEmbed('instagram',url,'Instagram post');}
+  });
+
+  // Twitter — DOM + NUXT fallback
+  const twFound=new Set();
+  root.querySelectorAll('[__component="api.api-twitter"], [type="twitter"]').forEach(el=>{
+    const iframe=el.querySelector('iframe[data-tweet-id]');
+    if(iframe){
+      const tid=iframe.getAttribute('data-tweet-id');
+      const url=`https://x.com/i/status/${tid}`;
+      twFound.add(url);addEmbed('twitter',url,'Twitter/X post');
+      return;
+    }
+    // Try iframe src for id param
+    const iframeSrc=el.querySelector('iframe')?.src||'';
+    const idMatch=iframeSrc.match(/[&?]id=(\d+)/);
+    if(idMatch){
+      const url=`https://x.com/i/status/${idMatch[1]}`;
+      twFound.add(url);addEmbed('twitter',url,'Twitter/X post');
+      return;
+    }
+    addEmbed('twitter','twitter embed gedetecteerd','');
+  });
+  // Raw HTML fallback: search for twitter/x.com status URLs
+  const twMatches=[...decodedHtml.matchAll(/(?:twitter\.com|x\.com)\/\w+\/status\/(\d+)/g)];
+  twMatches.forEach(m=>{
+    const url=`https://x.com/i/status/${m[1]}`;
+    if(!twFound.has(url)){twFound.add(url);addEmbed('twitter',url,'Twitter/X post');}
   });
 
   // ── ARTIKEL-ID uit URL ──
