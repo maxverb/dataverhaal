@@ -76,6 +76,7 @@ function parseArticle(html,sourceUrl){
   const images=[];
   function addImg(src,desc){
     if(!src||src.startsWith('data:')) return;
+    if(src.includes('avatar.png')||src.includes('placeholder')) return; // skip avatars
     if(src.startsWith('/')&&sourceUrl!=='(geplakt)'){try{src=new URL(sourceUrl).origin+src;}catch(e){}}
     if(!images.some(i=>i.src===src)) images.push({src,desc:desc||''});
   }
@@ -95,12 +96,30 @@ function parseArticle(html,sourceUrl){
     if(val&&!embeds.some(e=>e.val===val)) embeds.push({type,val,detail:detail||''});
   }
 
-  root.querySelectorAll('[__component="api.api-instagram"], [type="instagram"]').forEach(el=>{
+  // Instagram — multiple detection methods
+  root.querySelectorAll('[__component="api.api-instagram"], [type="instagram"], .api-instagram, [class*="instagram"]').forEach(el=>{
+    // Try iframe first (client-side rendered)
     const iframe=el.querySelector('iframe');
-    const src=iframe?.src||'';
-    const match=src.match(/instagram\.com\/(reel|p)\/([^/]+)/);
-    const url=match?`https://www.instagram.com/${match[1]}/${match[2]}/`:src;
-    addEmbed('instagram',url,'Instagram embed');
+    if(iframe?.src){
+      const match=iframe.src.match(/instagram\.com\/(reel|p)\/([^/]+)/);
+      addEmbed('instagram',match?`https://www.instagram.com/${match[1]}/${match[2]}/`:iframe.src,'Instagram embed');
+      return;
+    }
+    // Try data attributes (server-side)
+    const dataUrl=el.getAttribute('data-url')||el.getAttribute('data-href')||'';
+    if(dataUrl&&dataUrl.includes('instagram')){addEmbed('instagram',dataUrl,'Instagram embed');return;}
+    // Try any link inside
+    const link=el.querySelector('a[href*="instagram.com"]');
+    if(link){addEmbed('instagram',link.href,'Instagram embed');return;}
+    // Try embedo container (regiogroei uses embedo)
+    const embedo=el.querySelector('[data-embedo-source="instagram"]');
+    if(embedo){
+      const id=el.id||el.querySelector('[id]')?.id||'';
+      addEmbed('instagram','instagram embed (id: '+id+')','Instagram embed — iframe niet geladen door proxy');
+      return;
+    }
+    // Fallback: just note it exists
+    addEmbed('instagram','instagram embed gedetecteerd','Embed niet volledig geladen — check de pagina');
   });
 
   root.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach(el=>{
@@ -162,7 +181,7 @@ function renderTable(a){
 function srRow(label,content){
   if(!content) return `<tr class="sr-row"><td class="sr-td-label">${esc(label)}</td><td class="sr-td-content sr-empty">—</td><td class="sr-td-copy"></td></tr>`;
   const id='sr-'+Math.random().toString(36).slice(2,8);
-  const short=content.length>400?content.slice(0,400)+'…':content;
+  const short=content; // show full content, cell is scrollable via CSS
   return `<tr class="sr-row">
     <td class="sr-td-label">${esc(label)}</td>
     <td class="sr-td-content" id="${id}">${esc(short).replace(/\n/g,'<br>')}</td>
