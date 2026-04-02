@@ -126,16 +126,46 @@ function parseArticle(html,sourceUrl){
 
   // Audio/Video — Blue Billywig player (regiogroei)
   function parseBBMedia(el,type){
+    // Method 1: direct audio/video element (when pasted from browser)
     const mediaEl=el.querySelector(type==='audio'?'audio':'video');
-    const mediaSrc=mediaEl?.src||mediaEl?.getAttribute('src')||'';
-    // Extract numeric media ID from URL like .../2175880_audio-mp3.mp3 or .../1234567_video.mp4
-    const idMatch=mediaSrc.match(/\/(\d{5,})_/);
-    const mediaId=idMatch?idMatch[1]:'';
+    let mediaSrc=mediaEl?.src||mediaEl?.getAttribute('src')||'';
+
+    // Method 2: extract ID from BB wrapper div ID
+    // Pattern: bb-iawr-regiogroei_rijnmond_web_audioplayer-sourceid_string_2175880
+    let mediaId='';
+    const wrapperEl=el.querySelector('[id*="sourceid_string_"]')||el.querySelector('[id*="bb-iawr-"]');
+    if(wrapperEl){
+      const wrapMatch=wrapperEl.id.match(/sourceid_string_(\d+)/);
+      if(wrapMatch) mediaId=wrapMatch[1];
+    }
+    // Method 3: from media src URL
+    if(!mediaId&&mediaSrc){
+      const idMatch=mediaSrc.match(/\/(\d{5,})_/);
+      if(idMatch) mediaId=idMatch[1];
+    }
+    // Method 4: from the component ID itself (regiogroei uses numeric IDs in some cases)
+    if(!mediaId){
+      const compId=el.id||'';
+      // Try sourceid from any nested element
+      const allIds=[...el.querySelectorAll('[id]')].map(e=>e.id).join(' ');
+      const anyMatch=allIds.match(/(\d{7,})/);
+      if(anyMatch) mediaId=anyMatch[1];
+    }
+
+    // Construct CDN URL if we have the ID but not the direct src
+    if(mediaId&&!mediaSrc){
+      // Regiogroei BB CDN pattern
+      mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_${type}-mp3.mp3`;
+    }
+
     const dataSid=el.querySelector('[data-sid]')?.getAttribute('data-sid')||'';
-    const poster=el.querySelector('.bb-poster-image')?.src||el.querySelector('img.bb-poster-image')?.src||'';
-    const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||'';
+    const poster=el.querySelector('.bb-poster-image')?.src||el.querySelector('img.bb-poster-image')?.src||
+      el.querySelector('img[class*="poster"]')?.src||'';
+    const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
+      el.querySelector('.figcaption')?.textContent?.trim()||'';
     const duration=el.querySelector('[data-duration]')?.getAttribute('data-duration');
     const durStr=duration?Math.floor(duration/60)+'m'+('0'+duration%60).slice(-2)+'s':'';
+
     const parts=[];
     if(desc) parts.push(desc);
     if(mediaId) parts.push('Media-ID: '+mediaId);
@@ -143,6 +173,7 @@ function parseArticle(html,sourceUrl){
     if(dataSid) parts.push('SID: '+dataSid);
     if(durStr) parts.push('Duur: '+durStr);
     if(poster) parts.push('Thumbnail: '+poster);
+    if(!parts.length) parts.push(type+' embed gedetecteerd');
     addEmbed(type,parts.join('\n'),desc||type+' fragment');
   }
   root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>parseBBMedia(el,'audio'));
@@ -189,18 +220,19 @@ function renderTable(a){
   const videoCount=a.embeds.filter(e=>e.type==='video').length;
   const embedCount=a.embeds.filter(e=>e.type!=='audio'&&e.type!=='video').length;
 
+  function stat(num,lbl){return `<div class="sr-stat"><span class="sr-stat-num">${num}</span><span class="sr-stat-lbl">${lbl}</span></div>`;}
   let html=`<div class="sr-stats">`;
-  html+=`<span>${kopWoorden} wrd kop</span>`;
-  html+=`<span>${introWoorden} wrd intro</span>`;
-  html+=`<span>${tekstWoorden} wrd tekst</span>`;
-  html+=`<span>${alineas} alinea's</span>`;
-  html+=`<span>${tussenkoppen} tussenkoppen</span>`;
-  html+=`<span>${a.images.length} afbeeldingen</span>`;
-  html+=`<span>${a.links.length} links</span>`;
-  html+=`<span>${a.related.length} lees ook</span>`;
-  if(audioCount) html+=`<span>${audioCount} audio</span>`;
-  if(videoCount) html+=`<span>${videoCount} video</span>`;
-  if(embedCount) html+=`<span>${embedCount} embeds</span>`;
+  html+=stat(kopWoorden,'wrd kop');
+  html+=stat(introWoorden,'wrd intro');
+  html+=stat(tekstWoorden,'wrd tekst');
+  html+=stat(alineas,"alinea's");
+  html+=stat(tussenkoppen,'tussenkoppen');
+  html+=stat(a.images.length,'afbeeldingen');
+  html+=stat(a.links.length,'links');
+  html+=stat(a.related.length,'lees ook');
+  if(audioCount) html+=stat(audioCount,'audio');
+  if(videoCount) html+=stat(videoCount,'video');
+  if(embedCount) html+=stat(embedCount,'embeds');
   html+=`</div>`;
 
   // ── TABLE ──
