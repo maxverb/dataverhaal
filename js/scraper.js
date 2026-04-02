@@ -288,47 +288,24 @@ function parseArticle(html,sourceUrl){
   const metaEl=doc.querySelector('meta[name="dataverhaal-media"]');
   if(metaEl){try{workerMedia=JSON.parse(metaEl.content);}catch(e){}}
 
+  // Audio/Video — only title + media ID in table
+  const mediaIds=[];
   let bbIdx=0;
   function parseBBComponent(el,type){
     const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
       el.querySelector('.figcaption')?.textContent?.trim()||'';
-    const parts=[];
-    if(desc) parts.push(desc);
 
-    // Try Worker meta tag data first
+    // Get media ID from Worker meta or DOM
     const wId=workerMedia.sourceIds[bbIdx]||'';
-    const wUrl=workerMedia.cdnUrls[bbIdx]||'';
-    const wSid=workerMedia.sids[bbIdx]||'';
-    const wDur=workerMedia.durations[bbIdx]||'';
-    const wPoster=workerMedia.posters[bbIdx]||'';
-
-    // Try DOM (works when pasted from browser)
     const wrapperEl=el.querySelector('[id*="sourceid_string"]')||doc.querySelector('[id*="sourceid_string_'+(wId||'NONE')+'"]');
     const domId=wrapperEl?((wrapperEl.id.match(/sourceid_string[_:](\d+)/)||[])[1]):'';
-    const wrapper=wrapperEl?.closest('.bb-media')||wrapperEl;
-    const domSid=wrapper?.getAttribute('data-sid')||'';
-    const domDur=wrapper?.getAttribute('data-duration')||'';
-    const audioEl=el.querySelector('audio')||doc.querySelector('audio[src*="'+(wId||domId||'NONE')+'"]');
-    const domSrc=audioEl?.src||audioEl?.getAttribute('src')||'';
-    const posterEl=el.querySelector('.bb-poster-image')||el.querySelector('img[class*="poster"]');
-    const domPoster=posterEl?.src||posterEl?.getAttribute('src')||'';
-
-    // Merge: prefer DOM, fallback to Worker meta
     const mediaId=domId||wId;
-    const mediaSrc=domSrc||wUrl;
-    const sid=domSid||wSid;
-    const dur=domDur||wDur;
-    const poster=domPoster||wPoster;
 
+    const parts=[];
+    if(desc) parts.push(desc);
     if(mediaId) parts.push('Media-ID: '+mediaId);
-    if(mediaSrc) parts.push('URL: '+mediaSrc);
-    if(sid) parts.push('SID: '+sid);
-    if(dur){
-      const d=parseInt(dur);
-      if(d) parts.push('Duur: '+Math.floor(d/60)+'m'+('0'+d%60).slice(-2)+'s');
-    }
-    if(poster) parts.push('Thumbnail: '+poster);
 
+    mediaIds.push({type,mediaId,desc});
     addEmbed(type,parts.join('\n'),desc||type+' fragment');
     bbIdx++;
   }
@@ -360,11 +337,13 @@ function parseArticle(html,sourceUrl){
     if(title&&!related.some(r=>r.title===title)) related.push({title,href});
   });
 
-  // Replace embed placeholders in rawParts with actual URLs from embeds
+  // Replace embed/media placeholders in rawParts with actual data
   const embedsByType={};
   embeds.forEach(e=>{if(!embedsByType[e.type])embedsByType[e.type]=[];embedsByType[e.type].push(e.val);});
   const embedIdx={};
+  let audioIdx=0, videoIdx=0;
   const finalRaw=rawParts.map(line=>{
+    // Social embeds
     for(const type of ['instagram','twitter','youtube']){
       const tag='[EMBED '+type.toUpperCase()+']';
       if(line===tag){
@@ -373,6 +352,15 @@ function parseArticle(html,sourceUrl){
         const url=urls[embedIdx[type]++]||'';
         return url&&!url.includes('gedetecteerd')?tag+' '+url:tag;
       }
+    }
+    // Audio/Video — append media ID
+    if(line.startsWith('[AUDIO] ')){
+      const mi=mediaIds.filter(m=>m.type==='audio')[audioIdx++];
+      return mi?.mediaId?line+' (ID: '+mi.mediaId+')':line;
+    }
+    if(line.startsWith('[VIDEO] ')){
+      const mi=mediaIds.filter(m=>m.type==='video')[videoIdx++];
+      return mi?.mediaId?line+' (ID: '+mi.mediaId+')':line;
     }
     return line;
   });
