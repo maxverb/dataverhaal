@@ -6,220 +6,122 @@ const SCRAPER_PROXIES=[
 ];
 
 async function scrapeURL(){
-  const urlInput=document.getElementById('scrape-url');
+  const url=document.getElementById('scrape-url').value.trim();
   const status=document.getElementById('scrape-status');
-  const results=document.getElementById('scrape-results');
-  const url=urlInput.value.trim();
   if(!url){status.textContent='Voer een URL in';return;}
-
   status.textContent='Ophalen...';status.style.color='var(--ac)';
-  results.innerHTML='';
 
   let html=null;
   for(const proxyFn of SCRAPER_PROXIES){
-    try{
-      const resp=await fetch(proxyFn(url));
-      if(resp.ok){html=await resp.text();break;}
-    }catch(e){}
+    try{const r=await fetch(proxyFn(url));if(r.ok){html=await r.text();break;}}catch(e){}
   }
-
-  if(!html){
-    status.textContent='Kon pagina niet ophalen. Probeer de HTML te plakken.';
-    status.style.color='#f87171';
-    return;
-  }
-
-  const article=parseArticle(html,url);
-  renderArticle(article,results);
-  status.textContent=`✓ Geparsed`;status.style.color='#4ade80';
+  if(!html){status.textContent='Kon pagina niet ophalen. Plak HTML.';status.style.color='#f87171';return;}
+  renderTable(parseArticle(html,url));
+  status.textContent='✓ Geparsed';status.style.color='#4ade80';
 }
 
 function scrapeFromPaste(){
-  const pasteArea=document.getElementById('scrape-paste');
+  const html=document.getElementById('scrape-paste').value.trim();
   const status=document.getElementById('scrape-status');
-  const results=document.getElementById('scrape-results');
-  const html=pasteArea.value.trim();
   if(!html){status.textContent='Plak HTML broncode';return;}
-
-  const article=parseArticle(html,'(geplakt)');
-  renderArticle(article,results);
-  status.textContent=`✓ Geparsed`;status.style.color='#4ade80';
+  renderTable(parseArticle(html,'(geplakt)'));
+  status.textContent='✓ Geparsed';status.style.color='#4ade80';
 }
 
 function parseArticle(html,sourceUrl){
   const doc=new DOMParser().parseFromString(html,'text/html');
 
-  // ── HEADLINE ──
   const headline=
     doc.querySelector('h1.article__title')?.textContent?.trim()||
     doc.querySelector('h1[class*="title"]')?.textContent?.trim()||
     doc.querySelector('article h1')?.textContent?.trim()||
     doc.querySelector('h1')?.textContent?.trim()||
-    doc.querySelector('meta[property="og:title"]')?.content||
-    '';
+    doc.querySelector('meta[property="og:title"]')?.content||'';
 
-  // ── INTRO / LEAD ──
   const intro=
     doc.querySelector('.article__intro')?.textContent?.trim()||
     doc.querySelector('.article__lead')?.textContent?.trim()||
     doc.querySelector('[class*="intro"]')?.textContent?.trim()||
     doc.querySelector('[class*="lead"]')?.textContent?.trim()||
     doc.querySelector('meta[property="og:description"]')?.content||
-    doc.querySelector('meta[name="description"]')?.content||
-    '';
+    doc.querySelector('meta[name="description"]')?.content||'';
 
-  // ── BODY TEXT ──
-  const bodyEl=
-    doc.querySelector('.article__body')||
-    doc.querySelector('.article-body')||
-    doc.querySelector('[class*="article__content"]')||
-    doc.querySelector('[class*="article-content"]')||
-    doc.querySelector('article')||
-    doc.querySelector('.post-content')||
-    doc.querySelector('main');
+  const bodyEl=doc.querySelector('.article__body')||doc.querySelector('.article-body')||
+    doc.querySelector('[class*="article__content"]')||doc.querySelector('[class*="article-content"]')||
+    doc.querySelector('article')||doc.querySelector('main');
+  const bodyText=bodyEl?[...bodyEl.querySelectorAll('p')].map(p=>p.textContent.trim()).filter(t=>t.length>20).join('\n\n'):'';
 
-  let bodyParagraphs=[];
-  if(bodyEl){
-    bodyParagraphs=[...bodyEl.querySelectorAll('p')]
-      .map(p=>p.textContent.trim())
-      .filter(t=>t.length>20);
-  }
-
-  // ── IMAGES ──
+  // Images — only URLs
   const images=[];
-  const imgEls=doc.querySelectorAll('article img, .article__body img, [class*="article"] img, main img, meta[property="og:image"]');
+  const imgEls=doc.querySelectorAll('article img, .article__body img, [class*="article"] img, main img');
   imgEls.forEach(el=>{
-    let src=el.tagName==='META'?el.content:(el.src||el.getAttribute('data-src')||el.getAttribute('data-lazy-src')||'');
+    let src=el.src||el.getAttribute('data-src')||el.getAttribute('data-lazy-src')||'';
     if(!src||src.startsWith('data:'))return;
-    // Make absolute
-    if(src.startsWith('/')&&sourceUrl!=='(geplakt)'){
-      try{const u=new URL(sourceUrl);src=u.origin+src;}catch(e){}
-    }
-    const alt=el.alt||el.title||'';
-    if(!images.some(i=>i.src===src)) images.push({src,alt});
+    if(src.startsWith('/')&&sourceUrl!=='(geplakt)'){try{src=new URL(sourceUrl).origin+src;}catch(e){}}
+    if(!images.includes(src)) images.push(src);
   });
-
-  // Also check og:image
   const ogImg=doc.querySelector('meta[property="og:image"]');
-  if(ogImg&&ogImg.content&&!images.some(i=>i.src===ogImg.content)){
-    images.unshift({src:ogImg.content,alt:'OG afbeelding'});
-  }
-
-  // ── VIDEOS ──
-  const videos=[];
-  doc.querySelectorAll('video, iframe[src*="youtube"], iframe[src*="vimeo"], iframe[src*="brightcove"], [class*="video"]').forEach(el=>{
-    const src=el.src||el.querySelector('source')?.src||'';
-    const type=el.tagName==='IFRAME'?'embed':'video';
-    if(src) videos.push({src,type});
-  });
-
-  // ── AUDIO ──
-  const audios=[];
-  doc.querySelectorAll('audio, iframe[src*="soundcloud"], iframe[src*="spotify"], [class*="audio"]').forEach(el=>{
-    const src=el.src||el.querySelector('source')?.src||'';
-    if(src) audios.push({src});
-  });
-
-  // ── EMBEDS ──
-  const embeds=[];
-  doc.querySelectorAll('iframe, blockquote[class*="twitter"], blockquote[class*="instagram"], [class*="embed"]').forEach(el=>{
-    const src=el.src||'';
-    const cls=el.className||'';
-    let type='embed';
-    if(src.includes('twitter')||cls.includes('twitter')) type='twitter';
-    else if(src.includes('instagram')||cls.includes('instagram')) type='instagram';
-    else if(src.includes('youtube')) type='youtube';
-    else if(src.includes('vimeo')) type='vimeo';
-    if(src&&!videos.some(v=>v.src===src)&&!audios.some(a=>a.src===src))
-      embeds.push({src,type});
-  });
-
-  // ── META ──
-  const author=doc.querySelector('meta[name="author"]')?.content||
-    doc.querySelector('[class*="author"]')?.textContent?.trim()||'';
-  const pubDate=doc.querySelector('meta[property="article:published_time"]')?.content||
-    doc.querySelector('time')?.getAttribute('datetime')||
-    doc.querySelector('time')?.textContent?.trim()||'';
-
-  return {headline,intro,bodyParagraphs,images,videos,audios,embeds,author,pubDate,sourceUrl};
-}
-
-function renderArticle(a,container){
-  let html='';
-
-  // Header
-  if(a.headline) html+=`<div class="sr-section"><div class="sr-label">KOP</div><div class="sr-headline">${esc(a.headline)}</div></div>`;
-  if(a.author||a.pubDate) html+=`<div class="sr-section"><div class="sr-label">META</div><div class="sr-meta">${esc(a.author)}${a.author&&a.pubDate?' · ':''}${esc(a.pubDate)}</div></div>`;
-  if(a.intro) html+=`<div class="sr-section"><div class="sr-label">INTRO</div><div class="sr-intro">${esc(a.intro)}</div></div>`;
-
-  // Body
-  if(a.bodyParagraphs.length){
-    html+=`<div class="sr-section"><div class="sr-label">TEKST (${a.bodyParagraphs.length} alinea's)</div>`;
-    a.bodyParagraphs.forEach((p,i)=>{
-      html+=`<div class="sr-para">${esc(p)}</div>`;
-    });
-    html+=`</div>`;
-  }
-
-  // Images
-  if(a.images.length){
-    html+=`<div class="sr-section"><div class="sr-label">AFBEELDINGEN (${a.images.length})</div><div class="sr-images">`;
-    a.images.forEach(img=>{
-      html+=`<div class="sr-img"><img src="${esc(img.src)}" alt="${esc(img.alt)}" onerror="this.style.display='none'"><span>${esc(img.alt||img.src.split('/').pop())}</span></div>`;
-    });
-    html+=`</div></div>`;
-  }
-
-  // Videos
-  if(a.videos.length){
-    html+=`<div class="sr-section"><div class="sr-label">VIDEO (${a.videos.length})</div>`;
-    a.videos.forEach(v=>{html+=`<div class="sr-embed">${esc(v.type)}: ${esc(v.src)}</div>`;});
-    html+=`</div>`;
-  }
-
-  // Audio
-  if(a.audios.length){
-    html+=`<div class="sr-section"><div class="sr-label">AUDIO (${a.audios.length})</div>`;
-    a.audios.forEach(au=>{html+=`<div class="sr-embed">${esc(au.src)}</div>`;});
-    html+=`</div>`;
-  }
+  if(ogImg?.content&&!images.includes(ogImg.content)) images.unshift(ogImg.content);
 
   // Embeds
-  if(a.embeds.length){
-    html+=`<div class="sr-section"><div class="sr-label">EMBEDS (${a.embeds.length})</div>`;
-    a.embeds.forEach(e=>{html+=`<div class="sr-embed">${esc(e.type)}: ${esc(e.src)}</div>`;});
-    html+=`</div>`;
-  }
+  const embeds=[];
+  doc.querySelectorAll('video, audio, iframe, blockquote[class*="twitter"], blockquote[class*="instagram"]').forEach(el=>{
+    const src=el.src||el.querySelector('source')?.src||'';
+    const cls=(el.className||'').toLowerCase();
+    const tag=el.tagName.toLowerCase();
+    let type=tag;
+    if(src.includes('youtube')||cls.includes('youtube')) type='youtube';
+    else if(src.includes('vimeo')) type='vimeo';
+    else if(src.includes('twitter')||cls.includes('twitter')) type='twitter';
+    else if(src.includes('instagram')||cls.includes('instagram')) type='instagram';
+    else if(src.includes('soundcloud')||src.includes('spotify')) type='audio';
+    else if(tag==='video') type='video';
+    else if(tag==='audio') type='audio';
+    const val=src||el.outerHTML.slice(0,200);
+    if(val&&!embeds.some(e=>e.val===val)) embeds.push({type,val});
+  });
 
-  // Summary stats
-  const wordCount=a.bodyParagraphs.join(' ').split(/\s+/).length;
-  html+=`<div class="sr-section"><div class="sr-label">SAMENVATTING</div><div class="sr-stats">`;
-  html+=`<span>${wordCount} woorden</span>`;
-  html+=`<span>${a.bodyParagraphs.length} alinea's</span>`;
-  html+=`<span>${a.images.length} afbeeldingen</span>`;
-  html+=`<span>${a.videos.length} video's</span>`;
-  html+=`<span>${a.audios.length} audio</span>`;
-  html+=`<span>${a.embeds.length} embeds</span>`;
-  html+=`</div></div>`;
-
-  // Copy button
-  html+=`<button class="btn btn-p" onclick="copyScrapeText()" style="margin-top:8px">📋 Kopieer tekst</button>`;
-
-  container.innerHTML=html;
-
-  // Store for copy
-  container.dataset.headline=a.headline;
-  container.dataset.intro=a.intro;
-  container.dataset.body=a.bodyParagraphs.join('\n\n');
+  return {headline,intro,bodyText,images,embeds};
 }
 
-function copyScrapeText(){
-  const r=document.getElementById('scrape-results');
-  const text=[r.dataset.headline,r.dataset.intro,r.dataset.body].filter(Boolean).join('\n\n');
+function renderTable(a){
+  const out=document.getElementById('scrape-results');
+  let html=`<table class="sr-table">
+    <thead><tr><th>Element</th><th>Inhoud</th><th></th></tr></thead><tbody>`;
+
+  // Row 1: Kop
+  html+=srRow('Kop',a.headline);
+  // Row 2: Intro
+  html+=srRow('Intro',a.intro);
+  // Row 3: Tekst
+  html+=srRow('Tekst',a.bodyText);
+  // Row 4: Afbeeldingen (URLs only)
+  html+=srRow('Afbeeldingen',a.images.join('\n'));
+  // Row 5+: Embeds
+  a.embeds.forEach(e=>{
+    html+=srRow(e.type.toUpperCase(),e.val);
+  });
+
+  html+=`</tbody></table>`;
+  out.innerHTML=html;
+}
+
+function srRow(label,content){
+  if(!content)return `<tr class="sr-row"><td class="sr-td-label">${esc(label)}</td><td class="sr-td-content sr-empty">—</td><td class="sr-td-copy"></td></tr>`;
+  const id='sr-'+Math.random().toString(36).slice(2,8);
+  const short=content.length>300?content.slice(0,300)+'…':content;
+  return `<tr class="sr-row">
+    <td class="sr-td-label">${esc(label)}</td>
+    <td class="sr-td-content" id="${id}">${esc(short).replace(/\n/g,'<br>')}</td>
+    <td class="sr-td-copy"><button class="btn btn-sm" onclick="copySrCell('${id}','${btoa(unescape(encodeURIComponent(content)))}',this)">📋</button></td>
+  </tr>`;
+}
+
+function copySrCell(id,b64,btn){
+  const text=decodeURIComponent(escape(atob(b64)));
   navigator.clipboard.writeText(text).then(()=>{
-    const btn=document.querySelector('#scrape-results .btn-p');
-    btn.textContent='✓ Gekopieerd';setTimeout(()=>{btn.textContent='📋 Kopieer tekst';},1500);
+    btn.textContent='✓';setTimeout(()=>{btn.textContent='📋';},1000);
   });
 }
 
-function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
