@@ -59,7 +59,8 @@ function parseArticle(html,sourceUrl){
     doc.querySelector('meta[property="og:description"]')?.content||'';
 
   // ── OG IMAGE ──
-  const ogImage=doc.querySelector('meta[property="og:image"]')?.content||'';
+  const ogImageRaw=doc.querySelector('meta[property="og:image"]')?.content||'';
+  const ogImage=ogImageRaw.split('?')[0];
 
   // ── TEKST — walk layout-components in order, interleave headers ──
   const textParts=[];
@@ -110,7 +111,7 @@ function parseArticle(html,sourceUrl){
       const src=makeAbs(img?.getAttribute('data-src')||img?.src||'',sourceUrl);
       const desc=imgComp.querySelector('.description')?.textContent?.trim()||img?.alt||'';
       const cr=imgComp.querySelector('.copyright')?.textContent?.trim()||'';
-      if(src&&!src.includes('avatar.png')) rawParts.push('[AFBEELDING] '+src+(desc?' — '+desc:'')+(cr?' '+cr:''));
+      if(src&&!src.includes('avatar.png')) rawParts.push('[AFBEELDING] '+src.split('?')[0]+(desc?' — '+desc:'')+(cr?' '+cr:''));
       return;
     }
     // Audio
@@ -148,9 +149,11 @@ function parseArticle(html,sourceUrl){
   function addImg(src,desc){
     src=makeAbs(src,sourceUrl);
     if(!src||src.includes('avatar.png')||src.includes('placeholder')) return;
-    // Skip if same base image as OG (different size params)
-    if(ogImage){const ogBase=ogImage.split('?')[0];const srcBase=src.split('?')[0];if(ogBase===srcBase)return;}
-    if(!images.some(i=>i.src===src)) images.push({src,desc:desc||''});
+    // Strip query params for cleaner URLs
+    const cleanSrc=src.split('?')[0];
+    // Skip if same base image as OG
+    if(ogImage&&ogImage.split('?')[0]===cleanSrc) return;
+    if(!images.some(i=>i.src===cleanSrc)) images.push({src:cleanSrc,desc:desc||''});
   }
   // Article images (excluding OG duplicate)
   root.querySelectorAll('[__component="api.api-image"], figure.responsive-image').forEach(fig=>{
@@ -169,19 +172,26 @@ function parseArticle(html,sourceUrl){
     if(val&&!embeds.some(e=>e.val===val)) embeds.push({type,val,detail:detail||''});
   }
 
-  // Instagram
-  root.querySelectorAll('[__component="api.api-instagram"], [type="instagram"], .api-instagram, [class*="instagram"]').forEach(el=>{
+  // Instagram — try DOM first, then raw HTML regex
+  const igFound=new Set();
+  root.querySelectorAll('[__component="api.api-instagram"], [type="instagram"], .api-instagram').forEach(el=>{
     const iframe=el.querySelector('iframe');
     if(iframe?.src){
       const match=iframe.src.match(/instagram\.com\/(reel|p)\/([^/]+)/);
-      addEmbed('instagram',match?`https://www.instagram.com/${match[1]}/${match[2]}/`:iframe.src,'Instagram embed');
+      if(match){const url=`https://www.instagram.com/${match[1]}/${match[2]}/`;igFound.add(url);addEmbed('instagram',url,'Instagram embed');}
+      else{igFound.add(iframe.src);addEmbed('instagram',iframe.src,'Instagram embed');}
       return;
     }
     const link=el.querySelector('a[href*="instagram.com"]');
-    if(link){addEmbed('instagram',link.href,'Instagram embed');return;}
-    const embedo=el.querySelector('[data-embedo-source="instagram"]');
-    if(embedo){addEmbed('instagram','instagram embed (embedo)','Instagram — niet volledig geladen door proxy');return;}
-    addEmbed('instagram','instagram embed gedetecteerd','Embed niet volledig geladen');
+    if(link){igFound.add(link.href);addEmbed('instagram',link.href,'Instagram embed');return;}
+    // Component exists but no iframe/link — mark for raw HTML fallback
+    addEmbed('instagram','instagram embed gedetecteerd','');
+  });
+  // Raw HTML fallback: search for instagram.com/reel/ or /p/ URLs in the entire page
+  const igMatches=[...rawHtml.matchAll(/instagram\.com\/(reel|p)\/([A-Za-z0-9_-]+)/g)];
+  igMatches.forEach(m=>{
+    const url=`https://www.instagram.com/${m[1]}/${m[2]}/`;
+    if(!igFound.has(url)){igFound.add(url);addEmbed('instagram',url,'Instagram (uit pagina-data)');}
   });
 
   // ── ARTIKEL-ID uit URL ──
