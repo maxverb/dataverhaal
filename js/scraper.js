@@ -69,7 +69,7 @@ function parseArticle(html,sourceUrl){
 
   // Start with headline + OG + intro
   if(headline) rawParts.push('[KOP] '+headline);
-  if(ogImage) rawParts.push('[OG AFBEELDING] '+ogImage);
+  // OG afbeelding niet in ruw veld (staat al apart in tabel)
   if(author||pubDate) rawParts.push('[META] '+[author,pubDate].filter(Boolean).join(' · '));
   if(intro) rawParts.push('[INTRO] '+intro);
 
@@ -264,18 +264,26 @@ function parseArticle(html,sourceUrl){
 
   // YouTube — DOM + NUXT fallback
   const ytFound=new Set();
+  let ytPlaceholders=0;
   root.querySelectorAll('[__component="api.api-youtube"], [type="youtube"]').forEach(el=>{
     const iframe=el.querySelector('iframe[src*="youtube"]');
     const m=iframe?.src?.match(/\/embed\/([A-Za-z0-9_-]+)/);
     if(m){const url=`https://www.youtube.com/watch?v=${m[1]}`;ytFound.add(url);addEmbed('youtube',url,'YouTube video');}
-    else addEmbed('youtube','youtube embed gedetecteerd','');
+    else ytPlaceholders++;
   });
-  // Raw HTML fallback
-  const ytMatches=[...decodedHtml.matchAll(/youtube\.com\/embed\/([A-Za-z0-9_-]+)/g)];
-  ytMatches.forEach(m=>{
-    const url=`https://www.youtube.com/watch?v=${m[1]}`;
-    if(!ytFound.has(url)){ytFound.add(url);addEmbed('youtube',url,'YouTube video');}
+  // Raw HTML fallback: youtube.com/embed/ID + youtu.be/ID
+  const ytPatterns=[
+    /youtube\.com\/embed\/([A-Za-z0-9_-]{8,})/g,
+    /youtu\.be\/([A-Za-z0-9_-]{8,})/g,
+    /youtube\.com\/watch\?v=([A-Za-z0-9_-]{8,})/g,
+  ];
+  ytPatterns.forEach(pat=>{
+    [...decodedHtml.matchAll(pat)].forEach(m=>{
+      const url=`https://www.youtube.com/watch?v=${m[1]}`;
+      if(!ytFound.has(url)){ytFound.add(url);addEmbed('youtube',url,'YouTube video');ytPlaceholders=Math.max(0,ytPlaceholders-1);}
+    });
   });
+  for(let i=0;i<ytPlaceholders;i++) addEmbed('youtube','youtube embed gedetecteerd','');
 
   // ── ARTIKEL-ID uit URL ──
   const urlArticleId=(sourceUrl.match(/\/nieuws\/(\d+)\//)||[])[1]||'';
