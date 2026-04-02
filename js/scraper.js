@@ -147,10 +147,13 @@ function parseArticle(html,sourceUrl){
   const rgUrlPattern=/https?:\/\/[^"'\s]*regiogroei[^"'\s]*\.mp[34][^"'\s]*/g;
   while((um=rgUrlPattern.exec(rawHtml))!==null){if(!bbUrls.includes(um[0]))bbUrls.push(um[0]);}
 
+  // Extract article ID from source URL as ultimate fallback for media IDs
+  const urlArticleId=(sourceUrl.match(/\/nieuws\/(\d+)\//)||[])[1]||'';
+
   function parseBBMedia(el,type,idx){
     let mediaId='', mediaSrc='', dataSid='', poster='', durStr='';
 
-    // DOM methods
+    // DOM methods (work when HTML is pasted from browser)
     const mediaEl=el.querySelector(type==='audio'?'audio':'video');
     if(mediaEl) mediaSrc=mediaEl.src||mediaEl.getAttribute('src')||'';
     const wrapperEl=el.querySelector('[id*="sourceid_string_"]');
@@ -161,10 +164,31 @@ function parseArticle(html,sourceUrl){
     const dur=el.querySelector('[data-duration]')?.getAttribute('data-duration');
     if(dur) durStr=Math.floor(dur/60)+'m'+('0'+dur%60).slice(-2)+'s';
 
-    // Fallback: use pre-scanned IDs/URLs from raw HTML
+    // Fallback 1: pre-scanned IDs/URLs from raw HTML
     if(!mediaId&&bbMediaIds[idx]) mediaId=bbMediaIds[idx];
     if(!mediaSrc&&bbUrls[idx]) mediaSrc=bbUrls[idx];
-    if(!mediaSrc&&mediaId) mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_audio-mp3.mp3`;
+
+    // Fallback 2: try the component's own ID attribute — regiogroei sometimes uses
+    // the article ID as the BB sourceid for the audio player
+    if(!mediaId){
+      const compId=el.id||'';
+      // Search for any numeric sequence in nearby script tags or data attrs
+      const elHtml=el.outerHTML||'';
+      const numMatch=elHtml.match(/(?:sourceid|sourceId|clipid|clip_id|mediaId|media_id|playout_id)[\W]*['"]?(\d{5,})/i);
+      if(numMatch) mediaId=numMatch[1];
+    }
+
+    // Fallback 3: article URL ID — regiogroei often uses the same ID
+    if(!mediaId&&urlArticleId) mediaId=urlArticleId;
+
+    // Construct URLs from media ID
+    if(!mediaSrc&&mediaId){
+      mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_audio-mp3.mp3`;
+    }
+    // BB thumbnail URL pattern
+    if(!poster&&mediaId){
+      poster=`https://rijnmond.bbvms.com/mediaclip/${mediaId}/pthumbnail/576/324.webp`;
+    }
 
     const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
       el.querySelector('.figcaption')?.textContent?.trim()||'';
