@@ -58,6 +58,9 @@ function parseArticle(html,sourceUrl){
   const intro=introEl?.textContent?.trim()||
     doc.querySelector('meta[property="og:description"]')?.content||'';
 
+  // ── OG IMAGE ──
+  const ogImage=doc.querySelector('meta[property="og:image"]')?.content||'';
+
   // ── TEKST — walk layout-components in order, interleave headers ──
   const textParts=[];
   const links=[];
@@ -149,8 +152,6 @@ function parseArticle(html,sourceUrl){
     if(ogImage){const ogBase=ogImage.split('?')[0];const srcBase=src.split('?')[0];if(ogBase===srcBase)return;}
     if(!images.some(i=>i.src===src)) images.push({src,desc:desc||''});
   }
-  // OG image stored separately
-  const ogImage=doc.querySelector('meta[property="og:image"]')?.content||'';
   // Article images (excluding OG duplicate)
   root.querySelectorAll('[__component="api.api-image"], figure.responsive-image').forEach(fig=>{
     // Skip images inside news-category-list (related articles)
