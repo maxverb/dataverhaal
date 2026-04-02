@@ -90,10 +90,13 @@ function parseArticle(html,sourceUrl){
   function addImg(src,desc){
     src=makeAbs(src,sourceUrl);
     if(!src||src.includes('avatar.png')||src.includes('placeholder')) return;
+    // Skip if same base image as OG (different size params)
+    if(ogImage){const ogBase=ogImage.split('?')[0];const srcBase=src.split('?')[0];if(ogBase===srcBase)return;}
     if(!images.some(i=>i.src===src)) images.push({src,desc:desc||''});
   }
-  const ogImg=doc.querySelector('meta[property="og:image"]');
-  if(ogImg?.content) addImg(ogImg.content,'OG afbeelding');
+  // OG image stored separately
+  const ogImage=doc.querySelector('meta[property="og:image"]')?.content||'';
+  // Article images (excluding OG duplicate)
   root.querySelectorAll('[__component="api.api-image"], figure.responsive-image').forEach(fig=>{
     // Skip images inside news-category-list (related articles)
     if(fig.closest('.news-category-list')) return;
@@ -126,10 +129,28 @@ function parseArticle(html,sourceUrl){
   });
 
   // Audio/Video — Blue Billywig player (regiogroei)
-  function parseBBMedia(el,type){
+  // First: scan entire raw HTML for ALL BB media IDs (works regardless of rendering)
+  const bbMediaIds=[];
+  const bbPatterns=[
+    /sourceid_string_(\d+)/g,
+    /\/(\d{7,})_(?:audio|video)[^"']*/g,
+    /mediaclip\/(\d+)/g,
+    /data-src="[^"]*\/(\d{7,})_/g,
+  ];
+  bbPatterns.forEach(p=>{let m;while((m=p.exec(rawHtml))!==null){if(!bbMediaIds.includes(m[1]))bbMediaIds.push(m[1]);}});
+
+  // Also find all BB CDN URLs
+  const bbUrls=[];
+  const urlPattern=/https?:\/\/[^"'\s]*bluebillywig[^"'\s]*\.mp[34][^"'\s]*/g;
+  let um;while((um=urlPattern.exec(rawHtml))!==null){if(!bbUrls.includes(um[0]))bbUrls.push(um[0]);}
+  // Also regiogroei CDN
+  const rgUrlPattern=/https?:\/\/[^"'\s]*regiogroei[^"'\s]*\.mp[34][^"'\s]*/g;
+  while((um=rgUrlPattern.exec(rawHtml))!==null){if(!bbUrls.includes(um[0]))bbUrls.push(um[0]);}
+
+  function parseBBMedia(el,type,idx){
     let mediaId='', mediaSrc='', dataSid='', poster='', durStr='';
 
-    // DOM methods — work when HTML is pasted from browser
+    // DOM methods
     const mediaEl=el.querySelector(type==='audio'?'audio':'video');
     if(mediaEl) mediaSrc=mediaEl.src||mediaEl.getAttribute('src')||'';
     const wrapperEl=el.querySelector('[id*="sourceid_string_"]');
@@ -140,27 +161,10 @@ function parseArticle(html,sourceUrl){
     const dur=el.querySelector('[data-duration]')?.getAttribute('data-duration');
     if(dur) durStr=Math.floor(dur/60)+'m'+('0'+dur%60).slice(-2)+'s';
 
-    // Raw HTML regex fallback — works when fetched via proxy
-    if(!mediaId){
-      // Search raw HTML for sourceid patterns near the component
-      const elHtml=el.outerHTML||el.innerHTML||'';
-      const patterns=[
-        /sourceid_string_(\d+)/,
-        /sourceid['":\s]+['"]?(\d{5,})/i,
-        /mediaclip\/(\d+)/,
-        /\/(\d{7,})_(?:audio|video)/,
-        /clipId['":\s]+['"]?(\d+)/i,
-      ];
-      for(const p of patterns){const m=(elHtml||rawHtml).match(p);if(m){mediaId=m[1];break;}}
-    }
-    if(!mediaSrc&&mediaId){
-      // Search raw HTML for the CDN URL
-      const cdnMatch=rawHtml.match(new RegExp(`https?://[^"'\\s]*${mediaId}[^"'\\s]*\\.mp[34]`));
-      if(cdnMatch) mediaSrc=cdnMatch[0];
-      else mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_audio-mp3.mp3`;
-    }
-    if(!dataSid){const m=(el.outerHTML||'').match(/data-sid="([^"]+)"/);if(m)dataSid=m[1];}
-    if(!poster){const m=(el.outerHTML||'').match(/pthumbnail\/[^"'\s]+\.webp/);if(m)poster='https://rijnmond.bbvms.com/'+m[0];}
+    // Fallback: use pre-scanned IDs/URLs from raw HTML
+    if(!mediaId&&bbMediaIds[idx]) mediaId=bbMediaIds[idx];
+    if(!mediaSrc&&bbUrls[idx]) mediaSrc=bbUrls[idx];
+    if(!mediaSrc&&mediaId) mediaSrc=`https://s-aefc8d5f.b.cdn.bluebillywig.com/2026/video/${mediaId}_audio-mp3.mp3`;
 
     const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||
       el.querySelector('.figcaption')?.textContent?.trim()||'';
@@ -175,8 +179,9 @@ function parseArticle(html,sourceUrl){
     if(!parts.length) parts.push(type+' embed gedetecteerd');
     addEmbed(type,parts.join('\n'),desc||type+' fragment');
   }
-  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>parseBBMedia(el,'audio'));
-  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>parseBBMedia(el,'video'));
+  let bbIdx=0;
+  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>parseBBMedia(el,'audio',bbIdx++));
+  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>parseBBMedia(el,'video',bbIdx++));
 
   // YouTube
   root.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach(el=>{
@@ -203,7 +208,7 @@ function parseArticle(html,sourceUrl){
     if(title&&!related.some(r=>r.title===title)) related.push({title,href});
   });
 
-  return {headline,author,pubDate,intro,bodyText,links,images,embeds,related};
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related};
 }
 
 function renderTable(a){
@@ -238,6 +243,7 @@ function renderTable(a){
   html+=`<table class="sr-table">
     <thead><tr><th>Element</th><th>Inhoud</th><th></th></tr></thead><tbody>`;
   html+=srRow('Kop',a.headline);
+  if(a.ogImage) html+=srRow('OG Image',a.ogImage);
   if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
   html+=srRow('Intro',a.intro);
   html+=srRow('Tekst',a.bodyText);
