@@ -1,4 +1,4 @@
-// ── ARTICLE SCRAPER — optimized for regiogroei CMS (Rijnmond/West/DHFM) ──
+// ── ARTICLE SCRAPER — regiogroei CMS (Rijnmond/West/DHFM) ──
 
 const SCRAPER_PROXIES=[
   url=>`https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
@@ -27,6 +27,12 @@ function scrapeFromPaste(){
   status.textContent='✓ Geparsed';status.style.color='#4ade80';
 }
 
+function makeAbs(src,sourceUrl){
+  if(!src||src.startsWith('data:')) return '';
+  if(src.startsWith('/')&&sourceUrl!=='(geplakt)'){try{return new URL(sourceUrl).origin+src;}catch(e){}}
+  return src;
+}
+
 function parseArticle(html,sourceUrl){
   const doc=new DOMParser().parseFromString(html,'text/html');
   const root=doc.querySelector('.article-content')||doc.querySelector('article')||doc.querySelector('main')||doc.body;
@@ -36,53 +42,60 @@ function parseArticle(html,sourceUrl){
     doc.querySelector('meta[property="og:title"]')?.content||'';
 
   // ── AUTEUR ──
-  const author=(root.querySelector('.groei-wa-author-links a')||root.querySelector('[class*="author"] a')||doc.querySelector('meta[name="author"]'))?.textContent?.trim()||
+  const author=(root.querySelector('.groei-wa-author-links a')||root.querySelector('[class*="author"] a'))?.textContent?.trim()||
     doc.querySelector('meta[name="author"]')?.content||'';
 
   // ── DATUM ──
   const dateEl=root.querySelector('.groei-wa-article-info');
   const pubDate=dateEl?dateEl.textContent.replace(/\s+/g,' ').trim():'';
 
-  // ── INTRO — first highlight text block ──
+  // ── INTRO — first highlight block ──
   const introEl=root.querySelector('.layout-component.highlight .api-text .text')||
     root.querySelector('.layout-component.highlight .text')||
     root.querySelector('[class*="intro"]');
   const intro=introEl?.textContent?.trim()||
     doc.querySelector('meta[property="og:description"]')?.content||'';
 
-  // ── TEKST — all api-text .text blocks (excluding the intro) ──
-  const textBlocks=[];
-  root.querySelectorAll('.api-text .text, [__component="api.api-text"] .text').forEach(el=>{
-    if(el===introEl) return;
-    const t=el.textContent.trim();
-    if(t.length>10) textBlocks.push(t);
+  // ── TEKST — walk layout-components in order, interleave headers ──
+  const textParts=[];
+  const links=[];
+  root.querySelectorAll('.layout-component').forEach(lc=>{
+    // Header → prefix in text
+    const header=lc.querySelector('.modern-header .heading, h2.heading');
+    if(header){
+      const t=header.textContent.trim();
+      if(t&&t!==headline) textParts.push('\n[TUSSENKOP] '+t+'\n');
+      return;
+    }
+    // Text block
+    const textEl=lc.querySelector('.api-text .text');
+    if(textEl){
+      if(textEl===introEl) return; // skip intro
+      const t=textEl.textContent.trim();
+      if(t.length>10) textParts.push(t);
+      // Extract hyperlinks
+      textEl.querySelectorAll('a[href]').forEach(a=>{
+        let href=a.getAttribute('href')||'';
+        href=makeAbs(href,sourceUrl);
+        const linkText=a.textContent.trim();
+        if(href&&linkText) links.push({text:linkText,href});
+      });
+    }
   });
-  if(!textBlocks.length){
-    root.querySelectorAll('p').forEach(p=>{
-      const t=p.textContent.trim();
-      if(t.length>20) textBlocks.push(t);
-    });
-  }
-  const bodyText=textBlocks.join('\n\n');
+  const bodyText=textParts.join('\n\n');
 
-  // ── TUSSENKOPPEN ──
-  const subheadings=[];
-  root.querySelectorAll('.modern-header .heading, h2.heading, h2').forEach(el=>{
-    const t=el.textContent.trim();
-    if(t&&t!==headline) subheadings.push(t);
-  });
-
-  // ── AFBEELDINGEN — URLs + beschrijving ──
+  // ── AFBEELDINGEN ──
   const images=[];
   function addImg(src,desc){
-    if(!src||src.startsWith('data:')) return;
-    if(src.includes('avatar.png')||src.includes('placeholder')) return;
-    if(src.startsWith('/')&&sourceUrl!=='(geplakt)'){try{src=new URL(sourceUrl).origin+src;}catch(e){}}
+    src=makeAbs(src,sourceUrl);
+    if(!src||src.includes('avatar.png')||src.includes('placeholder')) return;
     if(!images.some(i=>i.src===src)) images.push({src,desc:desc||''});
   }
   const ogImg=doc.querySelector('meta[property="og:image"]');
   if(ogImg?.content) addImg(ogImg.content,'OG afbeelding');
   root.querySelectorAll('[__component="api.api-image"], figure.responsive-image').forEach(fig=>{
+    // Skip images inside news-category-list (related articles)
+    if(fig.closest('.news-category-list')) return;
     const img=fig.querySelector('img');
     const src=img?.getAttribute('data-src')||img?.src||'';
     const desc=fig.querySelector('.description')?.textContent?.trim()||img?.alt||'';
@@ -96,6 +109,7 @@ function parseArticle(html,sourceUrl){
     if(val&&!embeds.some(e=>e.val===val)) embeds.push({type,val,detail:detail||''});
   }
 
+  // Instagram
   root.querySelectorAll('[__component="api.api-instagram"], [type="instagram"], .api-instagram, [class*="instagram"]').forEach(el=>{
     const iframe=el.querySelector('iframe');
     if(iframe?.src){
@@ -103,53 +117,70 @@ function parseArticle(html,sourceUrl){
       addEmbed('instagram',match?`https://www.instagram.com/${match[1]}/${match[2]}/`:iframe.src,'Instagram embed');
       return;
     }
-    const dataUrl=el.getAttribute('data-url')||el.getAttribute('data-href')||'';
-    if(dataUrl&&dataUrl.includes('instagram')){addEmbed('instagram',dataUrl,'Instagram embed');return;}
     const link=el.querySelector('a[href*="instagram.com"]');
     if(link){addEmbed('instagram',link.href,'Instagram embed');return;}
     const embedo=el.querySelector('[data-embedo-source="instagram"]');
-    if(embedo){addEmbed('instagram','instagram embed (embedo)','Instagram — iframe niet geladen door proxy');return;}
+    if(embedo){addEmbed('instagram','instagram embed (embedo)','Instagram — niet volledig geladen door proxy');return;}
     addEmbed('instagram','instagram embed gedetecteerd','Embed niet volledig geladen');
   });
 
+  // Audio — Blue Billywig player (regiogroei)
+  root.querySelectorAll('[__component="api.api-audio"], [type="audio"]').forEach(el=>{
+    const audioEl=el.querySelector('audio');
+    const audioSrc=audioEl?.src||audioEl?.getAttribute('src')||'';
+    const dataSid=el.querySelector('[data-sid]')?.getAttribute('data-sid')||'';
+    const poster=el.querySelector('.bb-poster-image')?.src||'';
+    const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||'';
+    const duration=el.querySelector('[data-duration]')?.getAttribute('data-duration');
+    const durStr=duration?Math.floor(duration/60)+'m'+('0'+duration%60).slice(-2)+'s':'';
+    const parts=[desc];
+    if(audioSrc) parts.push('URL: '+audioSrc);
+    if(dataSid) parts.push('ID: '+dataSid);
+    if(durStr) parts.push('Duur: '+durStr);
+    if(poster) parts.push('Thumbnail: '+poster);
+    addEmbed('audio',parts.join('\n'),desc||'Audio fragment');
+  });
+
+  // Video — Blue Billywig or native
+  root.querySelectorAll('[__component="api.api-video"], [type="video"]').forEach(el=>{
+    const videoEl=el.querySelector('video');
+    const videoSrc=videoEl?.src||videoEl?.querySelector('source')?.src||'';
+    const dataSid=el.querySelector('[data-sid]')?.getAttribute('data-sid')||'';
+    const poster=el.querySelector('.bb-poster-image')?.src||'';
+    const desc=el.querySelector('.figcaption .description, .description')?.textContent?.trim()||'';
+    const parts=[desc];
+    if(videoSrc) parts.push('URL: '+videoSrc);
+    if(dataSid) parts.push('ID: '+dataSid);
+    if(poster) parts.push('Thumbnail: '+poster);
+    addEmbed('video',parts.join('\n'),desc||'Video fragment');
+  });
+
+  // YouTube
   root.querySelectorAll('iframe[src*="youtube"], iframe[src*="youtu.be"]').forEach(el=>{
     addEmbed('youtube',el.src,'YouTube video');
   });
 
+  // Twitter/X
   root.querySelectorAll('blockquote[class*="twitter"], [class*="twitter-tweet"]').forEach(el=>{
     const link=el.querySelector('a[href*="twitter.com"], a[href*="x.com"]');
     addEmbed('twitter',link?.href||'twitter embed','Twitter/X post');
   });
 
+  // TikTok
   root.querySelectorAll('blockquote[class*="tiktok"], [class*="tiktok"]').forEach(el=>{
     const link=el.querySelector('a[href*="tiktok.com"]');
     addEmbed('tiktok',link?.href||'tiktok embed','TikTok video');
-  });
-
-  root.querySelectorAll('video').forEach(el=>{
-    addEmbed('video',el.src||el.querySelector('source')?.src||'video','Video');
-  });
-  root.querySelectorAll('audio').forEach(el=>{
-    addEmbed('audio',el.src||el.querySelector('source')?.src||'audio','Audio');
-  });
-
-  root.querySelectorAll('iframe').forEach(el=>{
-    const src=el.src||'';
-    if(!src||embeds.some(e=>e.val===src)) return;
-    if(src.includes('instagram')||src.includes('youtube')||src.includes('twitter')) return;
-    addEmbed('iframe',src,'Overig embed');
   });
 
   // ── GERELATEERD ──
   const related=[];
   root.querySelectorAll('.news-category-list .groei-wa-news-article a, .news-list-item a').forEach(a=>{
     const title=a.querySelector('h3')?.textContent?.trim();
-    let href=a.getAttribute('href')||'';
-    if(href.startsWith('/')&&sourceUrl!=='(geplakt)'){try{href=new URL(sourceUrl).origin+href;}catch(e){}}
+    let href=makeAbs(a.getAttribute('href')||'',sourceUrl);
     if(title&&!related.some(r=>r.title===title)) related.push({title,href});
   });
 
-  return {headline,author,pubDate,intro,bodyText,subheadings,images,embeds,related};
+  return {headline,author,pubDate,intro,bodyText,links,images,embeds,related};
 }
 
 function renderTable(a){
@@ -159,8 +190,8 @@ function renderTable(a){
   html+=srRow('Kop',a.headline);
   if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
   html+=srRow('Intro',a.intro);
-  if(a.subheadings.length) html+=srRow('Tussenkoppen',a.subheadings.join(' | '));
   html+=srRow('Tekst',a.bodyText);
+  if(a.links.length) html+=srRow('Links',a.links.map(l=>l.text+' → '+l.href).join('\n'));
   html+=srRow('Afbeeldingen',a.images.map(i=>i.src+(i.desc?' — '+i.desc:'')).join('\n'));
   a.embeds.forEach(e=>html+=srRow(e.type.toUpperCase(),e.val));
   if(a.related.length) html+=srRow('Gerelateerd',a.related.map(r=>r.title+' → '+r.href).join('\n'));
@@ -171,10 +202,9 @@ function renderTable(a){
 function srRow(label,content){
   if(!content) return `<tr class="sr-row"><td class="sr-td-label">${esc(label)}</td><td class="sr-td-content sr-empty">—</td><td class="sr-td-copy"></td></tr>`;
   const id='sr-'+Math.random().toString(36).slice(2,8);
-  const short=content;
   return `<tr class="sr-row">
     <td class="sr-td-label">${esc(label)}</td>
-    <td class="sr-td-content" id="${id}">${esc(short).replace(/\n/g,'<br>')}</td>
+    <td class="sr-td-content" id="${id}">${esc(content).replace(/\n/g,'<br>')}</td>
     <td class="sr-td-copy"><button class="btn btn-sm" onclick="copySrCell('${id}','${btoa(unescape(encodeURIComponent(content)))}',this)">📋</button></td>
   </tr>`;
 }
