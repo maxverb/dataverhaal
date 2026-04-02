@@ -60,27 +60,81 @@ function parseArticle(html,sourceUrl){
   // ── TEKST — walk layout-components in order, interleave headers ──
   const textParts=[];
   const links=[];
+  const rawParts=[]; // unified raw output with tags
+
+  // Start with headline + OG + intro
+  if(headline) rawParts.push('[KOP] '+headline);
+  if(ogImage) rawParts.push('[OG AFBEELDING] '+ogImage);
+  if(author||pubDate) rawParts.push('[META] '+[author,pubDate].filter(Boolean).join(' · '));
+  if(intro) rawParts.push('[INTRO] '+intro);
+
   root.querySelectorAll('.layout-component').forEach(lc=>{
-    // Header → prefix in text
+    // Header
     const header=lc.querySelector('.modern-header .heading, h2.heading');
     if(header){
       const t=header.textContent.trim();
-      if(t&&t!==headline) textParts.push('\n[TUSSENKOP] '+t+'\n');
+      if(t&&t!==headline){
+        textParts.push('\n[TUSSENKOP] '+t+'\n');
+        rawParts.push('[TUSSENKOP] '+t);
+      }
       return;
     }
     // Text block
     const textEl=lc.querySelector('.api-text .text');
     if(textEl){
-      if(textEl===introEl) return; // skip intro
+      if(textEl===introEl) return;
       const t=textEl.textContent.trim();
-      if(t.length>10) textParts.push(t);
-      // Extract hyperlinks
+      if(t.length>10){
+        textParts.push(t);
+        rawParts.push('[TEKST] '+t);
+      }
       textEl.querySelectorAll('a[href]').forEach(a=>{
         let href=a.getAttribute('href')||'';
         href=makeAbs(href,sourceUrl);
         const linkText=a.textContent.trim();
-        if(href&&linkText) links.push({text:linkText,href});
+        if(href&&linkText){
+          links.push({text:linkText,href});
+          rawParts.push('[LINK] '+linkText+' → '+href);
+        }
       });
+      return;
+    }
+    // Image
+    const imgComp=lc.querySelector('[__component="api.api-image"], figure.responsive-image');
+    if(imgComp&&!lc.closest('.news-category-list')){
+      const img=imgComp.querySelector('img');
+      const src=makeAbs(img?.getAttribute('data-src')||img?.src||'',sourceUrl);
+      const desc=imgComp.querySelector('.description')?.textContent?.trim()||img?.alt||'';
+      const cr=imgComp.querySelector('.copyright')?.textContent?.trim()||'';
+      if(src&&!src.includes('avatar.png')) rawParts.push('[AFBEELDING] '+src+(desc?' — '+desc:'')+(cr?' '+cr:''));
+      return;
+    }
+    // Audio
+    if(lc.querySelector('[__component="api.api-audio"], [type="audio"]')){
+      const desc=lc.querySelector('.figcaption .description, .description')?.textContent?.trim()||'audio';
+      rawParts.push('[AUDIO] '+desc);
+      return;
+    }
+    // Video
+    if(lc.querySelector('[__component="api.api-video"], [type="video"]')){
+      const desc=lc.querySelector('.figcaption .description, .description')?.textContent?.trim()||'video';
+      rawParts.push('[VIDEO] '+desc);
+      return;
+    }
+    // Instagram
+    if(lc.querySelector('[__component="api.api-instagram"], [type="instagram"]')){
+      rawParts.push('[EMBED INSTAGRAM]');
+      return;
+    }
+    // Related articles (Lees ook)
+    const related=lc.querySelector('.news-category-list');
+    if(related){
+      related.querySelectorAll('.groei-wa-news-article a').forEach(a=>{
+        const title=a.querySelector('h3')?.textContent?.trim();
+        let href=makeAbs(a.getAttribute('href')||'',sourceUrl);
+        if(title) rawParts.push('[LEES OOK] '+title+' → '+href);
+      });
+      return;
     }
   });
   const bodyText=textParts.join('\n\n');
@@ -232,7 +286,7 @@ function parseArticle(html,sourceUrl){
     if(title&&!related.some(r=>r.title===title)) related.push({title,href});
   });
 
-  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related};
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,rawText:rawParts.join('\n')};
 }
 
 function renderTable(a){
@@ -275,6 +329,7 @@ function renderTable(a){
   html+=srRow('Afbeeldingen',a.images.map(i=>i.src+(i.desc?' — '+i.desc:'')).join('\n'));
   a.embeds.forEach(e=>html+=srRow(e.type.toUpperCase(),e.val));
   if(a.related.length) html+=srRow('Gerelateerd',a.related.map(r=>r.title+' → '+r.href).join('\n'));
+  html+=srRow('Alles (ruw)',a.rawText);
   html+=`</tbody></table>`;
   out.innerHTML=html;
 }
