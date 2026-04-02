@@ -124,9 +124,19 @@ function parseArticle(html,sourceUrl){
       });
       return;
     }
-    // Image
+    // Related articles (Lees ook) — check BEFORE images to prevent lees-ook images leaking
+    const related=lc.querySelector('.news-category-list');
+    if(related){
+      related.querySelectorAll('.groei-wa-news-article a').forEach(a=>{
+        const title=a.querySelector('h3')?.textContent?.trim();
+        let href=makeAbs(a.getAttribute('href')||'',sourceUrl);
+        if(title) rawParts.push('[LEES OOK] '+title+' → '+href);
+      });
+      return;
+    }
+    // Image (skip if inside news-category-list which was already handled)
     const imgComp=lc.querySelector('[__component="api.api-image"], figure.responsive-image');
-    if(imgComp&&!lc.closest('.news-category-list')){
+    if(imgComp){
       const img=imgComp.querySelector('img');
       const src=makeAbs(img?.getAttribute('data-src')||img?.src||'',sourceUrl);
       const desc=imgComp.querySelector('.description')?.textContent?.trim()||img?.alt||'';
@@ -146,37 +156,22 @@ function parseArticle(html,sourceUrl){
       rawParts.push('[VIDEO] '+desc);
       return;
     }
-    // Instagram
+    // Instagram — placeholder, URL comes from NUXT fallback later
     if(lc.querySelector('[__component="api.api-instagram"], [type="instagram"]')){
       rawParts.push('[EMBED INSTAGRAM]');
       return;
     }
-    // Twitter
+    // Twitter — placeholder, URL comes from NUXT fallback later
     if(lc.querySelector('[__component="api.api-twitter"], [type="twitter"]')){
-      // Try to get tweet ID from iframe
-      const twIframe=lc.querySelector('iframe[data-tweet-id]');
-      const tweetId=twIframe?.getAttribute('data-tweet-id')||'';
-      rawParts.push('[EMBED TWITTER]'+(tweetId?' https://x.com/i/status/'+tweetId:''));
+      rawParts.push('[EMBED TWITTER]');
       return;
     }
-    // YouTube
+    // YouTube — placeholder, URL comes from NUXT fallback later
     if(lc.querySelector('[__component="api.api-youtube"], [type="youtube"]')){
-      const ytIframe=lc.querySelector('iframe[src*="youtube"]');
-      const ytMatch=ytIframe?.src?.match(/\/embed\/([A-Za-z0-9_-]+)/);
-      const ytId=ytMatch?ytMatch[1]:'';
-      rawParts.push('[EMBED YOUTUBE]'+(ytId?' https://www.youtube.com/watch?v='+ytId:''));
+      rawParts.push('[EMBED YOUTUBE]');
       return;
     }
-    // Related articles (Lees ook)
-    const related=lc.querySelector('.news-category-list');
-    if(related){
-      related.querySelectorAll('.groei-wa-news-article a').forEach(a=>{
-        const title=a.querySelector('h3')?.textContent?.trim();
-        let href=makeAbs(a.getAttribute('href')||'',sourceUrl);
-        if(title) rawParts.push('[LEES OOK] '+title+' → '+href);
-      });
-      return;
-    }
+    // (Related already handled above)
   });
   const bodyText=textParts.join('\n\n');
 
@@ -365,7 +360,24 @@ function parseArticle(html,sourceUrl){
     if(title&&!related.some(r=>r.title===title)) related.push({title,href});
   });
 
-  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,urlArticleId,rawText:rawParts.join('\n')};
+  // Replace embed placeholders in rawParts with actual URLs from embeds
+  const embedsByType={};
+  embeds.forEach(e=>{if(!embedsByType[e.type])embedsByType[e.type]=[];embedsByType[e.type].push(e.val);});
+  const embedIdx={};
+  const finalRaw=rawParts.map(line=>{
+    for(const type of ['instagram','twitter','youtube']){
+      const tag='[EMBED '+type.toUpperCase()+']';
+      if(line===tag){
+        if(!embedIdx[type])embedIdx[type]=0;
+        const urls=embedsByType[type]||[];
+        const url=urls[embedIdx[type]++]||'';
+        return url&&!url.includes('gedetecteerd')?tag+' '+url:tag;
+      }
+    }
+    return line;
+  });
+
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,urlArticleId,rawText:finalRaw.join('\n')};
 }
 
 function renderTable(a){
@@ -390,7 +402,7 @@ function renderTable(a){
   html+=stat(alineas,"alinea's");
   html+=stat(tussenkoppen,'tussenkoppen');
   if(kaders) html+=stat(kaders,'kaders');
-  html+=stat(a.images.length,'afbeeldingen');
+  html+=stat(a.images.length+(a.ogImage?1:0),'afbeeldingen');
   html+=stat(a.links.length,'links');
   html+=stat(a.related.length,'lees ook');
   if(audioCount) html+=stat(audioCount,'audio');
