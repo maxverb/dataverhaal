@@ -426,7 +426,74 @@ function renderTable(a){
   if(a.related.length) html+=srRow('Gerelateerd',a.related.map(r=>r.title+' → '+r.href).join('\n'));
   html+=srRow('Alles (ruw)',a.rawText);
   html+=`</tbody></table>`;
+  html+=`<button class="btn btn-p" onclick="exportScrapeCSV()" style="margin-top:10px">⬇ Export CSV</button>`;
   out.innerHTML=html;
+  // Store article data for CSV export
+  out._article=a;
+}
+
+function exportScrapeCSV(){
+  const a=document.getElementById('scrape-results')._article;
+  if(!a) return;
+
+  const audioCount=a.embeds.filter(e=>e.type==='audio').length;
+  const videoCount=a.embeds.filter(e=>e.type==='video').length;
+  const igCount=a.embeds.filter(e=>e.type==='instagram').length;
+  const twCount=a.embeds.filter(e=>e.type==='twitter').length;
+  const ytCount=a.embeds.filter(e=>e.type==='youtube').length;
+  const otherEmbeds=a.embeds.filter(e=>!['audio','video','instagram','twitter','youtube'].includes(e.type)).length;
+
+  const headers=['artikel_id','url','kop','auteur','datum','intro','tekst','og_image',
+    'afbeeldingen','links','gerelateerd','tussenkoppen','kaders','quotes',
+    'audio','video','instagram','twitter','youtube','overig_embeds',
+    'wrd_kop','wrd_intro','wrd_tekst','alineas'];
+
+  const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
+  const kaders=(a.bodyText.match(/\[KADER\]/g)||[]).length;
+  const quotes=(a.bodyText.match(/\[QUOTE\]/g)||[]).length;
+  const cleanText=a.bodyText.replace(/\[TUSSENKOP\][^\n]*/g,'').replace(/\[KADER\]|\[\/KADER\]/g,'').replace(/\[QUOTE\][^\n]*/g,'');
+  const alineas=cleanText.split(/\n\n+/).filter(p=>p.trim()).length;
+
+  const row=[
+    a.urlArticleId||'',
+    '',// URL filled by caller if needed
+    a.headline||'',
+    a.author||'',
+    a.pubDate||'',
+    a.intro||'',
+    a.bodyText||'',
+    a.ogImage||'',
+    a.images.length+(a.ogImage?1:0),
+    a.links.length,
+    a.related.length,
+    tussenkoppen,
+    kaders,
+    quotes,
+    audioCount,
+    videoCount,
+    igCount,
+    twCount,
+    ytCount,
+    otherEmbeds,
+    a.headline?a.headline.split(/\s+/).length:0,
+    a.intro?a.intro.split(/\s+/).length:0,
+    cleanText?cleanText.split(/\s+/).filter(w=>w).length:0,
+    alineas
+  ];
+
+  function csvVal(v){
+    const s=String(v).replace(/"/g,'""');
+    return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s+'"':s;
+  }
+
+  const csv=headers.join(',')+'\n'+row.map(csvVal).join(',');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=(a.urlArticleId||'artikel')+'.csv';
+  link.click();
+  URL.revokeObjectURL(url);
 }
 
 function srRow(label,content){
