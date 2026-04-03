@@ -18,7 +18,7 @@
   <nav class="tb-tabs">
     <button class="tb-tab active" onclick="switchTab('grafiek',this)">Grafiek</button>
     <button class="tb-tab" onclick="switchTab('tab2',this)">Scraper</button>
-    <button class="tb-tab" onclick="switchTab('tab3',this)">Tabblad 3</button>
+    <button class="tb-tab" onclick="switchTab('tab3',this)">Monitor</button>
     <button class="tb-tab" onclick="switchTab('tab4',this)">Tabblad 4</button>
   </nav>
   <div class="tb-sp"></div>
@@ -299,13 +299,48 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 </div>
 </div>
 
-<!-- TAB: TABBLAD 3 -->
+<!-- TAB: MONITOR -->
 <div class="tab-content" id="tab-tab3">
-  <div class="tab-empty">
-    <span class="tab-empty-icon">3</span>
-    <p>Tabblad 3</p>
-    <p style="color:var(--pm);font-size:13px">Nog geen inhoud</p>
+<div class="scraper-layout">
+  <div class="scraper-input">
+    <div class="psec">
+      <div class="sh"><span class="sl">Monitor</span></div>
+      <div class="sc">
+        <div><label>Scoor voor omroep</label>
+          <select id="mon-omroep" style="margin-bottom:5px">
+            <option value="">Kies...</option>
+            <option value="rijnmond">Rijnmond</option>
+            <option value="west">Omroep West</option>
+          </select>
+        </div>
+        <label class="chk"><input type="checkbox" id="mon-scrape" checked> Artikelen scrapen (langzamer, meer data)</label>
+        <div style="display:flex;gap:5px;margin-top:5px">
+          <button class="btn btn-p" onclick="startMonitor()" id="mon-start" style="flex:1">▶ Start monitor</button>
+          <button class="btn btn-sm" onclick="stopMonitor()" id="mon-stop" style="display:none">⏹ Stop</button>
+        </div>
+        <div id="mon-status" style="font-size:11px;color:var(--pm);margin-top:4px"></div>
+        <div id="mon-progress-bar" style="display:none;height:4px;background:var(--ib);border-radius:2px;margin-top:4px;overflow:hidden">
+          <div id="mon-progress-fill" style="height:100%;background:var(--ac);width:0%;transition:width .3s"></div>
+        </div>
+      </div>
+    </div>
+    <div class="psec" id="mon-export-section" style="display:none">
+      <div class="sh"><span class="sl">Export</span></div>
+      <div class="sc">
+        <button class="btn btn-p" onclick="exportMonitorCSV()" style="width:100%">⬇ Download CSV (<span id="mon-count">0</span> relevant)</button>
+      </div>
+    </div>
   </div>
+  <div class="scraper-output">
+    <div id="mon-results">
+      <div class="tab-empty">
+        <span class="tab-empty-icon">📡</span>
+        <p>Kies een omroep en start de monitor</p>
+        <p style="color:var(--pm);font-size:13px">Scant RSS feeds van alle andere omroepen en scoort op relevantie</p>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- TAB: TABBLAD 4 -->
@@ -351,6 +386,8 @@ function switchTab(id,btn){
 <script src="js/overlays.js?v=10"></script>
 <script src="js/interact.js?v=8"></script>
 <script src="js/scraper.js?v=61"></script>
+<script src="js/data/entities.js?v=80"></script>
+<script src="js/monitor.js?v=80"></script>
 <script src="js/ui.js?v=10"></script>
 </body>
 </html>
