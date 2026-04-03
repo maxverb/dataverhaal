@@ -204,20 +204,24 @@ function renderMonitorResults(omroep){
   // Sort by score descending
   const sorted=[...monitorResults].sort((a,b)=>b.score-a.score);
 
+  // Track highest score ever in localStorage
+  const hiKey='dataverhaal_monitor_highscore_'+omroep;
+  let highScore=parseInt(localStorage.getItem(hiKey)||'0');
+  if(sorted.length&&sorted[0].score>highScore){highScore=sorted[0].score;localStorage.setItem(hiKey,String(highScore));}
+
   let html='';
   sorted.forEach((art,i)=>{
-    const maxScore=sorted[0]?.score||1;
-    const barPct=Math.round(art.score/maxScore*100);
-    const detailTxt=art.scoreDetails.slice(0,3).map(d=>d.term).join(', ');
+    // Color based on score: >=10 green, 4-9 orange, <4 blue
+    const clr=art.score>=10?'#22c55e':art.score>=4?'#f59e0b':'var(--ac)';
+    const matchTags=art.scoreDetails.slice(0,5).map(d=>
+      `<span class="mon-tag">${esc(d.term)}</span>`
+    ).join('');
     html+=`<div class="mon-row" onclick="showMonDetail(${i})">
-      <div class="mon-rank">${i+1}</div>
+      <div class="mon-score-num" style="color:${clr}">${art.score}</div>
+      <div class="mon-source">${esc(art.source)}</div>
       <div class="mon-info">
         <div class="mon-title">${esc(art.fullTitle||art.title)}</div>
-        <div class="mon-meta">${esc(art.source)} · ${esc(detailTxt)}</div>
-      </div>
-      <div class="mon-score-col">
-        <div class="mon-score-num">${art.score}</div>
-        <div class="mon-score-bar"><div class="mon-score-fill" style="width:${barPct}%"></div></div>
+        <div class="mon-tags">${matchTags}</div>
       </div>
     </div>`;
   });
