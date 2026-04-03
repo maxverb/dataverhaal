@@ -376,7 +376,15 @@ function parseArticle(html,sourceUrl){
     return line;
   });
 
-  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,urlArticleId,sourceUrl,rawText:finalRaw.join('\n')};
+  // ── CATEGORIE uit metadata ──
+  const category=
+    doc.querySelector('meta[property="article:section"]')?.content||
+    doc.querySelector('meta[name="category"]')?.content||
+    root.querySelector('.category-labels .name-label')?.textContent?.trim()||
+    doc.querySelector('.category-labels .name-label')?.textContent?.trim()||
+    '';
+
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,urlArticleId,sourceUrl,category,rawText:finalRaw.join('\n')};
 }
 
 function renderTable(a){
@@ -391,66 +399,10 @@ function renderTable(a){
 function exportScrapeCSV(){
   const a=document.getElementById('scrape-results')._article;
   if(!a) return;
-
-  const audioCount=a.embeds.filter(e=>e.type==='audio').length;
-  const videoCount=a.embeds.filter(e=>e.type==='video').length;
-  const igCount=a.embeds.filter(e=>e.type==='instagram').length;
-  const twCount=a.embeds.filter(e=>e.type==='twitter').length;
-  const ytCount=a.embeds.filter(e=>e.type==='youtube').length;
-  const otherEmbeds=a.embeds.filter(e=>!['audio','video','instagram','twitter','youtube'].includes(e.type)).length;
-
-  const headers=['artikel_id','url','kop','auteur','datum','intro','tekst','og_image',
-    'afbeeldingen','links','gerelateerd','tussenkoppen','kaders','quotes',
-    'audio','video','instagram','twitter','youtube','overig_embeds',
-    'wrd_kop','wrd_intro','wrd_tekst','alineas','ruw'];
-
-  const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
-  const kaders=(a.bodyText.match(/\[KADER\]/g)||[]).length;
-  const quotes=(a.bodyText.match(/\[QUOTE\]/g)||[]).length;
-  const cleanText=a.bodyText.replace(/\[TUSSENKOP\][^\n]*/g,'').replace(/\[KADER\]|\[\/KADER\]/g,'').replace(/\[QUOTE\][^\n]*/g,'');
-  const alineas=cleanText.split(/\n\n+/).filter(p=>p.trim()).length;
-
-  const row=[
-    a.urlArticleId||'',
-    a.sourceUrl&&a.sourceUrl!=='(geplakt)'?a.sourceUrl:'',
-    a.headline||'',
-    a.author||'',
-    a.pubDate||'',
-    a.intro||'',
-    a.bodyText||'',
-    a.ogImage||'',
-    a.images.length+(a.ogImage?1:0),
-    a.links.length,
-    a.related.length,
-    tussenkoppen,
-    kaders,
-    quotes,
-    audioCount,
-    videoCount,
-    igCount,
-    twCount,
-    ytCount,
-    otherEmbeds,
-    a.headline?a.headline.split(/\s+/).length:0,
-    a.intro?a.intro.split(/\s+/).length:0,
-    cleanText?cleanText.split(/\s+/).filter(w=>w).length:0,
-    alineas,
-    a.rawText||''
-  ];
-
-  function csvVal(v){
-    const s=String(v).replace(/"/g,'""');
-    return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s+'"':s;
-  }
-
-  const csv=headers.join(',')+'\n'+row.map(csvVal).join(',');
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement('a');
-  link.href=url;
-  link.download=(a.urlArticleId||'artikel')+'.csv';
-  link.click();
-  URL.revokeObjectURL(url);
+  const saved=bulkResults;
+  bulkResults=[a];
+  exportBulkCSV();
+  bulkResults=saved;
 }
 
 function srRow(label,content){
@@ -602,12 +554,15 @@ function clearBulkResults(){
 
 function exportBulkCSV(){
   if(!bulkResults.length) return;
-  const headers=['artikel_id','url','kop','auteur','datum','intro','tekst','og_image',
+  const headers=['artikel_id','url','categorie','kop','auteur','datum','intro','tekst','og_image',
     'afbeeldingen','links','gerelateerd','tussenkoppen','kaders','quotes',
     'audio','video','instagram','twitter','youtube','overig_embeds',
+    'audio_urls','video_urls','instagram_urls','twitter_urls','youtube_urls',
     'wrd_kop','wrd_intro','wrd_tekst','alineas','ruw'];
 
   function csvVal(v){const s=String(v).replace(/"/g,'""');return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s+'"':s;}
+
+  function embedUrls(a,type){return a.embeds.filter(e=>e.type===type&&e.val&&!e.val.includes('gedetecteerd')).map(e=>e.val).join(' | ');}
 
   function articleRow(a){
     const audioCount=a.embeds.filter(e=>e.type==='audio').length;
@@ -624,11 +579,13 @@ function exportBulkCSV(){
     return [
       a.urlArticleId||'',
       a.sourceUrl&&a.sourceUrl!=='(geplakt)'?a.sourceUrl:'',
+      a.category||'',
       a.headline||'',a.author||'',a.pubDate||'',
       a.intro||'',a.bodyText||'',a.ogImage||'',
       a.images.length+(a.ogImage?1:0),a.links.length,a.related.length,
       tussenkoppen,kaders,quotes,
       audioCount,videoCount,igCount,twCount,ytCount,otherEmbeds,
+      embedUrls(a,'audio'),embedUrls(a,'video'),embedUrls(a,'instagram'),embedUrls(a,'twitter'),embedUrls(a,'youtube'),
       a.headline?a.headline.split(/\s+/).length:0,
       a.intro?a.intro.split(/\s+/).length:0,
       cleanText?cleanText.split(/\s+/).filter(w=>w).length:0,
@@ -671,6 +628,7 @@ function renderTableHTML(a){
   if(a.sourceUrl&&a.sourceUrl!=='(geplakt)') html+=srRow('URL',a.sourceUrl);
   html+=srRow('Kop',a.headline);
   if(a.urlArticleId) html+=srRow('Artikel-ID',a.urlArticleId);
+  if(a.category) html+=srRow('Categorie',a.category);
   if(a.ogImage) html+=srRow('OG Image',a.ogImage);
   if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
   html+=srRow('Intro',a.intro);html+=srRow('Tekst',a.bodyText);
