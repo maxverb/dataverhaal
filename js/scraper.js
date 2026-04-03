@@ -292,7 +292,7 @@ function parseArticle(html,sourceUrl){
   for(let i=0;i<ytPlaceholders;i++) addEmbed('youtube','youtube embed gedetecteerd','');
 
   // ── ARTIKEL-ID uit URL ──
-  const urlArticleId=(sourceUrl.match(/\/nieuws\/(\d+)\//)||[])[1]||'';
+  const urlArticleId=(sourceUrl.match(/\/(?:nieuws|natuur|sport|cultuur|politiek|economie|regio)\/(\d+)/)||sourceUrl.match(/\/(\d{5,})\//)||[])[1]||'';
 
   // ── Audio/Video — read Worker meta tag + DOM fallback ──
   let workerMedia={sourceIds:[],cdnUrls:[],sids:[],durations:[],posters:[]};
