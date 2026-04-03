@@ -3,7 +3,15 @@ registerChart('barh',{label:'Horiz.',draw:function(ctx,data,x,y,w,h,O){
   const n=data.length, nc=cols.length;
   const allVals=data.flatMap(d=>cols.map(c=>d.values[c]||0));
   const maxV=Math.max(...allVals)||1;
-  const lblW=w*0.3, cX=x+lblW+W*0.012, cW=w-lblW-W*0.012;
+
+  // Dynamic label width: measure longest label
+  const lblSz=Math.max(W*0.018,11);
+  ctx.font=`500 ${lblSz}px Barlow`;
+  let lblW=0;
+  data.forEach(d=>{const tw=ctx.measureText(shortLabel(d.label)).width;if(tw>lblW)lblW=tw;});
+  lblW=Math.min(lblW+W*0.02, w*0.4); // add padding, max 40%
+
+  const cX=x+lblW+W*0.008, cW=w-lblW-W*0.008;
   const legH=nc>1?W*0.04:0;
   const gap=n>8?0.10:0.18;
   const gH=(h-legH)/n, bH=gH*(1-gap), subH=bH/nc;
