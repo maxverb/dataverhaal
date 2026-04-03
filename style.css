@@ -54,16 +54,18 @@ body{font-family:'Barlow',sans-serif;background:#0e0e0e;color:var(--pt);height:1
 .sd-top-item span:first-child{color:var(--pt)}
 .sd-top-item span:last-child{color:var(--ac);font-weight:700}
 /* MONITOR */
-.mon-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--pb);cursor:pointer;transition:background .15s}
+.mon-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--pb);transition:background .15s}
 .mon-row:hover{background:var(--ib)}
 .mon-info{flex:1;min-width:0}
-.mon-title{font-size:12px;font-weight:600;color:var(--pt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mon-tags{display:flex;gap:3px;flex-wrap:wrap;margin-top:2px}
-.mon-tag{font-size:9px;background:var(--ib);color:var(--pm);border-radius:3px;padding:1px 5px;white-space:nowrap}
-.mon-source{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--pm);width:55px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mon-score-num{font-family:'Sora',sans-serif;font-size:16px;font-weight:700;line-height:1;width:32px;text-align:right;flex-shrink:0}
-.mon-detail{padding:8px}
-.mon-detail-score{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
+.mon-title{font-size:15px;font-weight:600;color:var(--pt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-decoration:none;display:block}
+.mon-title:hover{text-decoration:underline}
+.mon-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
+.mon-tag{font-size:11px;background:var(--ib);color:var(--pm);border-radius:3px;padding:2px 7px;white-space:nowrap;cursor:pointer;transition:background .15s}
+.mon-tag:hover{background:var(--ac);color:#fff}
+.mon-source{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--pm);width:70px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mon-score-num{font-family:'Sora',sans-serif;font-size:22px;font-weight:700;line-height:1;width:40px;text-align:right;flex-shrink:0}
+.mon-detail{padding:12px}
+.mon-detail-score{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
 .bulk-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--pb);cursor:pointer;transition:background .15s}
 .bulk-row:hover{background:var(--ib)}
 .bulk-row.bulk-error{opacity:.6}
