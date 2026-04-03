@@ -35,7 +35,7 @@ registerChart('barh',{label:'Horiz.',draw:function(ctx,data,x,y,w,h,O){
       else{const rr=Math.min(subH*0.3,W*0.005);rbar(ctx,cX,by,bW,subH-(nc>1?1:0),0,rr);}
       if(showVal&&nc===1){
         const sz=Math.max(W*0.018,11);
-        ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.text;ctx.textAlign='left';
+        ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.text;ctx.textAlign='left';ctx.textBaseline='middle';
         ctx.fillText(fmtN(v),cX+bW+W*0.012,by+subH/2);
       }
     });
