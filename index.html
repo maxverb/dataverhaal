@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=30">
+<link rel="stylesheet" href="style.css?v=52">
 </head>
 <body>
 
@@ -248,30 +248,45 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 <div class="scraper-layout">
   <div class="scraper-input">
     <div class="psec">
-      <div class="sh"><span class="sl">Artikel scrapen</span></div>
+      <div class="sh"><span class="sl">Artikelen scrapen</span></div>
       <div class="sc">
-        <div><label>URL van artikel</label>
-          <div style="display:flex;gap:5px">
-            <input type="text" id="scrape-url" placeholder="https://www.rijnmond.nl/nieuws/..." style="flex:1">
-            <button class="btn btn-p" onclick="scrapeURL()">Ophalen</button>
-          </div>
+        <div><label>URLs (één per regel)</label>
+          <textarea id="scrape-urls" placeholder="https://www.rijnmond.nl/nieuws/...&#10;https://www.omroepwest.nl/nieuws/...&#10;https://www.gld.nl/nieuws/..." style="min-height:160px;font-size:11px"></textarea>
         </div>
-        <div id="scrape-status" style="font-size:11px;color:var(--pm)"></div>
+        <div style="display:flex;gap:5px">
+          <button class="btn btn-p" onclick="scrapeBulk()" id="scrape-start" style="flex:1">▶ Scrape alles</button>
+          <button class="btn btn-sm" onclick="stopBulk()" id="scrape-stop" style="display:none">⏹ Stop</button>
+        </div>
+        <div id="scrape-progress" style="font-size:11px;color:var(--pm)"></div>
+        <div id="scrape-progress-bar" style="display:none;height:4px;background:var(--ib);border-radius:2px;margin-top:4px;overflow:hidden">
+          <div id="scrape-progress-fill" style="height:100%;background:var(--ac);width:0%;transition:width .3s"></div>
+        </div>
       </div>
     </div>
     <div class="psec">
-      <div class="sh" onclick="tog(this)"><span class="sl">Of plak HTML broncode</span><span class="st">▾</span></div>
+      <div class="sh" onclick="tog(this)"><span class="sl">Enkel artikel (URL of HTML)</span><span class="st">▾</span></div>
       <div class="sc hidden">
-        <textarea id="scrape-paste" placeholder="Plak hier de HTML broncode..." style="min-height:120px;font-size:11px"></textarea>
+        <div style="display:flex;gap:5px;margin-bottom:5px">
+          <input type="text" id="scrape-url" placeholder="Enkele URL..." style="flex:1">
+          <button class="btn btn-sm" onclick="scrapeURL()">Ophalen</button>
+        </div>
+        <textarea id="scrape-paste" placeholder="Of plak HTML broncode..." style="min-height:80px;font-size:11px"></textarea>
         <button class="btn btn-sm" onclick="scrapeFromPaste()">Parseer HTML</button>
+      </div>
+    </div>
+    <div class="psec" id="scrape-export-section" style="display:none">
+      <div class="sh"><span class="sl">Export</span></div>
+      <div class="sc">
+        <button class="btn btn-p" onclick="exportBulkCSV()" style="width:100%">⬇ Download CSV (<span id="scrape-count">0</span> artikelen)</button>
+        <button class="btn btn-sm" onclick="clearBulkResults()" style="width:100%;margin-top:4px">✕ Wis resultaten</button>
       </div>
     </div>
   </div>
   <div class="scraper-output" id="scrape-results">
     <div class="tab-empty">
       <span class="tab-empty-icon">📰</span>
-      <p>Voer een URL in of plak HTML</p>
-      <p style="color:var(--pm);font-size:13px">Kop, intro, tekst, afbeeldingen, video's en embeds worden herkend</p>
+      <p>Plak URLs en klik "Scrape alles"</p>
+      <p style="color:var(--pm);font-size:13px">Eén URL per regel — tot 100+ artikelen tegelijk</p>
     </div>
   </div>
 </div>
@@ -328,7 +343,7 @@ function switchTab(id,btn){
 <script src="js/suggest.js?v=4"></script>
 <script src="js/overlays.js?v=10"></script>
 <script src="js/interact.js?v=8"></script>
-<script src="js/scraper.js?v=51"></script>
+<script src="js/scraper.js?v=52"></script>
 <script src="js/ui.js?v=10"></script>
 </body>
 </html>
