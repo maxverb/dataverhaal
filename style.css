@@ -54,17 +54,14 @@ body{font-family:'Barlow',sans-serif;background:#0e0e0e;color:var(--pt);height:1
 .sd-top-item span:first-child{color:var(--pt)}
 .sd-top-item span:last-child{color:var(--ac);font-weight:700}
 /* MONITOR */
-.mon-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--pb);cursor:pointer;transition:background .15s}
+.mon-row{display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--pb);cursor:pointer;transition:background .15s}
 .mon-row:hover{background:var(--ib)}
-.mon-rank{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--pm);width:28px;text-align:right;flex-shrink:0}
-.mon-thumb{width:60px;height:40px;object-fit:cover;border-radius:3px;flex-shrink:0;background:var(--ib)}
 .mon-info{flex:1;min-width:0}
-.mon-title{font-size:13px;font-weight:600;color:var(--pt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mon-meta{font-size:11px;color:var(--pm)}
-.mon-score-col{flex-shrink:0;width:60px;text-align:right}
-.mon-score-num{font-family:'Sora',sans-serif;font-size:18px;font-weight:700;color:var(--ac);line-height:1}
-.mon-score-bar{height:3px;background:var(--ib);border-radius:2px;margin-top:3px;overflow:hidden}
-.mon-score-fill{height:100%;background:var(--ac);border-radius:2px}
+.mon-title{font-size:12px;font-weight:600;color:var(--pt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mon-tags{display:flex;gap:3px;flex-wrap:wrap;margin-top:2px}
+.mon-tag{font-size:9px;background:var(--ib);color:var(--pm);border-radius:3px;padding:1px 5px;white-space:nowrap}
+.mon-source{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--pm);width:55px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mon-score-num{font-family:'Sora',sans-serif;font-size:16px;font-weight:700;line-height:1;width:32px;text-align:right;flex-shrink:0}
 .mon-detail{padding:8px}
 .mon-detail-score{display:flex;align-items:baseline;gap:8px;margin-bottom:4px}
 .bulk-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--pb);cursor:pointer;transition:background .15s}
