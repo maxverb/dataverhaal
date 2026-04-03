@@ -3,6 +3,12 @@
 let monitorResults=[];
 let monitorStopped=false;
 
+// localStorage cache for scraped articles
+const MON_CACHE_KEY='dataverhaal_monitor_cache';
+function getMonCache(){try{return JSON.parse(localStorage.getItem(MON_CACHE_KEY)||'{}');}catch(e){return {};}}
+function setMonCache(cache){try{localStorage.setItem(MON_CACHE_KEY,JSON.stringify(cache));}catch(e){}}
+
+
 async function startMonitor(){
   const omroep=document.getElementById('mon-omroep').value;
   if(!omroep){document.getElementById('mon-status').textContent='Kies een omroep';return;}
@@ -67,32 +73,53 @@ async function startMonitor(){
   // Step 2: Score each article (first on RSS data, then optionally scrape)
   const scrapeEnabled=document.getElementById('mon-scrape').checked;
 
+  // Load cache — only scrape articles not yet cached
+  const cache=getMonCache();
+  const currentUrls=new Set(allArticles.map(a=>a.link));
+  // Remove cached items no longer in RSS
+  Object.keys(cache).forEach(url=>{if(!currentUrls.has(url)) delete cache[url];});
+  setMonCache(cache);
+
+  let scraped=0, cached=0;
   for(let i=0;i<allArticles.length;i++){
     if(monitorStopped) break;
     const art=allArticles[i];
 
     // ETA
     const elapsed=(Date.now()-startTime)/1000;
-    const perItem=i>0?elapsed/i:1;
+    const perItem=i>0?elapsed/i:0.5;
     const remaining=Math.round(perItem*(allArticles.length-i));
     const eta=remaining>=60?Math.floor(remaining/60)+'m '+remaining%60+'s':remaining+'s';
-    status.textContent=`${i+1}/${allArticles.length} · ${eta} · ${art.source}`;
     fill.style.width=Math.round((i/allArticles.length)*100)+'%';
 
     let fullText='';
-    if(scrapeEnabled){
+    // Check cache first
+    if(cache[art.link]){
+      const c=cache[art.link];
+      fullText=c.fullText||'';
+      art.intro=c.intro||art.desc;
+      art.fullTitle=c.fullTitle||art.title;
+      cached++;
+      status.textContent=`${i+1}/${allArticles.length} · ${eta} · ⚡ cache · ${art.source}`;
+    } else if(scrapeEnabled){
+      status.textContent=`${i+1}/${allArticles.length} · ${eta} · ${art.source}`;
       try{
         const html=await fetchHTML(art.link);
         if(html){
           const parsed=parseArticle(html,art.link);
           fullText=parsed.bodyText||'';
-          if(parsed.ogImage&&!art.image) art.image=parsed.ogImage;
           art.intro=parsed.intro||art.desc;
           art.fullTitle=parsed.headline||art.title;
         }
       }catch(e){}
-      // Delay between requests
+      // Save to cache
+      cache[art.link]={fullText,intro:art.intro,fullTitle:art.fullTitle,ts:Date.now()};
+      setMonCache(cache);
+      scraped++;
+      // Delay only for actual scrapes
       if(i<allArticles.length-1&&!monitorStopped) await new Promise(r=>setTimeout(r,300));
+    } else {
+      status.textContent=`${i+1}/${allArticles.length} · ${eta} · ${art.source}`;
     }
 
     // Score against entities
@@ -103,7 +130,6 @@ async function startMonitor(){
 
     if(score.total>0){
       monitorResults.push(art);
-      // Insert sorted
       renderMonitorResults(omroep);
     }
   }
@@ -113,7 +139,7 @@ async function startMonitor(){
   const totalTime=totalSec>=60?Math.floor(totalSec/60)+'m '+totalSec%60+'s':totalSec+'s';
   status.textContent=monitorStopped
     ?`Gestopt (${totalTime})`
-    :`✓ ${allArticles.length} artikelen gescand, ${monitorResults.length} relevant (${totalTime})`;
+    :`✓ ${allArticles.length} gescand (${scraped} nieuw, ${cached} cache), ${monitorResults.length} relevant (${totalTime})`;
   status.style.color='#4ade80';
   startBtn.disabled=false;startBtn.textContent='▶ Start monitor';
   stopBtn.style.display='none';
@@ -145,13 +171,20 @@ function scoreArticle(title,intro,text,entities){
 
   allTerms.forEach(({term,cat,weight})=>{
     const termLower=term.toLowerCase();
+    // Short terms (<=4 chars like RET, ADO, 010) use word boundary matching
+    const useWordBoundary=term.length<=4;
+    const regex=useWordBoundary?new RegExp('\\b'+termLower.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i'):null;
+
+    function matches(text){
+      if(!text) return false;
+      if(useWordBoundary) return regex.test(text);
+      return text.toLowerCase().includes(termLower);
+    }
+
     let hits=0;
-    // Title hits count 3x
-    if(titleLower.includes(termLower)) hits+=3;
-    // Intro hits count 2x
-    if(introLower.includes(termLower)) hits+=2;
-    // Text hits count 1x
-    if(textLower.includes(termLower)) hits+=1;
+    if(matches(title)) hits+=3;
+    if(matches(intro)) hits+=2;
+    if(matches(text)) hits+=1;
 
     if(hits>0){
       const score=hits*weight;
@@ -178,7 +211,6 @@ function renderMonitorResults(omroep){
     const detailTxt=art.scoreDetails.slice(0,3).map(d=>d.term).join(', ');
     html+=`<div class="mon-row" onclick="showMonDetail(${i})">
       <div class="mon-rank">${i+1}</div>
-      ${art.image?`<img class="mon-thumb" src="${art.image.split('?')[0]}" onerror="this.style.display='none'">`:''}
       <div class="mon-info">
         <div class="mon-title">${esc(art.fullTitle||art.title)}</div>
         <div class="mon-meta">${esc(art.source)} · ${esc(detailTxt)}</div>
