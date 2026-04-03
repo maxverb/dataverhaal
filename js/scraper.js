@@ -381,52 +381,7 @@ function parseArticle(html,sourceUrl){
 
 function renderTable(a){
   const out=document.getElementById('scrape-results');
-
-  // ── STATS DASHBOARD ──
-  const kopWoorden=a.headline?a.headline.split(/\s+/).length:0;
-  const introWoorden=a.intro?a.intro.split(/\s+/).length:0;
-  const tekstWoorden=a.bodyText?a.bodyText.replace(/\[TUSSENKOP\][^\n]*/g,'').split(/\s+/).filter(w=>w).length:0;
-  const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
-  const kaders=(a.bodyText.match(/\[KADER\]/g)||[]).length;
-  const quotes=(a.bodyText.match(/\[QUOTE\]/g)||[]).length;
-  const alineas=a.bodyText.split(/\n\n+/).filter(p=>p.trim()&&!p.includes('[TUSSENKOP]')&&!p.includes('[KADER]')&&!p.includes('[/KADER]')).length;
-  const audioCount=a.embeds.filter(e=>e.type==='audio').length;
-  const videoCount=a.embeds.filter(e=>e.type==='video').length;
-  const embedCount=a.embeds.filter(e=>e.type!=='audio'&&e.type!=='video').length;
-
-  function stat(num,lbl){return `<div class="sr-stat"><span class="sr-stat-num">${num}</span><span class="sr-stat-lbl">${lbl}</span></div>`;}
-  let html=`<div class="sr-stats">`;
-  html+=stat(kopWoorden,'wrd kop');
-  html+=stat(introWoorden,'wrd intro');
-  html+=stat(tekstWoorden,'wrd tekst');
-  html+=stat(alineas,"alinea's");
-  html+=stat(tussenkoppen,'tussenkoppen');
-  if(kaders) html+=stat(kaders,'kaders');
-  if(quotes) html+=stat(quotes,'quotes');
-  html+=stat(a.images.length+(a.ogImage?1:0),'afbeeldingen');
-  html+=stat(a.links.length,'links');
-  html+=stat(a.related.length,'lees ook');
-  if(audioCount) html+=stat(audioCount,'audio');
-  if(videoCount) html+=stat(videoCount,'video');
-  if(embedCount) html+=stat(embedCount,'embeds');
-  html+=`</div>`;
-
-  // ── TABLE ──
-  html+=`<table class="sr-table">
-    <thead><tr><th>Element</th><th>Inhoud</th><th></th></tr></thead><tbody>`;
-  if(a.sourceUrl&&a.sourceUrl!=='(geplakt)') html+=srRow('URL',a.sourceUrl);
-  html+=srRow('Kop',a.headline);
-  if(a.urlArticleId) html+=srRow('Artikel-ID',a.urlArticleId);
-  if(a.ogImage) html+=srRow('OG Image',a.ogImage);
-  if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
-  html+=srRow('Intro',a.intro);
-  html+=srRow('Tekst',a.bodyText);
-  if(a.links.length) html+=srRow('Links',a.links.map(l=>l.text+' → '+l.href).join('\n'));
-  html+=srRow('Afbeeldingen',a.images.map(i=>i.src+(i.desc?' — '+i.desc:'')).join('\n'));
-  a.embeds.forEach(e=>html+=srRow(e.type.toUpperCase(),e.val));
-  if(a.related.length) html+=srRow('Gerelateerd',a.related.map(r=>r.title+' → '+r.href).join('\n'));
-  html+=srRow('Alles (ruw)',a.rawText);
-  html+=`</tbody></table>`;
+  let html=renderTableHTML(a);
   html+=`<button class="btn btn-p" onclick="exportScrapeCSV()" style="margin-top:10px">⬇ Export CSV</button>`;
   out.innerHTML=html;
   // Store article data for CSV export
@@ -513,6 +468,219 @@ function copySrCell(id,b64,btn){
   navigator.clipboard.writeText(text).then(()=>{
     btn.textContent='✓';setTimeout(()=>{btn.textContent='📋';},1000);
   });
+}
+
+// ── BULK SCRAPING ───────────────────────────────────────────────────────
+
+let bulkResults=[];
+let bulkStopped=false;
+
+async function fetchHTML(url){
+  for(const proxyFn of SCRAPER_PROXIES){
+    try{const r=await fetch(proxyFn(url));if(r.ok)return await r.text();}catch(e){}
+  }
+  return null;
+}
+
+async function scrapeBulk(){
+  const textarea=document.getElementById('scrape-urls');
+  const urls=textarea.value.split('\n').map(u=>u.trim()).filter(u=>u.startsWith('http'));
+  if(!urls.length){document.getElementById('scrape-progress').textContent='Geen URLs gevonden';return;}
+
+  bulkStopped=false;
+  bulkResults=[];
+  const prog=document.getElementById('scrape-progress');
+  const bar=document.getElementById('scrape-progress-bar');
+  const fill=document.getElementById('scrape-progress-fill');
+  const out=document.getElementById('scrape-results');
+  const startBtn=document.getElementById('scrape-start');
+  const stopBtn=document.getElementById('scrape-stop');
+  const exportSec=document.getElementById('scrape-export-section');
+
+  bar.style.display='block';
+  startBtn.disabled=true;startBtn.textContent='Bezig...';
+  stopBtn.style.display='';
+  out.innerHTML='';
+  exportSec.style.display='none';
+
+  for(let i=0;i<urls.length;i++){
+    if(bulkStopped) break;
+    const url=urls[i];
+    prog.textContent=`${i+1}/${urls.length}: ${url.split('/').pop().slice(0,40)}...`;
+    prog.style.color='var(--ac)';
+    fill.style.width=Math.round((i/urls.length)*100)+'%';
+
+    try{
+      const html=await fetchHTML(url);
+      if(html){
+        const article=parseArticle(html,url);
+        bulkResults.push(article);
+        out.innerHTML+=bulkRow(article,i+1,urls.length);
+      } else {
+        out.innerHTML+=bulkRowError(url,i+1,'Kon niet ophalen');
+      }
+    }catch(e){
+      out.innerHTML+=bulkRowError(url,i+1,e.message);
+    }
+
+    // Scroll to bottom
+    out.scrollTop=out.scrollHeight;
+
+    // Small delay to not overwhelm the proxy
+    if(i<urls.length-1&&!bulkStopped) await new Promise(r=>setTimeout(r,500));
+  }
+
+  fill.style.width='100%';
+  prog.textContent=bulkStopped?`Gestopt na ${bulkResults.length} artikelen`:`✓ ${bulkResults.length}/${urls.length} artikelen gescraped`;
+  prog.style.color=bulkStopped?'#f59e0b':'#4ade80';
+  startBtn.disabled=false;startBtn.textContent='▶ Scrape alles';
+  stopBtn.style.display='none';
+  exportSec.style.display='';
+  document.getElementById('scrape-count').textContent=bulkResults.length;
+}
+
+function stopBulk(){bulkStopped=true;}
+
+function bulkRow(a,num,total){
+  const audioCount=a.embeds.filter(e=>e.type==='audio').length;
+  const videoCount=a.embeds.filter(e=>e.type==='video').length;
+  const igCount=a.embeds.filter(e=>e.type==='instagram').length;
+  const twCount=a.embeds.filter(e=>e.type==='twitter').length;
+  const ytCount=a.embeds.filter(e=>e.type==='youtube').length;
+  const wrd=a.bodyText?a.bodyText.replace(/\[[^\]]*\]/g,'').split(/\s+/).filter(w=>w).length:0;
+  const badges=[];
+  if(a.images.length) badges.push(`${a.images.length+(a.ogImage?1:0)} img`);
+  if(audioCount) badges.push(`${audioCount} audio`);
+  if(videoCount) badges.push(`${videoCount} video`);
+  if(igCount) badges.push(`${igCount} ig`);
+  if(twCount) badges.push(`${twCount} tw`);
+  if(ytCount) badges.push(`${ytCount} yt`);
+  return `<div class="bulk-row" onclick="showBulkDetail(${bulkResults.length-1})">
+    <span class="bulk-num">${num}</span>
+    <div class="bulk-info">
+      <div class="bulk-title">${esc(a.headline||'(geen kop)')}</div>
+      <div class="bulk-meta">${esc(a.author||'')}${a.author?' · ':''}${wrd} wrd${badges.length?' · '+badges.join(' · '):''}</div>
+    </div>
+    <span class="bulk-ok">✓</span>
+  </div>`;
+}
+
+function bulkRowError(url,num,err){
+  return `<div class="bulk-row bulk-error">
+    <span class="bulk-num">${num}</span>
+    <div class="bulk-info">
+      <div class="bulk-title">${esc(url.split('/').pop()||url)}</div>
+      <div class="bulk-meta" style="color:#f87171">${esc(err)}</div>
+    </div>
+    <span class="bulk-ok" style="color:#f87171">✕</span>
+  </div>`;
+}
+
+function showBulkDetail(idx){
+  const a=bulkResults[idx];
+  if(!a) return;
+  const out=document.getElementById('scrape-results');
+  // Save current bulk view
+  if(!out._bulkHTML) out._bulkHTML=out.innerHTML;
+  let html=`<button class="btn btn-sm" onclick="backToBulk()" style="margin-bottom:8px">← Terug naar overzicht</button>`;
+  html+=renderTableHTML(a);
+  out.innerHTML=html;
+}
+
+function backToBulk(){
+  const out=document.getElementById('scrape-results');
+  if(out._bulkHTML){out.innerHTML=out._bulkHTML;out._bulkHTML=null;}
+}
+
+function clearBulkResults(){
+  bulkResults=[];
+  document.getElementById('scrape-results').innerHTML='<div class="tab-empty"><span class="tab-empty-icon">📰</span><p>Plak URLs en klik "Scrape alles"</p></div>';
+  document.getElementById('scrape-export-section').style.display='none';
+  document.getElementById('scrape-progress').textContent='';
+  document.getElementById('scrape-progress-bar').style.display='none';
+}
+
+function exportBulkCSV(){
+  if(!bulkResults.length) return;
+  const headers=['artikel_id','url','kop','auteur','datum','intro','tekst','og_image',
+    'afbeeldingen','links','gerelateerd','tussenkoppen','kaders','quotes',
+    'audio','video','instagram','twitter','youtube','overig_embeds',
+    'wrd_kop','wrd_intro','wrd_tekst','alineas','ruw'];
+
+  function csvVal(v){const s=String(v).replace(/"/g,'""');return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s+'"':s;}
+
+  function articleRow(a){
+    const audioCount=a.embeds.filter(e=>e.type==='audio').length;
+    const videoCount=a.embeds.filter(e=>e.type==='video').length;
+    const igCount=a.embeds.filter(e=>e.type==='instagram').length;
+    const twCount=a.embeds.filter(e=>e.type==='twitter').length;
+    const ytCount=a.embeds.filter(e=>e.type==='youtube').length;
+    const otherEmbeds=a.embeds.filter(e=>!['audio','video','instagram','twitter','youtube'].includes(e.type)).length;
+    const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
+    const kaders=(a.bodyText.match(/\[KADER\]/g)||[]).length;
+    const quotes=(a.bodyText.match(/\[QUOTE\]/g)||[]).length;
+    const cleanText=a.bodyText.replace(/\[TUSSENKOP\][^\n]*/g,'').replace(/\[KADER\]|\[\/KADER\]/g,'').replace(/\[QUOTE\][^\n]*/g,'');
+    const alineas=cleanText.split(/\n\n+/).filter(p=>p.trim()).length;
+    return [
+      a.urlArticleId||'',
+      a.sourceUrl&&a.sourceUrl!=='(geplakt)'?a.sourceUrl:'',
+      a.headline||'',a.author||'',a.pubDate||'',
+      a.intro||'',a.bodyText||'',a.ogImage||'',
+      a.images.length+(a.ogImage?1:0),a.links.length,a.related.length,
+      tussenkoppen,kaders,quotes,
+      audioCount,videoCount,igCount,twCount,ytCount,otherEmbeds,
+      a.headline?a.headline.split(/\s+/).length:0,
+      a.intro?a.intro.split(/\s+/).length:0,
+      cleanText?cleanText.split(/\s+/).filter(w=>w).length:0,
+      alineas,a.rawText||''
+    ].map(csvVal).join(',');
+  }
+
+  const csv=headers.join(',')+'\n'+bulkResults.map(articleRow).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');
+  link.href=url;
+  link.download=`scrape_${bulkResults.length}_artikelen.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+// Refactor renderTable to return HTML string for reuse
+function renderTableHTML(a){
+  const kopWoorden=a.headline?a.headline.split(/\s+/).length:0;
+  const introWoorden=a.intro?a.intro.split(/\s+/).length:0;
+  const tekstWoorden=a.bodyText?a.bodyText.replace(/\[[^\]]*\]/g,'').split(/\s+/).filter(w=>w).length:0;
+  const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
+  const kaders=(a.bodyText.match(/\[KADER\]/g)||[]).length;
+  const quotes=(a.bodyText.match(/\[QUOTE\]/g)||[]).length;
+  const alineas=a.bodyText.split(/\n\n+/).filter(p=>p.trim()&&!p.includes('[TUSSENKOP]')&&!p.includes('[KADER]')&&!p.includes('[/KADER]')).length;
+  const audioCount=a.embeds.filter(e=>e.type==='audio').length;
+  const videoCount=a.embeds.filter(e=>e.type==='video').length;
+  const embedCount=a.embeds.filter(e=>e.type!=='audio'&&e.type!=='video').length;
+  function stat(num,lbl){return `<div class="sr-stat"><span class="sr-stat-num">${num}</span><span class="sr-stat-lbl">${lbl}</span></div>`;}
+  let html=`<div class="sr-stats">`;
+  html+=stat(kopWoorden,'wrd kop');html+=stat(introWoorden,'wrd intro');html+=stat(tekstWoorden,'wrd tekst');
+  html+=stat(alineas,"alinea's");html+=stat(tussenkoppen,'tussenkoppen');
+  if(kaders) html+=stat(kaders,'kaders');if(quotes) html+=stat(quotes,'quotes');
+  html+=stat(a.images.length+(a.ogImage?1:0),'afbeeldingen');html+=stat(a.links.length,'links');
+  html+=stat(a.related.length,'lees ook');
+  if(audioCount) html+=stat(audioCount,'audio');if(videoCount) html+=stat(videoCount,'video');
+  if(embedCount) html+=stat(embedCount,'embeds');
+  html+=`</div><table class="sr-table"><thead><tr><th>Element</th><th>Inhoud</th><th></th></tr></thead><tbody>`;
+  if(a.sourceUrl&&a.sourceUrl!=='(geplakt)') html+=srRow('URL',a.sourceUrl);
+  html+=srRow('Kop',a.headline);
+  if(a.urlArticleId) html+=srRow('Artikel-ID',a.urlArticleId);
+  if(a.ogImage) html+=srRow('OG Image',a.ogImage);
+  if(a.author||a.pubDate) html+=srRow('Meta',[a.author,a.pubDate].filter(Boolean).join(' · '));
+  html+=srRow('Intro',a.intro);html+=srRow('Tekst',a.bodyText);
+  if(a.links.length) html+=srRow('Links',a.links.map(l=>l.text+' → '+l.href).join('\n'));
+  html+=srRow('Afbeeldingen',a.images.map(i=>i.src+(i.desc?' — '+i.desc:'')).join('\n'));
+  a.embeds.forEach(e=>html+=srRow(e.type.toUpperCase(),e.val));
+  if(a.related.length) html+=srRow('Gerelateerd',a.related.map(r=>r.title+' → '+r.href).join('\n'));
+  html+=srRow('Alles (ruw)',a.rawText);
+  html+=`</tbody></table>`;
+  return html;
 }
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
