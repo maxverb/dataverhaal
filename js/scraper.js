@@ -716,17 +716,11 @@ function renderStatsView(){
   if(!bulkResults.length){el.innerHTML='<div class="tab-empty"><p>Nog geen data</p></div>';return;}
   const n=bulkResults.length;
 
-  // Helper functions
   function avg(arr){return arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length*10)/10:0;}
   function pct(count){return n?Math.round(count/n*1000)/10:0;}
-  function distribution(arr,max){
-    const dist={};
-    arr.forEach(v=>{const k=Math.min(v,max);dist[k]=(dist[k]||0)+1;});
-    return dist;
-  }
 
   // Collect data
-  const wrdKop=[], wrdIntro=[], wrdTekst=[], chrTekst=[], leestijden=[];
+  const wrdKop=[], wrdIntro=[], wrdTekst=[], leestijden=[];
   const imgCounts=[], linkCounts=[], relCounts=[];
   const audioCounts=[], videoCounts=[], igCounts=[], twCounts=[], ytCounts=[];
   const quoteCounts=[], kaderCounts=[], tussenkopCounts=[];
@@ -737,7 +731,6 @@ function renderStatsView(){
     wrdKop.push(a.headline?a.headline.split(/\s+/).length:0);
     wrdIntro.push(a.intro?a.intro.split(/\s+/).length:0);
     wrdTekst.push(clean?clean.split(/\s+/).filter(w=>w).length:0);
-    chrTekst.push(a.charTekst||0);
     if(a.readTimeMin) leestijden.push(a.readTimeMin);
     imgCounts.push(a.images.length+(a.ogImage?1:0));
     linkCounts.push(a.links.length);
@@ -756,20 +749,32 @@ function renderStatsView(){
   });
 
   function card(title,big,sub){return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-big">${big}</div><div class="sd-sub">${sub}</div></div>`;}
-  function pctCard(title,count,total){
-    const p=pct(count);
-    return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-pct">${p}%</div><div class="sd-bar-wrap"><div class="sd-bar" style="width:${p}%"></div></div><div class="sd-sub">${count} van ${total} artikelen</div></div>`;
-  }
-  function distCard(title,counts,maxBuckets){
-    const dist=distribution(counts,maxBuckets||5);
+
+  // Combined column: avg + pct + distribution stacked
+  function mediaCol(title,counts,maxBuckets){
+    const withCount=counts.filter(c=>c>0).length;
+    const p=pct(withCount);
+    const a=avg(counts);
+    // Distribution
+    const dist={};
+    counts.forEach(v=>{const k=Math.min(v,maxBuckets);dist[k]=(dist[k]||0)+1;});
     const maxCount=Math.max(...Object.values(dist),1);
-    let rows='';
-    for(let i=0;i<=Math.min(Math.max(...counts),maxBuckets||5);i++){
+    let distRows='';
+    for(let i=0;i<=Math.min(Math.max(...counts,0),maxBuckets);i++){
       const c=dist[i]||0;
-      rows+=`<div class="sd-dist-row"><div class="sd-dist-label">${i}${i===(maxBuckets||5)?'+':''}</div><div class="sd-dist-bar"><div class="sd-dist-fill" style="width:${c/maxCount*100}%"></div></div><div class="sd-dist-val">${c}</div></div>`;
+      distRows+=`<div class="sd-dist-row"><div class="sd-dist-label">${i}${i===maxBuckets?'+':''}</div><div class="sd-dist-bar"><div class="sd-dist-fill" style="width:${c/maxCount*100}%"></div></div><div class="sd-dist-val">${c}</div></div>`;
     }
-    return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-dist">${rows}</div></div>`;
+    return `<div class="sd-card">
+      <div class="sd-card-title">${title}</div>
+      <div class="sd-big">${a}</div>
+      <div class="sd-sub">gemiddeld per artikel</div>
+      <div style="margin-top:6px"><div class="sd-pct">${p}%</div>
+      <div class="sd-bar-wrap"><div class="sd-bar" style="width:${p}%"></div></div>
+      <div class="sd-sub">${withCount} van ${n} met ≥1</div></div>
+      <div style="margin-top:8px"><div class="sd-sub" style="margin-bottom:4px;font-weight:600">Verdeling</div><div class="sd-dist">${distRows}</div></div>
+    </div>`;
   }
+
   function topList(title,obj,max){
     const sorted=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,max||8);
     if(!sorted.length) return '';
@@ -777,45 +782,37 @@ function renderStatsView(){
     return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-top-list">${items}</div></div>`;
   }
 
+  // ── OVERZICHT ──
   let html=`<div class="sd-section"><div class="sd-section-title">Overzicht</div></div><div class="sd-grid">`;
   html+=card('Artikelen',n,'gescraped');
   html+=card('Gem. woorden',avg(wrdTekst),'per artikel');
   html+=card('Gem. kop',avg(wrdKop)+'w','/ '+Math.round(avg(wrdKop.map((_,i)=>bulkResults[i].headline.length)))+'t');
   html+=card('Gem. intro',avg(wrdIntro)+'w',Math.round(avg(wrdIntro.map((_,i)=>bulkResults[i].intro.length)))+'t');
   if(leestijden.length) html+=card('Gem. leestijd',avg(leestijden)+'m','minuten');
-  html+=card('Gem. afbeeldingen',avg(imgCounts),'per artikel');
-  html+=card('Gem. tussenkoppen',avg(tussenkopCounts),'per artikel');
   html+=card('Gem. links',avg(linkCounts),'per artikel');
   html+=card('Gem. lees-ook',avg(relCounts),'per artikel');
   html+=`</div>`;
 
-  html+=`<div class="sd-section"><div class="sd-section-title">Media aanwezigheid</div></div><div class="sd-grid">`;
-  html+=pctCard('Met audio',audioCounts.filter(c=>c>0).length,n);
-  html+=pctCard('Met video',videoCounts.filter(c=>c>0).length,n);
-  html+=pctCard('Met Instagram',igCounts.filter(c=>c>0).length,n);
-  html+=pctCard('Met Twitter/X',twCounts.filter(c=>c>0).length,n);
-  html+=pctCard('Met YouTube',ytCounts.filter(c=>c>0).length,n);
-  html+=pctCard('Met quotes',quoteCounts.filter(c=>c>0).length,n);
-  html+=pctCard('Met kaders',kaderCounts.filter(c=>c>0).length,n);
+  // ── MEDIA — verticaal: gem → pct → verdeling per kolom ──
+  html+=`<div class="sd-section"><div class="sd-section-title">Media &amp; elementen</div></div><div class="sd-grid">`;
+  html+=mediaCol('Afbeeldingen',imgCounts,5);
+  html+=mediaCol('Audio',audioCounts,3);
+  html+=mediaCol('Video',videoCounts,3);
+  html+=mediaCol('Instagram',igCounts,3);
+  html+=mediaCol('Twitter/X',twCounts,3);
+  html+=mediaCol('YouTube',ytCounts,3);
+  html+=mediaCol('Quotes',quoteCounts,4);
+  html+=mediaCol('Kaders',kaderCounts,3);
+  html+=mediaCol('Tussenkoppen',tussenkopCounts,6);
+  html+=mediaCol('Links',linkCounts,5);
+  html+=mediaCol('Lees-ook',relCounts,4);
   html+=`</div>`;
 
-  html+=`<div class="sd-section"><div class="sd-section-title">Verdelingen</div></div><div class="sd-grid">`;
-  html+=distCard('Afbeeldingen per artikel',imgCounts,5);
-  html+=distCard('Audio per artikel',audioCounts,3);
-  html+=distCard('Video per artikel',videoCounts,3);
-  html+=distCard('Instagram per artikel',igCounts,3);
-  html+=distCard('Twitter per artikel',twCounts,3);
-  html+=distCard('YouTube per artikel',ytCounts,3);
-  html+=distCard('Quotes per artikel',quoteCounts,4);
-  html+=distCard('Tussenkoppen per artikel',tussenkopCounts,6);
-  html+=distCard('Links per artikel',linkCounts,5);
-  html+=`</div>`;
-
+  // ── TOP LIJSTEN ──
   html+=`<div class="sd-section"><div class="sd-section-title">Top lijsten</div></div><div class="sd-grid">`;
   html+=topList('Categorieën',categories);
   html+=topList('Domeinen',domains);
   html+=topList('Auteurs',authors);
-  // Copyright bronnen
   const allCopyrights={};
   bulkResults.forEach(a=>(a.copyrights||[]).forEach(c=>{allCopyrights[c]=(allCopyrights[c]||0)+1;}));
   html+=topList('Afbeelding-bronnen',allCopyrights);
