@@ -144,6 +144,17 @@ function parseArticle(html,sourceUrl){
       if(src&&!src.includes('avatar.png')&&!src.includes('editorAvatar')) rawParts.push('[AFBEELDING] '+src.split('?')[0]+(desc?' — '+desc:'')+(cr?' '+cr:''));
       return;
     }
+    // Quote
+    const quoteEl=lc.querySelector('[__component="api.api-quote"], [type="quote"]');
+    if(quoteEl){
+      const quote=quoteEl.querySelector('blockquote')?.textContent?.trim()||'';
+      const author=quoteEl.querySelector('figcaption')?.textContent?.trim()||'';
+      if(quote){
+        textParts.push('\n[QUOTE] "'+quote+'"'+(author?' — '+author:'')+'\n');
+        rawParts.push('[QUOTE] "'+quote+'"'+(author?' — '+author:''));
+      }
+      return;
+    }
     // Audio
     if(lc.querySelector('[__component="api.api-audio"], [type="audio"]')){
       const desc=lc.querySelector('.figcaption .description, .description')?.textContent?.trim()||'audio';
@@ -377,6 +388,7 @@ function renderTable(a){
   const tekstWoorden=a.bodyText?a.bodyText.replace(/\[TUSSENKOP\][^\n]*/g,'').split(/\s+/).filter(w=>w).length:0;
   const tussenkoppen=(a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length;
   const kaders=(a.bodyText.match(/\[KADER\]/g)||[]).length;
+  const quotes=(a.bodyText.match(/\[QUOTE\]/g)||[]).length;
   const alineas=a.bodyText.split(/\n\n+/).filter(p=>p.trim()&&!p.includes('[TUSSENKOP]')&&!p.includes('[KADER]')&&!p.includes('[/KADER]')).length;
   const audioCount=a.embeds.filter(e=>e.type==='audio').length;
   const videoCount=a.embeds.filter(e=>e.type==='video').length;
@@ -390,6 +402,7 @@ function renderTable(a){
   html+=stat(alineas,"alinea's");
   html+=stat(tussenkoppen,'tussenkoppen');
   if(kaders) html+=stat(kaders,'kaders');
+  if(quotes) html+=stat(quotes,'quotes');
   html+=stat(a.images.length+(a.ogImage?1:0),'afbeeldingen');
   html+=stat(a.links.length,'links');
   html+=stat(a.related.length,'lees ook');
