@@ -501,11 +501,17 @@ async function scrapeBulk(){
   stopBtn.style.display='';
   out.innerHTML='';
   exportSec.style.display='none';
+  const startTime=Date.now();
 
   for(let i=0;i<urls.length;i++){
     if(bulkStopped) break;
     const url=urls[i];
-    prog.textContent=`${i+1}/${urls.length}: ${url.split('/').pop().slice(0,40)}...`;
+    // ETA calculation
+    const elapsed=(Date.now()-startTime)/1000;
+    const perItem=i>0?elapsed/i:2;
+    const remaining=Math.round(perItem*(urls.length-i));
+    const eta=remaining>=60?Math.floor(remaining/60)+'m '+remaining%60+'s':remaining+'s';
+    prog.textContent=`${i+1}/${urls.length} · ${eta} resterend · ${url.split('/').pop().slice(0,30)}`;
     prog.style.color='var(--ac)';
     fill.style.width=Math.round((i/urls.length)*100)+'%';
 
@@ -530,7 +536,9 @@ async function scrapeBulk(){
   }
 
   fill.style.width='100%';
-  prog.textContent=bulkStopped?`Gestopt na ${bulkResults.length} artikelen`:`✓ ${bulkResults.length}/${urls.length} artikelen gescraped`;
+  const totalSec=Math.round((Date.now()-startTime)/1000);
+  const totalTime=totalSec>=60?Math.floor(totalSec/60)+'m '+totalSec%60+'s':totalSec+'s';
+  prog.textContent=bulkStopped?`Gestopt na ${bulkResults.length} artikelen (${totalTime})`:`✓ ${bulkResults.length}/${urls.length} artikelen gescraped in ${totalTime}`;
   prog.style.color=bulkStopped?'#f59e0b':'#4ade80';
   startBtn.disabled=false;startBtn.textContent='▶ Scrape alles';
   stopBtn.style.display='none';
