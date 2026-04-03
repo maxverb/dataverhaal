@@ -7,7 +7,8 @@ const SCRAPER_PROXIES=[
 ];
 
 async function scrapeURL(){
-  const url=document.getElementById('scrape-url').value.trim();
+  let url=document.getElementById('scrape-url').value.trim();
+  if(url&&!url.startsWith('http')){if(url.startsWith('www.')||url.match(/^[a-z0-9-]+\.[a-z]{2,}/i))url='https://'+url;}
   const status=document.getElementById('scrape-status');
   if(!url){status.textContent='Voer een URL in';return;}
   status.textContent='Ophalen...';status.style.color='var(--ac)';
@@ -477,7 +478,12 @@ async function fetchHTML(url){
 
 async function scrapeBulk(){
   const textarea=document.getElementById('scrape-urls');
-  const urls=textarea.value.split('\n').map(u=>u.trim()).filter(u=>u.startsWith('http'));
+  const urls=textarea.value.split('\n').map(u=>u.trim()).filter(u=>u).map(u=>{
+    if(u.startsWith('http')) return u;
+    if(u.startsWith('www.')) return 'https://'+u;
+    if(u.match(/^[a-z0-9-]+\.[a-z]{2,}/i)) return 'https://'+u;
+    return u;
+  }).filter(u=>u.startsWith('http'));
   if(!urls.length){document.getElementById('scrape-progress').textContent='Geen URLs gevonden';return;}
 
   bulkStopped=false;
