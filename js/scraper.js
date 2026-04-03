@@ -557,6 +557,7 @@ function exportBulkCSV(){
   const headers=['artikel_id','url','categorie','kop','auteur','datum','intro','tekst','og_image',
     'afbeeldingen','links','gerelateerd','tussenkoppen','kaders','quotes',
     'audio','video','instagram','twitter','youtube','overig_embeds',
+    'afbeelding_urls','link_urls','gerelateerd_urls',
     'audio_urls','video_urls','instagram_urls','twitter_urls','youtube_urls',
     'wrd_kop','wrd_intro','wrd_tekst','alineas','ruw'];
 
@@ -585,6 +586,9 @@ function exportBulkCSV(){
       a.images.length+(a.ogImage?1:0),a.links.length,a.related.length,
       tussenkoppen,kaders,quotes,
       audioCount,videoCount,igCount,twCount,ytCount,otherEmbeds,
+      a.images.map(i=>i.src).join(' | '),
+      a.links.map(l=>l.href).join(' | '),
+      a.related.map(r=>r.href).join(' | '),
       embedUrls(a,'audio'),embedUrls(a,'video'),embedUrls(a,'instagram'),embedUrls(a,'twitter'),embedUrls(a,'youtube'),
       a.headline?a.headline.split(/\s+/).length:0,
       a.intro?a.intro.split(/\s+/).length:0,
