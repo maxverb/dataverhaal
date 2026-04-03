@@ -530,6 +530,7 @@ async function scrapeBulk(){
   stopBtn.style.display='none';
   exportSec.style.display='';
   document.getElementById('scrape-count').textContent=bulkResults.length;
+  document.getElementById('scrape-view-toggle').style.display='flex';
 }
 
 function stopBulk(){bulkStopped=true;}
@@ -588,6 +589,9 @@ function backToBulk(){
 function clearBulkResults(){
   bulkResults=[];
   document.getElementById('scrape-results').innerHTML='<div class="tab-empty"><span class="tab-empty-icon">📰</span><p>Plak URLs en klik "Scrape alles"</p></div>';
+  document.getElementById('scrape-results').style.display='';
+  document.getElementById('scrape-stats-view').style.display='none';
+  document.getElementById('scrape-view-toggle').style.display='none';
   document.getElementById('scrape-export-section').style.display='none';
   document.getElementById('scrape-progress').textContent='';
   document.getElementById('scrape-progress-bar').style.display='none';
@@ -693,6 +697,131 @@ function renderTableHTML(a){
   html+=srRow('Alles (ruw)',a.rawText);
   html+=`</tbody></table>`;
   return html;
+}
+
+// ── VIEW TOGGLE ─────────────────────────────────────────────────────────
+
+function showScrapeView(view,btn){
+  document.querySelectorAll('.scrape-view-toggle .btn-sm').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  document.getElementById('scrape-results').style.display=view==='list'?'':'none';
+  document.getElementById('scrape-stats-view').style.display=view==='stats'?'':'none';
+  if(view==='stats') renderStatsView();
+}
+
+// ── STATS DASHBOARD ─────────────────────────────────────────────────────
+
+function renderStatsView(){
+  const el=document.getElementById('scrape-stats-view');
+  if(!bulkResults.length){el.innerHTML='<div class="tab-empty"><p>Nog geen data</p></div>';return;}
+  const n=bulkResults.length;
+
+  // Helper functions
+  function avg(arr){return arr.length?Math.round(arr.reduce((s,v)=>s+v,0)/arr.length*10)/10:0;}
+  function pct(count){return n?Math.round(count/n*1000)/10:0;}
+  function distribution(arr,max){
+    const dist={};
+    arr.forEach(v=>{const k=Math.min(v,max);dist[k]=(dist[k]||0)+1;});
+    return dist;
+  }
+
+  // Collect data
+  const wrdKop=[], wrdIntro=[], wrdTekst=[], chrTekst=[], leestijden=[];
+  const imgCounts=[], linkCounts=[], relCounts=[];
+  const audioCounts=[], videoCounts=[], igCounts=[], twCounts=[], ytCounts=[];
+  const quoteCounts=[], kaderCounts=[], tussenkopCounts=[];
+  const categories={}, domains={}, authors={};
+
+  bulkResults.forEach(a=>{
+    const clean=a.bodyText.replace(/\[[^\]]*\]/g,'');
+    wrdKop.push(a.headline?a.headline.split(/\s+/).length:0);
+    wrdIntro.push(a.intro?a.intro.split(/\s+/).length:0);
+    wrdTekst.push(clean?clean.split(/\s+/).filter(w=>w).length:0);
+    chrTekst.push(a.charTekst||0);
+    if(a.readTimeMin) leestijden.push(a.readTimeMin);
+    imgCounts.push(a.images.length+(a.ogImage?1:0));
+    linkCounts.push(a.links.length);
+    relCounts.push(a.related.length);
+    audioCounts.push(a.embeds.filter(e=>e.type==='audio').length);
+    videoCounts.push(a.embeds.filter(e=>e.type==='video').length);
+    igCounts.push(a.embeds.filter(e=>e.type==='instagram').length);
+    twCounts.push(a.embeds.filter(e=>e.type==='twitter').length);
+    ytCounts.push(a.embeds.filter(e=>e.type==='youtube').length);
+    quoteCounts.push((a.bodyText.match(/\[QUOTE\]/g)||[]).length);
+    kaderCounts.push((a.bodyText.match(/\[KADER\]/g)||[]).length);
+    tussenkopCounts.push((a.bodyText.match(/\[TUSSENKOP\]/g)||[]).length);
+    if(a.category){categories[a.category]=(categories[a.category]||0)+1;}
+    if(a.domain){domains[a.domain]=(domains[a.domain]||0)+1;}
+    if(a.author){authors[a.author]=(authors[a.author]||0)+1;}
+  });
+
+  function card(title,big,sub){return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-big">${big}</div><div class="sd-sub">${sub}</div></div>`;}
+  function pctCard(title,count,total){
+    const p=pct(count);
+    return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-pct">${p}%</div><div class="sd-bar-wrap"><div class="sd-bar" style="width:${p}%"></div></div><div class="sd-sub">${count} van ${total} artikelen</div></div>`;
+  }
+  function distCard(title,counts,maxBuckets){
+    const dist=distribution(counts,maxBuckets||5);
+    const maxCount=Math.max(...Object.values(dist),1);
+    let rows='';
+    for(let i=0;i<=Math.min(Math.max(...counts),maxBuckets||5);i++){
+      const c=dist[i]||0;
+      rows+=`<div class="sd-dist-row"><div class="sd-dist-label">${i}${i===(maxBuckets||5)?'+':''}</div><div class="sd-dist-bar"><div class="sd-dist-fill" style="width:${c/maxCount*100}%"></div></div><div class="sd-dist-val">${c}</div></div>`;
+    }
+    return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-dist">${rows}</div></div>`;
+  }
+  function topList(title,obj,max){
+    const sorted=Object.entries(obj).sort((a,b)=>b[1]-a[1]).slice(0,max||8);
+    if(!sorted.length) return '';
+    const items=sorted.map(([k,v])=>`<div class="sd-top-item"><span>${esc(k)}</span><span>${v}</span></div>`).join('');
+    return `<div class="sd-card"><div class="sd-card-title">${title}</div><div class="sd-top-list">${items}</div></div>`;
+  }
+
+  let html=`<div class="sd-section"><div class="sd-section-title">Overzicht</div></div><div class="sd-grid">`;
+  html+=card('Artikelen',n,'gescraped');
+  html+=card('Gem. woorden',avg(wrdTekst),'per artikel');
+  html+=card('Gem. kop',avg(wrdKop)+'w','/ '+Math.round(avg(wrdKop.map((_,i)=>bulkResults[i].headline.length)))+'t');
+  html+=card('Gem. intro',avg(wrdIntro)+'w',Math.round(avg(wrdIntro.map((_,i)=>bulkResults[i].intro.length)))+'t');
+  if(leestijden.length) html+=card('Gem. leestijd',avg(leestijden)+'m','minuten');
+  html+=card('Gem. afbeeldingen',avg(imgCounts),'per artikel');
+  html+=card('Gem. tussenkoppen',avg(tussenkopCounts),'per artikel');
+  html+=card('Gem. links',avg(linkCounts),'per artikel');
+  html+=card('Gem. lees-ook',avg(relCounts),'per artikel');
+  html+=`</div>`;
+
+  html+=`<div class="sd-section"><div class="sd-section-title">Media aanwezigheid</div></div><div class="sd-grid">`;
+  html+=pctCard('Met audio',audioCounts.filter(c=>c>0).length,n);
+  html+=pctCard('Met video',videoCounts.filter(c=>c>0).length,n);
+  html+=pctCard('Met Instagram',igCounts.filter(c=>c>0).length,n);
+  html+=pctCard('Met Twitter/X',twCounts.filter(c=>c>0).length,n);
+  html+=pctCard('Met YouTube',ytCounts.filter(c=>c>0).length,n);
+  html+=pctCard('Met quotes',quoteCounts.filter(c=>c>0).length,n);
+  html+=pctCard('Met kaders',kaderCounts.filter(c=>c>0).length,n);
+  html+=`</div>`;
+
+  html+=`<div class="sd-section"><div class="sd-section-title">Verdelingen</div></div><div class="sd-grid">`;
+  html+=distCard('Afbeeldingen per artikel',imgCounts,5);
+  html+=distCard('Audio per artikel',audioCounts,3);
+  html+=distCard('Video per artikel',videoCounts,3);
+  html+=distCard('Instagram per artikel',igCounts,3);
+  html+=distCard('Twitter per artikel',twCounts,3);
+  html+=distCard('YouTube per artikel',ytCounts,3);
+  html+=distCard('Quotes per artikel',quoteCounts,4);
+  html+=distCard('Tussenkoppen per artikel',tussenkopCounts,6);
+  html+=distCard('Links per artikel',linkCounts,5);
+  html+=`</div>`;
+
+  html+=`<div class="sd-section"><div class="sd-section-title">Top lijsten</div></div><div class="sd-grid">`;
+  html+=topList('Categorieën',categories);
+  html+=topList('Domeinen',domains);
+  html+=topList('Auteurs',authors);
+  // Copyright bronnen
+  const allCopyrights={};
+  bulkResults.forEach(a=>(a.copyrights||[]).forEach(c=>{allCopyrights[c]=(allCopyrights[c]||0)+1;}));
+  html+=topList('Afbeelding-bronnen',allCopyrights);
+  html+=`</div>`;
+
+  el.innerHTML=html;
 }
 
 function esc(s){return(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
