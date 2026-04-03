@@ -169,17 +169,26 @@ function scoreArticle(title,intro,text,entities){
   const introLower=(intro||'').toLowerCase();
   const textLower=(text||'').toLowerCase();
 
-  allTerms.forEach(({term,cat,weight})=>{
-    const termLower=term.toLowerCase();
-    // Short terms (<=4 chars like RET, ADO, 010) use word boundary matching
-    const useWordBoundary=term.length<=4;
-    const regex=useWordBoundary?new RegExp('\\b'+termLower.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i'):null;
+  // Special terms: case-sensitive matching
+  const caseSensitiveTerms=new Set(['Leiden']);
+  // Terms that must match as whole word (word boundary)
+  const wordBoundaryTerms=new Set(['Lisse']);
 
-    function matches(text){
-      if(!text) return false;
-      if(useWordBoundary) return regex.test(text);
-      return text.toLowerCase().includes(termLower);
+  allTerms.forEach(({term,cat,weight})=>{
+    const escaped=term.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const isCaseSensitive=caseSensitiveTerms.has(term);
+    const forceWordBoundary=wordBoundaryTerms.has(term)||term.length<=4;
+
+    let regex;
+    if(forceWordBoundary){
+      regex=new RegExp('\\b'+escaped+'\\b',isCaseSensitive?'':'i');
+    } else if(isCaseSensitive){
+      regex=new RegExp(escaped);
+    } else {
+      regex=new RegExp(escaped,'i');
     }
+
+    function matches(text){return text?regex.test(text):false;}
 
     let hits=0;
     if(matches(title)) hits+=3;
@@ -214,13 +223,13 @@ function renderMonitorResults(omroep){
     // Color based on score: >=10 green, 4-9 orange, <4 blue
     const clr=art.score>=10?'#22c55e':art.score>=4?'#f59e0b':'var(--ac)';
     const matchTags=art.scoreDetails.slice(0,5).map(d=>
-      `<span class="mon-tag">${esc(d.term)}</span>`
+      `<span class="mon-tag" onclick="event.stopPropagation();showMonDetail(${i})">${esc(d.term)}</span>`
     ).join('');
-    html+=`<div class="mon-row" onclick="showMonDetail(${i})">
+    html+=`<div class="mon-row">
       <div class="mon-score-num" style="color:${clr}">${art.score}</div>
       <div class="mon-source">${esc(art.source)}</div>
       <div class="mon-info">
-        <div class="mon-title">${esc(art.fullTitle||art.title)}</div>
+        <a class="mon-title" href="${esc(art.link)}" target="_blank" onclick="event.stopPropagation()">${esc(art.fullTitle||art.title)}</a>
         <div class="mon-tags">${matchTags}</div>
       </div>
     </div>`;
