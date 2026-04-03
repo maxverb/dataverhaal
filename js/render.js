@@ -71,7 +71,7 @@ function draw(){
   const title=document.getElementById('ttl').value;
   const subtitle=document.getElementById('sub').value;
   const gridStyle='dashed';
-  const showGrid=true;
+  const showGrid=document.getElementById('fg-grid')?document.getElementById('fg-grid').checked:true;
   const showVal=document.getElementById('fg-val').checked;
   const showXL=document.getElementById('fg-xl').checked;
   const showPctChg=(document.getElementById('fg-pctchg')||{}).checked||false;
