@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=52">
+<link rel="stylesheet" href="style.css?v=57">
 </head>
 <body>
 
@@ -282,12 +282,19 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
       </div>
     </div>
   </div>
-  <div class="scraper-output" id="scrape-results">
-    <div class="tab-empty">
-      <span class="tab-empty-icon">📰</span>
-      <p>Plak URLs en klik "Scrape alles"</p>
-      <p style="color:var(--pm);font-size:13px">Eén URL per regel — tot 100+ artikelen tegelijk</p>
+  <div class="scraper-output">
+    <div class="scrape-view-toggle" id="scrape-view-toggle" style="display:none">
+      <button class="btn btn-sm active" onclick="showScrapeView('list',this)">Artikelen</button>
+      <button class="btn btn-sm" onclick="showScrapeView('stats',this)">Statistieken</button>
     </div>
+    <div id="scrape-results">
+      <div class="tab-empty">
+        <span class="tab-empty-icon">📰</span>
+        <p>Plak URLs en klik "Scrape alles"</p>
+        <p style="color:var(--pm);font-size:13px">Eén URL per regel — tot 100+ artikelen tegelijk</p>
+      </div>
+    </div>
+    <div id="scrape-stats-view" style="display:none"></div>
   </div>
 </div>
 </div>
@@ -343,7 +350,7 @@ function switchTab(id,btn){
 <script src="js/suggest.js?v=4"></script>
 <script src="js/overlays.js?v=10"></script>
 <script src="js/interact.js?v=8"></script>
-<script src="js/scraper.js?v=56"></script>
+<script src="js/scraper.js?v=57"></script>
 <script src="js/ui.js?v=10"></script>
 </body>
 </html>
