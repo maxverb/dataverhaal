@@ -12,10 +12,23 @@ function dtParseSource(id){
   const raw=document.getElementById('dt-paste-'+id).value.trim();
   const status=document.getElementById('dt-status-'+id);
   if(!raw){dtSources[id]=null;status.textContent='';dtCheckMerge();dtRender();return;}
-  dtSources[id]=dtParseCSV(raw);
+  const delimSel=document.getElementById('dt-delim-'+id).value;
+  const forceDelim=delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel;
+  dtSources[id]=dtParseCSV(raw,forceDelim);
   const d=dtSources[id];
-  status.textContent=d?`✓ ${d.rows.length}r × ${d.headers.length}k`:'';
-  status.style.color=d?'var(--ok)':'var(--err)';
+  if(d){
+    const delimName=d._delim==='\t'?'tab':d._delim===','?'komma':d._delim===';'?'puntkomma':'?';
+    status.textContent=`✓ ${d.rows.length}r × ${d.headers.length}k (${delimName})`;
+    status.style.color='var(--ok)';
+    // Auto-set dropdown to detected delimiter if on auto
+    if(delimSel==='auto'){
+      const sel=document.getElementById('dt-delim-'+id);
+      if(d._delim==='\t') sel.value='tab';
+      else sel.value=d._delim;
+    }
+  } else {
+    status.textContent='';status.style.color='var(--err)';
+  }
   dtCheckMerge();
   // Auto-preview single source
   if(dtSources.a&&!dtSources.b){dtResult=dtSources.a;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
@@ -59,17 +72,13 @@ function dtParseFileSource(e,id){
   }
 }
 
-function dtParseCSV(raw){
+function dtParseCSV(raw,forceDelim){
   const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
   if(!lines.length) return null;
 
-  const firstLine=lines[0];
-  let delim='\t';
-  if(!firstLine.includes('\t')){
-    const commas=firstLine.split(',').length;
-    const semis=firstLine.split(';').length;
-    delim=semis>commas?';':',';
-  }
+  // Detect delimiter: test tab, comma, semicolon on multiple lines
+  // Pick the one that gives consistent column count across lines
+  let delim=forceDelim||dtDetectDelim(lines);
 
   function parseLine(line){
     const fields=[];
@@ -85,12 +94,41 @@ function dtParseCSV(raw){
   }
 
   const allRows=lines.map(parseLine);
-  if(allRows.length<2) return {headers:allRows[0]||[],rows:[]};
+  if(allRows.length<2) return {headers:allRows[0]||[],rows:[],_delim:delim};
 
   const firstRow=allRows[0];
   const isHeader=firstRow.some(v=>isNaN(parseFloat(v.replace(/[^\d.-]/g,''))));
-  if(isHeader) return {headers:firstRow,rows:allRows.slice(1)};
-  return {headers:firstRow.map((_,i)=>'Kolom '+(i+1)),rows:allRows};
+  const result=isHeader
+    ?{headers:firstRow,rows:allRows.slice(1),_delim:delim}
+    :{headers:firstRow.map((_,i)=>'Kolom '+(i+1)),rows:allRows,_delim:delim};
+  return result;
+}
+
+function dtDetectDelim(lines){
+  const candidates=['\t',',',';'];
+  const sample=lines.slice(0,Math.min(lines.length,10));
+
+  // For each candidate, count fields per line (respecting quotes)
+  let best=null,bestScore=-1;
+  for(const d of candidates){
+    const counts=sample.map(line=>{
+      let n=1,inQ=false;
+      for(let i=0;i<line.length;i++){
+        if(line[i]==='"') inQ=!inQ;
+        else if(line[i]===d&&!inQ) n++;
+      }
+      return n;
+    });
+    // Must have >1 column
+    if(counts[0]<=1) continue;
+    // Score: consistent column count across lines = good
+    const target=counts[0];
+    const consistent=counts.filter(c=>c===target).length;
+    // Prefer higher consistency, then more columns (more specific delimiter)
+    const score=consistent*1000+target;
+    if(score>bestScore){bestScore=score;best=d;}
+  }
+  return best||',';
 }
 
 // ── MERGE ──
