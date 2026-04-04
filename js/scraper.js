@@ -35,7 +35,131 @@ function makeAbs(src,sourceUrl){
   return src;
 }
 
+// ── BRABANT / NH / FLEVOLAND PARSER (Next.js CMS) ──
+
+function parseBrabant(html,sourceUrl){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+
+  // ── KOP — h1 with hashed class, strip location span ──
+  const h1=doc.querySelector('h1[class*="article_title"]')||doc.querySelector('h1');
+  const locSpan=h1?.querySelector('[class*="article_location"]');
+  if(locSpan) locSpan.remove();
+  const headline=h1?.textContent?.trim()||doc.querySelector('meta[property="og:title"]')?.content||'';
+
+  // ── AUTEUR ──
+  const author=doc.querySelector('a[class*="author_name"]')?.textContent?.trim()||
+    doc.querySelector('meta[name="author"]')?.content||'';
+
+  // ── DATUM ──
+  const pubDate=doc.querySelector('div[class*="article_time"]')?.textContent?.replace(/\s+/g,' ').trim()||'';
+
+  // ── OG IMAGE ──
+  const ogImageRaw=doc.querySelector('meta[property="og:image"]')?.content||'';
+  const ogImage=ogImageRaw.split('?')[0];
+
+  // ── INTRO — first content block ──
+  const contentBlocks=doc.querySelectorAll('div[class*="content_content"]');
+  const introEl=contentBlocks.length?contentBlocks[0].querySelector('p'):null;
+  const intro=introEl?.textContent?.trim()||doc.querySelector('meta[property="og:description"]')?.content||'';
+
+  // ── TEKST — all content blocks ──
+  const textParts=[];
+  const links=[];
+  const rawParts=[];
+  let isFirst=true;
+
+  if(headline) rawParts.push('[KOP] '+headline);
+  if(author||pubDate) rawParts.push('[META] '+[author,pubDate].filter(Boolean).join(' · '));
+  if(intro) rawParts.push('[INTRO] '+intro);
+
+  contentBlocks.forEach(block=>{
+    // Skip "Het lezen waard" / "Lees ook" sections inside content
+    if(block.closest('[class*="most-viewed"]')||block.closest('[class*="article-list"]')) return;
+    block.querySelectorAll('p').forEach(p=>{
+      const t=p.textContent.trim();
+      if(!t||t==='&nbsp;'||t==='\u00a0') return;
+      if(isFirst&&t===intro){isFirst=false;return;} // skip intro dupe
+      isFirst=false;
+      if(t.length>5){
+        textParts.push(t);
+        rawParts.push('[TEKST] '+t);
+      }
+    });
+    block.querySelectorAll('a[href]').forEach(a=>{
+      let href=a.getAttribute('href')||'';
+      href=makeAbs(href,sourceUrl);
+      const linkText=a.textContent.trim();
+      if(href&&linkText){
+        links.push({text:linkText,href});
+        rawParts.push('[LINK] '+linkText+' → '+href);
+      }
+    });
+  });
+
+  // ── QUOTES ──
+  doc.querySelectorAll('blockquote[class*="quote_quote"]').forEach(bq=>{
+    const t=bq.textContent.trim();
+    if(t){
+      textParts.push('\n[QUOTE] "'+t+'"\n');
+      rawParts.push('[QUOTE] "'+t+'"');
+    }
+  });
+
+  const bodyText=textParts.join('\n\n');
+
+  // ── IMAGES ──
+  const images=[];
+  // Main article images (skip teasers)
+  doc.querySelectorAll('img[class*="image"]').forEach(img=>{
+    if(img.closest('[class*="article-teaser"]')||img.closest('[class*="most-viewed"]')||img.closest('[class*="article-list"]')) return;
+    if(img.closest('[class*="author_avatar"]')) return;
+    const src=(img.getAttribute('src')||'').split('?')[0];
+    if(src&&!src.includes('avatar')&&src!==ogImage){
+      const alt=img.alt||'';
+      if(!images.some(i=>i.src===src)) images.push({src,desc:alt});
+    }
+  });
+
+  // ── RELATED (Lees ook) ──
+  const related=[];
+  doc.querySelectorAll('[class*="article-list"] a[class*="article-teaser_link"]').forEach(a=>{
+    const title=a.querySelector('h1[class*="article-teaser_title"]')?.textContent?.trim();
+    let href=makeAbs(a.getAttribute('href')||'',sourceUrl);
+    if(title&&href){
+      related.push({title,href});
+      rawParts.push('[LEES OOK] '+title+' → '+href);
+    }
+  });
+
+  // ── EMBEDS (basic) ──
+  const embeds=[];
+
+  // ── METADATA ──
+  const domain=sourceUrl.replace(/^https?:\/\/(www\.)?/,'').split('/')[0];
+  const urlMatch=sourceUrl.match(/\/nieuws\/(\d+)\//)||sourceUrl.match(/\/(\d+)\//);
+  const urlArticleId=urlMatch?urlMatch[1]:'';
+  const category=sourceUrl.match(/omroepbrabant\.nl\/([^/]+)\//)?.[1]||
+    sourceUrl.match(/nhnieuws\.nl\/([^/]+)\//)?.[1]||
+    sourceUrl.match(/omroepflevoland\.nl\/([^/]+)\//)?.[1]||'';
+  const cleanBodyText=bodyText.replace(/\[.*?\]/g,'').trim();
+  const wordCount=cleanBodyText?cleanBodyText.split(/\s+/).filter(w=>w).length:0;
+  const readTimeMin=wordCount>0?Math.max(1,Math.round(wordCount/200)):0;
+  const internalLinks=links.filter(l=>l.href.includes(domain)).length;
+  const externalLinks=links.length-internalLinks;
+
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,
+    urlArticleId,sourceUrl,category,readTimeMin,domain,quoteAuthors:[],copyrights:[],
+    internalLinks,externalLinks,
+    charKop:headline.length,charIntro:intro.length,charTekst:cleanBodyText.length,
+    rawText:rawParts.join('\n')};
+}
+
 function parseArticle(html,sourceUrl){
+  // Dispatch to site-specific parser if applicable
+  if(sourceUrl.includes('omroepbrabant.nl')) return parseBrabant(html,sourceUrl);
+  if(sourceUrl.includes('nhnieuws.nl')) return parseBrabant(html,sourceUrl); // same CMS
+  if(sourceUrl.includes('omroepflevoland.nl')) return parseBrabant(html,sourceUrl); // same CMS
+
   const rawHtml=html; // keep raw string for regex fallbacks
   const doc=new DOMParser().parseFromString(html,'text/html');
   const root=doc.querySelector('.article-content')||doc.querySelector('article')||doc.querySelector('main')||doc.body;
