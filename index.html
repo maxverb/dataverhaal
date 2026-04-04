@@ -101,12 +101,29 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
       <textarea id="di" placeholder="Amsterdam	45&#10;Rotterdam	38&#10;Den Haag	22" oninput="parseData()" style="min-height:70px"></textarea>
       <div style="display:flex;gap:5px;align-items:center">
         <div class="upz" onclick="document.getElementById('fi').click()" style="flex:1;padding:5px;font-size:10px">
-          ↑ CSV/XLSX
+          &#8593; CSV/XLSX
           <input type="file" id="fi" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(event)">
         </div>
         <div id="ds" style="font-size:10px;color:var(--pm);flex:1;text-align:right"></div>
       </div>
       <div id="colsel"></div>
+    </div>
+  </div>
+
+  <!-- TEKST — altijd zichtbaar, boven grafiekvorm -->
+  <div class="psec">
+    <div class="sh"><span class="sl">Tekst</span></div>
+    <div class="sc">
+      <button class="btn btn-sm" onclick="suggestText()" style="margin-bottom:4px;font-size:10px">&#10022; Stel tekst voor</button>
+      <input type="text" id="eyebrow" placeholder="Eyebrow" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
+      <input type="text" id="ttl" placeholder="Titel" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
+      <input type="text" id="sub" placeholder="Subtitel" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+        <input type="text" id="bron" placeholder="Bron" oninput="sched()" style="font-size:11px;padding:4px 6px">
+        <input type="text" id="datum" placeholder="Datum" oninput="sched()" style="font-size:11px;padding:4px 6px">
+      </div>
+      <input type="text" id="note" placeholder="Notitie / voetnoot" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-top:3px">
+      <input type="text" id="annot" placeholder="Annotatie (3:tekst;7:tekst)" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-top:3px">
     </div>
   </div>
 
@@ -124,13 +141,14 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
     <div style="display:flex;gap:4px;align-items:center;margin-top:4px">
       <input type="color" id="cc-pick" value="#0d9373" onchange="setCustomClr(this.value)" style="width:22px;height:22px;padding:0;border:1px solid var(--ibr);border-radius:3px;cursor:pointer">
       <input type="text" id="cc-hex" placeholder="#hex" oninput="setCustomClr(this.value)" style="flex:1;font-size:10px;padding:3px 6px">
-      <button class="btn btn-sm" onclick="clearCustomClr()" style="padding:2px 5px;font-size:9px">✕</button>
+      <button class="btn btn-sm" onclick="clearCustomClr()" style="padding:2px 5px;font-size:9px">&#10005;</button>
     </div>
   </div>
 
   <!-- FORMAAT — pills -->
   <div class="psec" style="padding:6px 14px">
     <div class="tg" id="fg" style="flex-wrap:wrap;gap:3px"></div>
+    <div style="font-size:10px;color:var(--pm);margin-top:4px"><span id="pfl">IG Post 4:5</span> <span id="pdim">1080 &#215; 1350</span></div>
   </div>
 
   <!-- DROPDOWNS — twee per rij -->
@@ -145,7 +163,7 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
         <option value="auto">Auto (k,M)</option>
         <option value="none">Exact</option>
         <option value="pct">%</option>
-        <option value="eur">€</option>
+        <option value="eur">&#8364;</option>
         <option value="usd">$</option>
         <option value="k">k</option>
         <option value="M">M</option>
@@ -169,33 +187,26 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
       <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-grid" checked onchange="sched()"> Grid</label>
       <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-val" checked onchange="sched()"> Waarden</label>
       <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-xl" checked onchange="sched()"> Labels</label>
-      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-pctchg" onchange="sched()"> %Δ</label>
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-pctchg" onchange="sched()"> %&#916;</label>
       <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-trend" onchange="sched()"> Trend</label>
       <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-ma" onchange="sched()"> Gem(7)</label>
       <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-avg" onchange="sched()"> Gem.lijn</label>
     </div>
   </div>
 
-  <!-- TEKST — begint ingeklapt -->
-  <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Tekst</span><span class="st">▾</span></div>
-    <div class="sc hidden">
-      <button class="btn btn-sm" onclick="suggestText()" style="margin-bottom:4px;font-size:10px">✦ Stel tekst voor</button>
-      <input type="text" id="eyebrow" placeholder="Eyebrow" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
-      <input type="text" id="ttl" placeholder="Titel" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
-      <input type="text" id="sub" placeholder="Subtitel" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
-        <input type="text" id="bron" placeholder="Bron" oninput="sched()" style="font-size:11px;padding:4px 6px">
-        <input type="text" id="datum" placeholder="Datum" oninput="sched()" style="font-size:11px;padding:4px 6px">
-      </div>
-      <input type="text" id="note" placeholder="Notitie / voetnoot" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-top:3px">
-      <input type="text" id="annot" placeholder="Annotatie (3:tekst;7:tekst)" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-top:3px">
+  <!-- EXPORT — acties die in toolbar zaten -->
+  <div class="psec" style="padding:6px 14px">
+    <div style="display:flex;gap:4px;flex-wrap:wrap">
+      <button class="btn btn-p" onclick="exportPNG()" style="flex:1;font-size:10px">&#11015; Download PNG</button>
+      <button class="btn btn-sm" onclick="copyToClipboard()" style="font-size:10px">&#128203; Kopieer</button>
+      <button class="btn btn-sm" onclick="shareURL()" style="font-size:10px">&#128279; Link</button>
+      <button class="btn btn-sm" onclick="reverseData()" style="font-size:10px">&#8693; Volgorde</button>
     </div>
   </div>
 
   <!-- EXTRA — ingeklapt -->
   <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Extra</span><span class="st">▾</span></div>
+    <div class="sh" onclick="tog(this)"><span class="sl">Extra</span><span class="st">&#9662;</span></div>
     <div class="sc hidden">
       <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px">
         <span style="font-size:10px;color:var(--pm);flex-shrink:0">Ref.lijn</span>
@@ -222,15 +233,6 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 
 <!-- PREVIEW -->
 <div class="preview">
-  <div class="ptb">
-    <span class="pfl" id="pfl">IG Post 4:5</span>
-    <span class="pdim" id="pdim">1080 × 1350</span>
-    <div class="psp"></div>
-    <button class="btn btn-sm" onclick="shareURL()" title="Kopieer deellink">🔗 Link</button>
-    <button class="btn btn-sm" onclick="reverseData()" title="Draai volgorde om">⇅ Volgorde</button>
-    <button class="btn btn-sm" onclick="copyToClipboard()" title="Kopieer naar klembord">📋 Kopieer</button>
-    <button class="btn btn-p" onclick="exportPNG()">⬇ Download PNG</button>
-  </div>
   <div class="cwrap"><canvas id="cv"></canvas></div>
 </div>
 </div>
