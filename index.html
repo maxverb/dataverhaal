@@ -343,18 +343,12 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
     <div class="psec">
       <div class="sh"><span class="sl">Bron A</span></div>
       <div class="sc">
-        <textarea id="dt-paste-a" placeholder="Plak CSV/TSV data..." style="min-height:70px;font-size:11px" oninput="dtParseSource('a')"></textarea>
+        <textarea id="dt-paste-a" placeholder="Plak CSV/TSV data..." style="min-height:70px;font-size:11px"></textarea>
         <div style="display:flex;gap:5px;align-items:center">
           <div class="upz" onclick="document.getElementById('dt-file-a').click()" style="flex:1;padding:5px;font-size:10px">
             &#8593; CSV/XLSX
             <input type="file" id="dt-file-a" accept=".csv,.xlsx,.xls,.tsv" style="display:none" onchange="dtParseFileSource(event,'a')">
           </div>
-          <select id="dt-delim-a" onchange="dtParseSource('a')" style="font-size:10px;padding:2px 4px;width:70px">
-            <option value="auto">Auto</option>
-            <option value="tab">Tab</option>
-            <option value=",">, komma</option>
-            <option value=";">; puntkomma</option>
-          </select>
           <div id="dt-status-a" style="font-size:10px;color:var(--pm);flex:1;text-align:right"></div>
         </div>
       </div>
@@ -363,21 +357,47 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
     <div class="psec">
       <div class="sh"><span class="sl">Bron B</span></div>
       <div class="sc">
-        <textarea id="dt-paste-b" placeholder="Plak CSV/TSV data..." style="min-height:70px;font-size:11px" oninput="dtParseSource('b')"></textarea>
+        <textarea id="dt-paste-b" placeholder="Plak CSV/TSV data..." style="min-height:70px;font-size:11px"></textarea>
         <div style="display:flex;gap:5px;align-items:center">
           <div class="upz" onclick="document.getElementById('dt-file-b').click()" style="flex:1;padding:5px;font-size:10px">
             &#8593; CSV/XLSX
             <input type="file" id="dt-file-b" accept=".csv,.xlsx,.xls,.tsv" style="display:none" onchange="dtParseFileSource(event,'b')">
           </div>
-          <select id="dt-delim-b" onchange="dtParseSource('b')" style="font-size:10px;padding:2px 4px;width:70px">
-            <option value="auto">Auto</option>
-            <option value="tab">Tab</option>
-            <option value=",">, komma</option>
-            <option value=";">; puntkomma</option>
-          </select>
           <div id="dt-status-b" style="font-size:10px;color:var(--pm);flex:1;text-align:right"></div>
         </div>
       </div>
+    </div>
+    <!-- IMPORT OPTIES -->
+    <div class="psec">
+      <div class="sh"><span class="sl">Import opties</span></div>
+      <div class="sc">
+        <div style="display:grid;grid-template-columns:auto 1fr;gap:4px 8px;align-items:center;font-size:10px">
+          <span style="color:var(--pm)">Scheidingsteken</span>
+          <select id="dt-delim" onchange="dtPreviewImport()" style="font-size:10px;padding:2px 4px">
+            <option value="auto">Auto-detectie</option>
+            <option value=",">, komma</option>
+            <option value=";">; puntkomma</option>
+            <option value="tab">Tab</option>
+            <option value="|">| pipe</option>
+          </select>
+          <span style="color:var(--pm)">Tekstscheidingsteken</span>
+          <select id="dt-quote" onchange="dtPreviewImport()" style="font-size:10px;padding:2px 4px">
+            <option value='"'>" dubbel aanhalingsteken</option>
+            <option value="'">' enkel aanhalingsteken</option>
+            <option value="">Geen</option>
+          </select>
+          <span style="color:var(--pm)">Vanaf rij</span>
+          <input type="number" id="dt-startrow" value="1" min="1" onchange="dtPreviewImport()" style="font-size:10px;padding:2px 4px;width:50px">
+        </div>
+        <button class="btn btn-p" onclick="dtPreviewImport()" style="width:100%;font-size:11px;margin-top:6px">&#9654; Preview</button>
+      </div>
+    </div>
+    <!-- BEVESTIG -->
+    <div class="psec" id="dt-confirm-section" style="display:none">
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-p" onclick="dtConfirmImport()" style="flex:1;font-size:11px">&#10003; Bevestig import</button>
+      </div>
+      <div id="dt-preview-status" style="font-size:10px;color:var(--pm);margin-top:4px"></div>
     </div>
     <!-- MERGE OPTIES -->
     <div class="psec" id="dt-merge-section" style="display:none">
@@ -424,8 +444,8 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
     <div id="dt-results">
       <div class="tab-empty">
         <span class="tab-empty-icon">📊</span>
-        <p>Laad twee bronnen en merge ze</p>
-        <p style="color:var(--pm);font-size:13px">Append (onder elkaar) of Join (naast elkaar op sleutelkolom)</p>
+        <p>Laad data en klik Preview</p>
+        <p style="color:var(--pm);font-size:13px">Pas scheidingsteken aan tot de tabel er goed uitziet</p>
       </div>
     </div>
   </div>
