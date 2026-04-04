@@ -80,6 +80,13 @@ body{font-family:'Inter','Barlow',sans-serif;background:var(--bg);color:var(--pt
 .mon-score-num{font-family:'Sora',sans-serif;font-size:22px;font-weight:700;line-height:1;width:40px;text-align:right;flex-shrink:0}
 .mon-detail{padding:12px}
 .mon-detail-score{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+/* DATA TABLE */
+.dt-table{width:100%;border-collapse:collapse;font-size:12px;background:var(--p);border:1px solid var(--pb)}
+.dt-table thead{background:var(--ac);color:#fff}
+.dt-table th{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;text-align:left;padding:5px 8px;white-space:nowrap}
+.dt-table td{padding:4px 8px;border-bottom:1px solid var(--pb);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis}
+.dt-table tr:nth-child(even){background:var(--ib)}
+.dt-table tr:hover{background:var(--pb)}
 .bulk-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-bottom:1px solid var(--pb);cursor:pointer;transition:background .15s}
 .bulk-row:hover{background:var(--ib)}
 .bulk-row.bulk-error{opacity:.6}

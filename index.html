@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=93">
+<link rel="stylesheet" href="style.css?v=96">
 </head>
 <body>
 
@@ -19,7 +19,7 @@
     <button class="tb-tab active" onclick="switchTab('grafiek',this)">Grafiek</button>
     <button class="tb-tab" onclick="switchTab('tab2',this)">Scraper</button>
     <button class="tb-tab" onclick="switchTab('tab3',this)">Monitor</button>
-    <button class="tb-tab" onclick="switchTab('tab4',this)">Tabblad 4</button>
+    <button class="tb-tab" onclick="switchTab('tab4',this)">Data</button>
     <button class="tb-tab" onclick="switchTab('tab5',this)">Tabblad 5</button>
     <button class="tb-tab" onclick="switchTab('tab6',this)">Tabblad 6</button>
     <button class="tb-tab" onclick="switchTab('tab7',this)">Tabblad 7</button>
@@ -333,13 +333,55 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 </div>
 </div>
 
-<!-- TAB: TABBLAD 4 -->
+<!-- TAB: DATA -->
 <div class="tab-content" id="tab-tab4">
-  <div class="tab-empty">
-    <span class="tab-empty-icon">4</span>
-    <p>Tabblad 4</p>
-    <p style="color:var(--pm);font-size:13px">Nog geen inhoud</p>
+<div class="scraper-layout">
+  <div class="scraper-input">
+    <!-- BRON -->
+    <div class="psec">
+      <div class="sh"><span class="sl">Bron</span></div>
+      <div class="sc">
+        <div style="display:flex;gap:4px;margin-bottom:4px">
+          <button class="btn btn-sm dt-src-btn active" onclick="dtSetInput('paste',this)" style="flex:1;font-size:10px">Plakken</button>
+          <button class="btn btn-sm dt-src-btn" onclick="dtSetInput('upload',this)" style="flex:1;font-size:10px">Upload</button>
+        </div>
+        <div id="dt-paste-zone">
+          <textarea id="dt-paste" placeholder="Plak CSV, TSV of tabeldata..." style="min-height:120px;font-size:11px" oninput="dtParsePaste()"></textarea>
+        </div>
+        <div id="dt-upload-zone" style="display:none">
+          <div class="upz" onclick="document.getElementById('dt-file').click()" style="padding:12px;font-size:11px">
+            ↑ CSV of XLSX uploaden
+            <input type="file" id="dt-file" accept=".csv,.xlsx,.xls,.tsv" style="display:none" onchange="dtParseFile(event)">
+          </div>
+        </div>
+        <div id="dt-status" style="font-size:10px;color:var(--pm);margin-top:3px"></div>
+      </div>
+    </div>
+    <!-- INFO -->
+    <div class="psec" id="dt-info-section" style="display:none">
+      <div class="sh"><span class="sl">Info</span></div>
+      <div class="sc">
+        <div id="dt-info" style="font-size:10px;color:var(--pm);line-height:1.6"></div>
+      </div>
+    </div>
+    <!-- EXPORT -->
+    <div class="psec" id="dt-export-section" style="display:none">
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-p" onclick="dtExportCSV()" style="flex:1;font-size:10px">⬇ CSV</button>
+        <button class="btn btn-sm" onclick="dtClear()" style="font-size:10px">✕ Wis</button>
+      </div>
+    </div>
   </div>
+  <div class="scraper-output">
+    <div id="dt-results">
+      <div class="tab-empty">
+        <span class="tab-empty-icon">📊</span>
+        <p>Plak of upload data</p>
+        <p style="color:var(--pm);font-size:13px">CSV, TSV, XLSX — preview en bewerk je data</p>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- TAB: TABBLAD 5 -->
@@ -430,6 +472,7 @@ function updateContext(type,data){
 <script src="js/scraper.js?v=91"></script>
 <script src="js/data/entities.js?v=83"></script>
 <script src="js/monitor.js?v=91"></script>
+<script src="js/datatable.js?v=96"></script>
 <script src="js/ui.js?v=87"></script>
 </body>
 </html>
