@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=91">
+<link rel="stylesheet" href="style.css?v=92">
 </head>
 <body>
 
@@ -91,137 +91,125 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 <div class="app">
 <div class="panel">
 
-  <!-- DATA -->
+  <!-- DATA — altijd open -->
   <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Data</span><span class="st open">▾</span></div>
+    <div class="sh"><span class="sl">Data</span></div>
     <div class="sc">
-      <div>
-        <label>Plak data (label ↹ waarde, één rij per item)</label>
-        <textarea id="di" placeholder="Amsterdam	45&#10;Rotterdam	38&#10;Den Haag	22&#10;Utrecht	18&#10;Eindhoven	12" oninput="parseData()"></textarea>
+      <textarea id="di" placeholder="Amsterdam	45&#10;Rotterdam	38&#10;Den Haag	22" oninput="parseData()" style="min-height:70px"></textarea>
+      <div style="display:flex;gap:5px;align-items:center">
+        <div class="upz" onclick="document.getElementById('fi').click()" style="flex:1;padding:5px;font-size:10px">
+          ↑ CSV/XLSX
+          <input type="file" id="fi" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(event)">
+        </div>
+        <div id="ds" style="font-size:10px;color:var(--pm);flex:1;text-align:right"></div>
       </div>
-      <div class="upz" onclick="document.getElementById('fi').click()">
-        ↑ CSV of XLSX uploaden
-        <input type="file" id="fi" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(event)">
-      </div>
-      <div id="ds" style="font-size:11px;color:var(--pm)"></div>
       <div id="colsel"></div>
     </div>
   </div>
 
-  <!-- TEKST -->
-  <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Tekst</span><span class="st open">▾</span></div>
-    <div class="sc">
-      <button class="btn btn-sm" onclick="suggestText()" style="margin-bottom:5px">✦ Stel tekst voor</button>
-      <div><label>Eyebrow</label><input type="text" id="eyebrow" placeholder="ANALYSE · 2025" oninput="sched()"></div>
-      <div><label>Titel</label><input type="text" id="ttl" placeholder="Titel van de grafiek" oninput="sched()"></div>
-      <div><label>Subtitel</label><input type="text" id="sub" placeholder="De stijging stagneerd met zo'n..." oninput="sched()"></div>
-      <div><label>Bron</label><input type="text" id="bron" placeholder="Bron: CBS" oninput="sched()"></div>
-      <div><label>Datum</label><input type="text" id="datum" placeholder="Bijv. 2025 of 1 jan 2025" oninput="sched()"></div>
-      <div><label>Notitie</label><input type="text" id="note" placeholder="Voetnoot of disclaimer" oninput="sched()"></div>
-      <div><label>Annotatie (rij:tekst)</label><input type="text" id="annot" placeholder="3:Storing datacenter" oninput="sched()"></div>
+  <!-- TYPE — groot, prominent -->
+  <div class="psec" style="padding-bottom:6px">
+    <div class="tg" id="ctg-main"></div>
+    <select id="ctg-more" onchange="setCT(this.value);this.value=''" style="margin-top:4px;font-size:11px">
+      <option value="">Meer typen...</option>
+    </select>
+  </div>
+
+  <!-- PALET — kleine rondjes -->
+  <div class="psec" style="padding:6px 14px">
+    <div class="pal-grid" id="pg"></div>
+    <div style="display:flex;gap:4px;align-items:center;margin-top:4px">
+      <input type="color" id="cc-pick" value="#0d9373" onchange="setCustomClr(this.value)" style="width:22px;height:22px;padding:0;border:1px solid var(--ibr);border-radius:3px;cursor:pointer">
+      <input type="text" id="cc-hex" placeholder="#hex" oninput="setCustomClr(this.value)" style="flex:1;font-size:10px;padding:3px 6px">
+      <button class="btn btn-sm" onclick="clearCustomClr()" style="padding:2px 5px;font-size:9px">✕</button>
     </div>
   </div>
 
-  <!-- GRAFIEK -->
-  <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Grafiek</span><span class="st open">▾</span></div>
-    <div class="sc">
-      <div><label>Type</label>
-        <div class="tg" id="ctg-main"></div>
-        <select id="ctg-more" onchange="setCT(this.value);this.value=''" style="margin-top:4px">
-          <option value="">Meer typen...</option>
-        </select>
-      </div>
-      <div><label>Sortering</label>
-        <select id="srt" onchange="sched()">
-          <option value="none">Origineel</option>
-          <option value="desc">Aflopend (hoog→laag)</option>
-          <option value="asc">Oplopend (laag→hoog)</option>
-        </select>
-      </div>
-      <div><label>Max. rijen</label>
-        <select id="mr" onchange="sched()">
-          <option value="all">Alle</option>
-          <option value="5">Top 5</option>
-          <option value="10">Top 10</option>
-          <option value="15">Top 15</option>
-        </select>
-      </div>
-      <div><label>Eenheid / suffix</label>
-        <select id="unit" onchange="sched()">
-          <option value="auto">Automatisch (k, M)</option>
-          <option value="none">Geen (exacte waarde)</option>
-          <option value="pct">%</option>
-          <option value="eur">€</option>
-          <option value="usd">$</option>
-          <option value="k">k (duizendtallen)</option>
-          <option value="M">M (miljoenen)</option>
-        </select>
-      </div>
-      <div><label>Weergave</label>
-        <select id="dispmode" onchange="sched()">
-          <option value="abs">Absoluut</option>
-          <option value="pct">Percentage van totaal</option>
-        </select>
-      </div>
-    </div>
+  <!-- FORMAAT — pills -->
+  <div class="psec" style="padding:6px 14px">
+    <div class="tg" id="fg" style="flex-wrap:wrap;gap:3px"></div>
   </div>
-  <!-- STIJL -->
-  <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Stijl</span><span class="st open">▾</span></div>
-    <div class="sc">
-      <div><label>Kleurpalet</label><div class="pal-grid" id="pg"></div></div>
-      <div style="display:flex;gap:5px;align-items:center">
-        <label style="flex-shrink:0">Custom kleur</label>
-        <input type="color" id="cc-pick" value="#3b82f6" onchange="setCustomClr(this.value)" style="width:28px;height:28px;padding:0;border:1px solid var(--ibr);border-radius:4px;cursor:pointer">
-        <input type="text" id="cc-hex" placeholder="#3b82f6" oninput="setCustomClr(this.value)" style="flex:1;font-size:11px">
-        <button class="btn btn-sm" onclick="clearCustomClr()">✕</button>
-      </div>
+
+  <!-- DROPDOWNS — twee per rij -->
+  <div class="psec" style="padding:6px 14px">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+      <select id="srt" onchange="sched()" style="font-size:11px;padding:4px 6px">
+        <option value="none">Origineel</option>
+        <option value="desc">Aflopend</option>
+        <option value="asc">Oplopend</option>
+      </select>
+      <select id="unit" onchange="sched()" style="font-size:11px;padding:4px 6px">
+        <option value="auto">Auto (k,M)</option>
+        <option value="none">Exact</option>
+        <option value="pct">%</option>
+        <option value="eur">€</option>
+        <option value="usd">$</option>
+        <option value="k">k</option>
+        <option value="M">M</option>
+      </select>
+      <select id="dispmode" onchange="sched()" style="font-size:11px;padding:4px 6px">
+        <option value="abs">Absoluut</option>
+        <option value="pct">% van totaal</option>
+      </select>
+      <select id="mr" onchange="sched()" style="font-size:11px;padding:4px 6px">
+        <option value="all">Alle rijen</option>
+        <option value="5">Top 5</option>
+        <option value="10">Top 10</option>
+        <option value="15">Top 15</option>
+      </select>
     </div>
   </div>
 
-  <!-- FORMAAT -->
-  <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Formaat</span><span class="st open">▾</span></div>
-    <div class="sc">
-      <div class="tg" id="fg" style="flex-wrap:wrap;gap:4px"></div>
+  <!-- FILTERS — compacte rijen -->
+  <div class="psec" style="padding:6px 14px">
+    <div style="display:flex;flex-wrap:wrap;gap:2px 8px">
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-grid" checked onchange="sched()"> Grid</label>
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-val" checked onchange="sched()"> Waarden</label>
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-xl" checked onchange="sched()"> Labels</label>
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-pctchg" onchange="sched()"> %Δ</label>
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-trend" onchange="sched()"> Trend</label>
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-ma" onchange="sched()"> Gem(7)</label>
+      <label class="chk" style="font-size:11px"><input type="checkbox" id="fg-avg" onchange="sched()"> Gem.lijn</label>
     </div>
   </div>
 
-  <!-- FILTERS -->
+  <!-- TEKST — begint ingeklapt -->
   <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Filters</span><span class="st open">▾</span></div>
-    <div class="sc">
-      <label class="chk"><input type="checkbox" id="fg-grid" checked onchange="sched()"> Rasterlijnen</label>
-      <label class="chk"><input type="checkbox" id="fg-val" checked onchange="sched()"> Waarden</label>
-      <label class="chk"><input type="checkbox" id="fg-xl" checked onchange="sched()"> X-as labels</label>
-      <label class="chk"><input type="checkbox" id="fg-pctchg" onchange="sched()"> % verandering</label>
-      <label class="chk"><input type="checkbox" id="fg-trend" onchange="sched()"> Trendlijn</label>
-      <label class="chk"><input type="checkbox" id="fg-ma" onchange="sched()"> Voortschr. gem. (7)</label>
-      <label class="chk"><input type="checkbox" id="fg-avg" onchange="sched()"> Gemiddelde-lijn</label>
-      <div style="display:flex;gap:5px;align-items:center">
-        <label style="flex-shrink:0">Referentielijn</label>
-        <input type="number" id="fg-ref" placeholder="Waarde" oninput="sched()" style="flex:1;font-size:11px">
-        <input type="text" id="fg-ref-lbl" placeholder="Label" oninput="sched()" style="flex:1;font-size:11px">
+    <div class="sh" onclick="tog(this)"><span class="sl">Tekst</span><span class="st">▾</span></div>
+    <div class="sc hidden">
+      <button class="btn btn-sm" onclick="suggestText()" style="margin-bottom:4px;font-size:10px">✦ Stel tekst voor</button>
+      <input type="text" id="eyebrow" placeholder="Eyebrow" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
+      <input type="text" id="ttl" placeholder="Titel" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
+      <input type="text" id="sub" placeholder="Subtitel" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-bottom:3px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:3px">
+        <input type="text" id="bron" placeholder="Bron" oninput="sched()" style="font-size:11px;padding:4px 6px">
+        <input type="text" id="datum" placeholder="Datum" oninput="sched()" style="font-size:11px;padding:4px 6px">
       </div>
-      <div><label>Branding</label>
-        <select id="fg-br" onchange="sched()">
+      <input type="text" id="note" placeholder="Notitie / voetnoot" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-top:3px">
+      <input type="text" id="annot" placeholder="Annotatie (3:tekst;7:tekst)" oninput="sched()" style="font-size:11px;padding:4px 6px;margin-top:3px">
+    </div>
+  </div>
+
+  <!-- EXTRA — ingeklapt -->
+  <div class="psec">
+    <div class="sh" onclick="tog(this)"><span class="sl">Extra</span><span class="st">▾</span></div>
+    <div class="sc hidden">
+      <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--pm);flex-shrink:0">Ref.lijn</span>
+        <input type="number" id="fg-ref" placeholder="Waarde" oninput="sched()" style="flex:1;font-size:10px;padding:3px 5px">
+        <input type="text" id="fg-ref-lbl" placeholder="Label" oninput="sched()" style="flex:1;font-size:10px;padding:3px 5px">
+      </div>
+      <div style="display:flex;gap:4px;align-items:center;margin-bottom:4px">
+        <span style="font-size:10px;color:var(--pm);flex-shrink:0">Branding</span>
+        <select id="fg-br" onchange="sched()" style="flex:1;font-size:10px;padding:3px 5px">
           <option value="none">Geen</option>
           <option value="maxverbeek" selected>Max Verbeek</option>
           <option value="dataverhaal">dataverhaal.nl</option>
         </select>
       </div>
-    </div>
-  </div>
-
-  <!-- CONFIGURATIES -->
-  <div class="psec">
-    <div class="sh" onclick="tog(this)"><span class="sl">Configuraties</span><span class="st open">▾</span></div>
-    <div class="sc">
-      <div style="display:flex;gap:5px">
-        <input type="text" id="cn" placeholder="Naam configuratie" style="flex:1">
-        <button class="btn btn-sm" onclick="saveCfg()">Opslaan</button>
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="text" id="cn" placeholder="Config naam" style="flex:1;font-size:10px;padding:3px 5px">
+        <button class="btn btn-sm" onclick="saveCfg()" style="font-size:10px;padding:3px 6px">Opslaan</button>
       </div>
       <div class="cfg-list" id="cl"></div>
     </div>
