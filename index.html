@@ -601,7 +601,17 @@ function switchTab(id,btn){
   document.querySelectorAll('.tb-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   if(btn) btn.classList.add('active');
+  try{localStorage.setItem('metamax_active_tab',id);}catch(e){}
 }
+(function(){
+  try{
+    const saved=localStorage.getItem('metamax_active_tab');
+    if(saved&&document.getElementById('tab-'+saved)){
+      const btn=document.querySelector('[onclick*="switchTab(\''+saved+'\'"]');
+      switchTab(saved,btn);
+    }
+  }catch(e){}
+})();
 function updateContext(type,data){
   if(type==='scraper'){
     const el=document.getElementById('ctx-scraper-section');
