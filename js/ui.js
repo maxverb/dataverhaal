@@ -8,7 +8,7 @@ function setCT(id,btn){
   // Reset dropdown if a main button was clicked
   const more=document.getElementById('ctg-more');
   if(more){
-    const mainTypes=['bar','barh','line','donut','area'];
+    const mainTypes=['bar','barh','line','donut'];
     more.value=mainTypes.includes(id)?'':id;
   }
   sched();
@@ -147,7 +147,7 @@ function init(){
   ).join('');
 
   // Chart type — 5 main buttons + dropdown for rest
-  const mainTypes=['bar','barh','line','donut','area'];
+  const mainTypes=['bar','barh','line','donut'];
   document.getElementById('ctg-main').innerHTML=mainTypes.filter(id=>CHARTS[id]).map(id=>
     `<button class="tb${id===S.ct?' active':''}" data-ct="${id}" onclick="setCT('${id}',this)">${CHARTS[id].label}</button>`
   ).join('');
