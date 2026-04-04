@@ -545,6 +545,8 @@ async function scrapeBulk(){
   exportSec.style.display='';
   document.getElementById('scrape-count').textContent=bulkResults.length;
   document.getElementById('scrape-view-toggle').style.display='flex';
+  if(typeof updateContext==='function') updateContext('scraper',
+    `<div class="ctx-stat"><span>Artikelen</span><span class="ctx-val">${bulkResults.length}</span></div>`);
 }
 
 function stopBulk(){bulkStopped=true;}
@@ -578,9 +580,9 @@ function bulkRowError(url,num,err){
     <span class="bulk-num">${num}</span>
     <div class="bulk-info">
       <div class="bulk-title">${esc(url.split('/').pop()||url)}</div>
-      <div class="bulk-meta" style="color:#f87171">${esc(err)}</div>
+      <div class="bulk-meta" style="color:var(--err)">${esc(err)}</div>
     </div>
-    <span class="bulk-ok" style="color:#f87171">✕</span>
+    <span class="bulk-ok" style="color:var(--err)">✕</span>
   </div>`;
 }
 
