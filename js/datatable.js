@@ -64,15 +64,16 @@ function dtPreviewImport(){
     else{st.textContent='Geen data';st.style.color='var(--err)';}
   }
 
-  // Show preview of first available source
-  const preview=dtPreviewData.a||dtPreviewData.b;
-  if(preview){
-    dtResult=preview;
-    dtRenderPreview(preview);
+  // Show preview of both sources
+  const hasA=dtPreviewData.a&&dtPreviewData.a.rows.length;
+  const hasB=dtPreviewData.b&&dtPreviewData.b.rows.length;
+  if(hasA||hasB){
+    dtRenderPreviewBoth(dtPreviewData.a,dtPreviewData.b);
     document.getElementById('dt-confirm-section').style.display='';
-    const delimName=preview._delim==='\t'?'tab':preview._delim===','?'komma':preview._delim===';'?'puntkomma':preview._delim==='|'?'pipe':'?';
-    document.getElementById('dt-preview-status').textContent=
-      `Gedetecteerd: ${delimName} · ${preview.headers.length} kolommen · ${preview.rows.length} rijen`;
+    let statusParts=[];
+    if(hasA) statusParts.push('A: '+dtPreviewData.a.rows.length+'r × '+dtPreviewData.a.headers.length+'k');
+    if(hasB) statusParts.push('B: '+dtPreviewData.b.rows.length+'r × '+dtPreviewData.b.headers.length+'k');
+    document.getElementById('dt-preview-status').textContent=statusParts.join(' · ');
   }
 }
 
@@ -106,28 +107,36 @@ function dtConfirmImport(){
   else if(dtSources.a&&dtSources.b){document.getElementById('dt-pipeline-section').style.display='none';document.getElementById('dt-export-section').style.display='none';}
 }
 
-function dtRenderPreview(data){
+function dtRenderPreviewBoth(dataA,dataB){
   const out=document.getElementById('dt-results');
-  if(!data||!data.rows.length){out.innerHTML='<div class="tab-empty"><p>Geen data gevonden</p></div>';return;}
+  let html='';
 
+  if(dataA&&dataA.rows.length) html+=dtBuildPreviewTable(dataA,'Bron A');
+  if(dataB&&dataB.rows.length) html+=dtBuildPreviewTable(dataB,'Bron B');
+
+  if(!html) html='<div class="tab-empty"><p>Geen data gevonden</p></div>';
+  out.innerHTML=html;
+}
+
+function dtBuildPreviewTable(data,label){
   const {headers,rows}=data;
-  const maxRows=Math.min(rows.length,15);
-  let html=`<div style="padding:6px 8px;font-size:10px;color:var(--ac);border-bottom:1px solid var(--pb);font-weight:600">PREVIEW — controleer of de kolommen kloppen</div>`;
+  const delimName=data._delim==='\t'?'tab':data._delim===','?'komma':data._delim===';'?'puntkomma':data._delim==='|'?'pipe':'?';
+  const maxRows=Math.min(rows.length,10);
+  let html=`<div style="padding:6px 8px;font-size:10px;color:var(--ac);border-bottom:1px solid var(--pb);font-weight:600">${label} — ${rows.length} rijen · ${headers.length} kolommen · ${delimName}</div>`;
   html+=`<div style="overflow:auto;padding:0"><table class="dt-table">`;
   html+=`<thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>`;
   html+=`<tbody>`;
   for(let i=0;i<maxRows;i++){
     html+=`<tr>${headers.map((_,j)=>{
       const v=rows[i][j]||'';
-      // Truncate long values in preview
       const display=v.length>80?v.substring(0,80)+'…':v;
       return '<td>'+esc(display)+'</td>';
     }).join('')}</tr>`;
   }
   html+=`</tbody></table>`;
-  if(rows.length>15) html+=`<div style="font-size:10px;color:var(--pm);padding:6px 8px">Preview: 15 van ${rows.length} rijen</div>`;
+  if(rows.length>10) html+=`<div style="font-size:10px;color:var(--pm);padding:6px 8px">Toont 10 van ${rows.length} rijen</div>`;
   html+=`</div>`;
-  out.innerHTML=html;
+  return html;
 }
 
 function dtParseCSV(raw,opts){
