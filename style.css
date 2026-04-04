@@ -87,7 +87,7 @@ body{font-family:'Inter','Barlow',sans-serif;background:var(--bg);color:var(--pt
 .mon-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}
 .mon-tag{font-size:11px;background:var(--ib);color:var(--pm);border-radius:3px;padding:2px 7px;white-space:nowrap;cursor:pointer;transition:background .15s}
 .mon-tag:hover{background:var(--ac);color:#fff}
-.mon-age{font-size:10px;color:var(--pm);font-family:'JetBrains Mono',monospace;margin-left:auto;white-space:nowrap}
+.mon-age-col{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;width:28px;text-align:center;flex-shrink:0}
 .mon-source{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--pm);width:70px;flex-shrink:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .mon-score-num{font-family:'Sora',sans-serif;font-size:22px;font-weight:700;line-height:1;width:40px;text-align:right;flex-shrink:0}
 .mon-detail{padding:12px}

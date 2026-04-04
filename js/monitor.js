@@ -281,12 +281,14 @@ function monRenderResults(results,omroep){
       `<span class="mon-tag">${esc(d.term)}</span>`
     ).join('');
     const age=monFmtAge(art.ageH);
+    const ageClr=art.ageH===null?'var(--pm)':art.ageH<2?'var(--green)':art.ageH<6?'var(--ac)':art.ageH<12?'var(--warn)':'var(--danger)';
     html+=`<div class="mon-row" onclick="monShowDetail(${i})">
       <div class="mon-score-num" style="color:${clr}">${art.score}</div>
+      <div class="mon-age-col" style="color:${ageClr}">${age||'?'}</div>
       <div class="mon-source">${esc(art.source)}</div>
       <div class="mon-info">
         <a class="mon-title" href="${esc(art.link)}" target="_blank" onclick="event.stopPropagation()">${esc(art.fullTitle||art.title)}</a>
-        <div class="mon-tags">${matchTags}${age?'<span class="mon-age">'+age+'</span>':''}</div>
+        <div class="mon-tags">${matchTags}</div>
       </div>
     </div>`;
   });
