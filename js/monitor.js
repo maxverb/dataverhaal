@@ -63,7 +63,7 @@ async function startMonitor(){
   }
 
   if(!allArticles.length){
-    status.textContent='Geen artikelen gevonden in RSS feeds';status.style.color='#f87171';
+    status.textContent='Geen artikelen gevonden in RSS feeds';status.style.color='var(--err)';
     startBtn.disabled=false;startBtn.textContent='▶ Start monitor';stopBtn.style.display='none';
     bar.style.display='none';return;
   }
@@ -140,12 +140,18 @@ async function startMonitor(){
   status.textContent=monitorStopped
     ?`Gestopt (${totalTime})`
     :`✓ ${allArticles.length} gescand (${scraped} nieuw, ${cached} cache), ${monitorResults.length} relevant (${totalTime})`;
-  status.style.color='#4ade80';
+  status.style.color='var(--ok)';
   startBtn.disabled=false;startBtn.textContent='▶ Start monitor';
   stopBtn.style.display='none';
   if(monitorResults.length){
     document.getElementById('mon-export-section').style.display='';
     document.getElementById('mon-count').textContent=monitorResults.length;
+    if(typeof updateContext==='function'){
+      const top=monitorResults.sort((a,b)=>b.score-a.score)[0];
+      updateContext('monitor',
+        `<div class="ctx-stat"><span>Relevant</span><span class="ctx-val">${monitorResults.length}</span></div>`+
+        (top?`<div class="ctx-stat"><span>Hoogste</span><span class="ctx-val">${top.score}</span></div>`:''));
+    }
   }
 }
 
@@ -221,7 +227,7 @@ function renderMonitorResults(omroep){
   let html='';
   sorted.forEach((art,i)=>{
     // Color based on score: >=10 green, 4-9 orange, <4 blue
-    const clr=art.score>=10?'#22c55e':art.score>=4?'#f59e0b':'var(--ac)';
+    const clr=art.score>=10?'var(--green)':art.score>=4?'var(--warn)':'var(--ac)';
     const matchTags=art.scoreDetails.slice(0,5).map(d=>
       `<span class="mon-tag" onclick="event.stopPropagation();showMonDetail(${i})">${esc(d.term)}</span>`
     ).join('');
