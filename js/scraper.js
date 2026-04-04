@@ -35,7 +35,120 @@ function makeAbs(src,sourceUrl){
   return src;
 }
 
-// ── NH NIEUWS / FLEVOLAND PARSER (Next.js CMS) ──
+// ── OMROEP FLEVOLAND PARSER (regiogroei legacy) ──
+
+function parseFlevoland(html,sourceUrl){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+
+  // ── KOP ──
+  const h2=doc.querySelector('h2.article__title')||doc.querySelector('h2');
+  const headline=h2?.textContent?.trim()||doc.querySelector('meta[property="og:title"]')?.content||'';
+
+  // ── LOCATIE ──
+  const location=doc.querySelector('.card__info span.t--red.t--strong')?.textContent?.trim()||'';
+
+  // ── DATUM ──
+  const dateSpan=doc.querySelector('.card__info span.t--grey');
+  const pubDate=dateSpan?.textContent?.replace(/[•\s]+/g,' ').trim()||'';
+
+  // ── AUTEUR ──
+  const author=doc.querySelector('.groei-wa-author-links a')?.textContent?.trim()||
+    doc.querySelector('meta[name="author"]')?.content||'';
+
+  // ── OG IMAGE ──
+  const ogImageRaw=doc.querySelector('meta[property="og:image"]')?.content||'';
+  const ogImage=ogImageRaw.split('?')[0];
+
+  // ── CONTENT SECTION ──
+  const content=doc.querySelector('section.article__content')||doc.querySelector('#rsDetailContentHook')||doc.body;
+
+  // ── INTRO — first <p> ──
+  const firstP=content.querySelector('p');
+  const intro=firstP?.textContent?.trim()||doc.querySelector('meta[property="og:description"]')?.content||'';
+
+  // ── TEKST + IMAGES + LINKS ──
+  const textParts=[];
+  const links=[];
+  const rawParts=[];
+  const images=[];
+  let seenIntro=false;
+
+  if(headline) rawParts.push('[KOP] '+headline);
+  if(location) rawParts.push('[LOCATIE] '+location);
+  if(author||pubDate) rawParts.push('[META] '+[author,pubDate].filter(Boolean).join(' · '));
+  if(intro) rawParts.push('[INTRO] '+intro);
+
+  // Walk child nodes of content section
+  content.childNodes.forEach(node=>{
+    // <p> elements
+    if(node.nodeName==='P'){
+      const t=node.textContent.trim();
+      if(!t||t==='\u00a0') return;
+      if(!seenIntro&&t===intro){seenIntro=true;return;}
+      seenIntro=true;
+      if(t.length>5){
+        textParts.push(t);
+        rawParts.push('[TEKST] '+t);
+      }
+      node.querySelectorAll('a[href]').forEach(a=>{
+        let href=a.getAttribute('href')||'';
+        href=makeAbs(href,sourceUrl);
+        const linkText=a.textContent.trim();
+        if(href&&linkText){links.push({text:linkText,href});rawParts.push('[LINK] '+linkText+' → '+href);}
+      });
+      return;
+    }
+    // <figure> elements — images
+    if(node.nodeName==='FIGURE'){
+      const img=node.querySelector('img');
+      if(img){
+        const src=(img.getAttribute('src')||'').split('?')[0];
+        const desc=img.getAttribute('title')||img.alt||'';
+        if(src&&!images.some(i=>i.src===src)){
+          images.push({src,desc});
+          rawParts.push('[AFBEELDING] '+src);
+        }
+      }
+      return;
+    }
+    // <strong> — sub-headers
+    if(node.nodeName==='STRONG'){
+      const t=node.textContent.trim();
+      if(t){textParts.push('\n[TUSSENKOP] '+t+'\n');rawParts.push('[TUSSENKOP] '+t);}
+      return;
+    }
+    // Loose text nodes
+    if(node.nodeType===3){
+      const t=node.textContent.trim();
+      if(t&&t.length>10&&t!=='\u00a0'){
+        textParts.push(t);
+        rawParts.push('[TEKST] '+t);
+      }
+    }
+  });
+
+  const bodyText=textParts.join('\n\n');
+  const related=[];
+  const embeds=[];
+
+  // ── METADATA ──
+  const domain='omroepflevoland.nl';
+  const urlMatch=sourceUrl.match(/\/nieuws\/(\d+)\//);
+  const urlArticleId=urlMatch?urlMatch[1]:'';
+  const cleanBodyText=bodyText.replace(/\[.*?\]/g,'').trim();
+  const wordCount=cleanBodyText?cleanBodyText.split(/\s+/).filter(w=>w).length:0;
+  const readTimeMin=wordCount>0?Math.max(1,Math.round(wordCount/200)):0;
+  const internalLinks=links.filter(l=>l.href.includes(domain)).length;
+  const externalLinks=links.length-internalLinks;
+
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,
+    urlArticleId,sourceUrl,category:'nieuws',readTimeMin,domain,quoteAuthors:[],copyrights:[],
+    internalLinks,externalLinks,
+    charKop:headline.length,charIntro:intro.length,charTekst:cleanBodyText.length,
+    rawText:rawParts.join('\n')};
+}
+
+// ── NH NIEUWS PARSER (Next.js CMS) ──
 
 function parseNH(html,sourceUrl){
   const doc=new DOMParser().parseFromString(html,'text/html');
@@ -273,7 +386,7 @@ function parseArticle(html,sourceUrl){
   // Dispatch to site-specific parser if applicable
   if(sourceUrl.includes('omroepbrabant.nl')) return parseBrabant(html,sourceUrl);
   if(sourceUrl.includes('nhnieuws.nl')) return parseNH(html,sourceUrl);
-  if(sourceUrl.includes('omroepflevoland.nl')) return parseNH(html,sourceUrl); // likely same CMS as NH
+  if(sourceUrl.includes('omroepflevoland.nl')) return parseFlevoland(html,sourceUrl);
 
   const rawHtml=html; // keep raw string for regex fallbacks
   const doc=new DOMParser().parseFromString(html,'text/html');
