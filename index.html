@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=119">
+<link rel="stylesheet" href="style.css?v=126">
 </head>
 <body>
 
@@ -334,6 +334,13 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
             <span id="mon-min-label">1</span>
           </div>
           <input type="range" id="mon-min-score" min="1" max="15" value="1" oninput="monUpdateMin()" style="width:100%;accent-color:var(--ac)">
+        </div>
+        <div style="margin-top:6px">
+          <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--pm);margin-bottom:2px">
+            <span>Max leeftijd</span>
+            <span id="mon-age-label">48u</span>
+          </div>
+          <input type="range" id="mon-max-age" min="1" max="48" value="48" oninput="monUpdateAge()" style="width:100%;accent-color:var(--ac)">
         </div>
       </div>
     </div>
@@ -662,7 +669,7 @@ function updateContext(type,data){
 <script src="js/interact.js?v=119"></script>
 <script src="js/scraper.js?v=125"></script>
 <script src="js/data/entities.js?v=119"></script>
-<script src="js/monitor.js?v=119"></script>
+<script src="js/monitor.js?v=126"></script>
 <script src="js/datatable.js?v=119"></script>
 <script src="js/explore.js?v=119"></script>
 <script src="js/ui.js?v=119"></script>

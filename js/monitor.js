@@ -124,7 +124,7 @@ async function monFetchAll(){
           art.fullTitle=parsed.headline||art.title;
         }
       }catch(e){}
-      cache[art.link]={fullText,intro:art.intro||art.desc,fullTitle:art.fullTitle||art.title,source:art.source,sourceId:art.sourceId,ts:Date.now()};
+      cache[art.link]={fullText,intro:art.intro||art.desc,fullTitle:art.fullTitle||art.title,source:art.source,sourceId:art.sourceId,pubDate:art.pubDate,ts:Date.now()};
       monSetCache(cache);
       scraped++;
       if(i<rssArticles.length-1&&!monStopped) await new Promise(r=>setTimeout(r,300));
@@ -173,12 +173,39 @@ function monUpdateMin(){
   monFilter();
 }
 
+function monUpdateAge(){
+  const v=document.getElementById('mon-max-age').value;
+  document.getElementById('mon-age-label').textContent=v+'u';
+  try{localStorage.setItem('metamax_mon_age',v);}catch(e){}
+  monFilter();
+}
+
+function monParseAge(pubDate){
+  if(!pubDate) return null;
+  const d=new Date(pubDate);
+  if(isNaN(d)) return null;
+  return Math.round((Date.now()-d.getTime())/3600000); // hours
+}
+
+function monFmtAge(hours){
+  if(hours===null||hours===undefined) return '';
+  if(hours<1) return 'nu';
+  if(hours<24) return hours+'u';
+  const d=Math.floor(hours/24);
+  return d+'d';
+}
+
 function monRestoreSettings(){
   try{
     const v=localStorage.getItem('metamax_mon_min');
     if(v){
       document.getElementById('mon-min-score').value=v;
       document.getElementById('mon-min-label').textContent=v;
+    }
+    const a=localStorage.getItem('metamax_mon_age');
+    if(a){
+      document.getElementById('mon-max-age').value=a;
+      document.getElementById('mon-age-label').textContent=a+'u';
     }
     const o=localStorage.getItem('metamax_mon_omroep');
     if(o) document.getElementById('mon-omroep').value=o;
@@ -189,27 +216,28 @@ function monFilter(){
   const omroep=document.getElementById('mon-omroep').value;
   try{localStorage.setItem('metamax_mon_omroep',omroep);}catch(e){}
   const minScore=parseInt(document.getElementById('mon-min-score').value)||1;
+  const maxAge=parseInt(document.getElementById('mon-max-age').value)||48;
 
   if(!monAllArticles.length){
-    // Try loading from cache if we haven't fetched yet
     monLoadFromCache();
     if(!monAllArticles.length) return;
   }
 
-  // Score all articles against selected entity set
   const results=[];
   monAllArticles.forEach(art=>{
+    // Age filter
+    const ageH=monParseAge(art.pubDate);
+    if(ageH!==null&&ageH>maxAge) return;
+
     if(omroep){
-      // Skip articles from the omroep itself (you don't monitor yourself)
       if(art.sourceId===omroep) return;
       const entities=MONITOR_ENTITIES[omroep];
       if(!entities) return;
       const score=scoreArticle(art.fullTitle||art.title,art.intro||art.desc,art.fullText||'',entities);
       if(score.total<minScore) return;
-      results.push({...art,score:score.total,scoreDetails:score.details});
+      results.push({...art,score:score.total,scoreDetails:score.details,ageH});
     } else {
-      // No filter — show all
-      results.push({...art,score:0,scoreDetails:[]});
+      results.push({...art,score:0,scoreDetails:[],ageH});
     }
   });
 
@@ -252,12 +280,13 @@ function monRenderResults(results,omroep){
     const matchTags=art.scoreDetails.slice(0,5).map(d=>
       `<span class="mon-tag">${esc(d.term)}</span>`
     ).join('');
+    const age=monFmtAge(art.ageH);
     html+=`<div class="mon-row" onclick="monShowDetail(${i})">
       <div class="mon-score-num" style="color:${clr}">${art.score}</div>
       <div class="mon-source">${esc(art.source)}</div>
       <div class="mon-info">
         <a class="mon-title" href="${esc(art.link)}" target="_blank" onclick="event.stopPropagation()">${esc(art.fullTitle||art.title)}</a>
-        <div class="mon-tags">${matchTags}</div>
+        <div class="mon-tags">${matchTags}${age?'<span class="mon-age">'+age+'</span>':''}</div>
       </div>
     </div>`;
   });
