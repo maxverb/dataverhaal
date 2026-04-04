@@ -66,6 +66,28 @@ l1:{
   sport:['Roda JC','Roda','MVV','MVV Maastricht','Fortuna Sittard','Fortuna','VVV-Venlo','VVV','Parkstad Limburg Stadion','De Geusselt','Fortuna Sittard Stadion','MECC'],
   landmarks:['Bonnefantenmuseum','Bonnefanten','Sint-Servaasbasiliek','Sint Servaas','Onze-Lieve-Vrouwebasiliek','Vrijthof','Markt Maastricht','Sint-Pietersberg','Fort Sint Pieter','Grotten Valkenburg','Drielandenpunt','GaiaZoo','Mondo Verde','Snowworld','Kasteel Hoensbroek','Thermenmuseum','Maasmechelen Village','Designer Outlet Roermond','Outlet Roermond','Maas','Geul','Heuvelland','Mergelland'],
   overig:['043','Arriva','GGD Zuid-Limburg','GGD Limburg-Noord','MUMC+','Maastricht UMC','Zuyderland','Zuyderland Medisch Centrum','VieCuri','Laurentius','Universiteit Maastricht','Zuyd Hogeschool','Zuyd','Fontys Venlo','Brightlands','Chemelot','Maastricht Aachen Airport','MAA','Provincie Limburg','Limburgs','Limburgse','Parkstad']
+},
+
+noord:{
+  name:'RTV Noord',
+  rss:'https://www.rtvnoord.nl/rss/index.xml',
+  gemeenten:['Groningen','Assen','Emmen','Delfzijl','Appingedam','Veendam','Stadskanaal','Winschoten','Hoogezand','Leek','Haren','Het Hogeland','Westerkwartier','Midden-Groningen','Oldambt','Westerwolde','Pekela','Eemsdelta','Loppersum','Bedum','Ten Boer','Zuidhorn','Marum','Grootegast','Winsum','De Marne','Eemsmond','Delfzijl','Bellingwedde','Vlagtwedde','Scheemda','Menterwolde','Slochteren','Hooglede'],
+  wijken:['Paddepoel','Vinkhuizen','Beijum','Lewenborg','Helpman','Haren','Hoogkerk','Stad','Binnenstad Groningen','Europapark','Meerstad','Reitdiep','Selwerd','Korrewegwijk','Oosterpoort','Rivierenbuurt','Corpus den Hoorn','De Wijert'],
+  personen:['Koen Schuiling','Marco Out'],
+  sport:['FC Groningen','FC Emmen','Euroborg','De Oude Meerdijk','SC Veendam','Be Quick 1887'],
+  landmarks:['Martinitoren','Martini','Groninger Museum','Forum Groningen','Forum','Noorderplantsoen','Grote Markt Groningen','Vismarkt','Stadspark','Eemshaven','Eems','Lauwersmeer','Lauwerszee','Bourtange','Waddengebied','Dollard','Blauwestad','Hunebedcentrum','Drentse Aa','Hondsrug'],
+  overig:['050','Qbuzz','Arriva','GGD Groningen','UMCG','Martini Ziekenhuis','Ommelander Ziekenhuis','Rijksuniversiteit Groningen','RUG','Hanzehogeschool','Hanze','Groningen Airport Eelde','Eelde','Provincie Groningen','Ommelanden','Ommeland']
+},
+
+oost:{
+  name:'RTV Oost',
+  rss:'https://www.oost.nl/rss/nieuws.xml',
+  gemeenten:['Zwolle','Enschede','Deventer','Almelo','Hengelo','Kampen','Hardenberg','Raalte','Olst-Wijhe','Dalfsen','Ommen','Staphorst','Steenwijkerland','Zwartewaterland','Hellendoorn','Rijssen-Holten','Wierden','Twenterand','Tubbergen','Dinkelland','Oldenzaal','Losser','Haaksbergen','Hof van Twente','Borne'],
+  wijken:['Stadshagen','Wipstrik','Assendorp','Berkum','Holtenbroek','Aa-landen','Dieze','Wesselerbrink','Hogeland','Roombeek','Lonneker','Glanerbrug','Boekelo','Colmschate','Bathmen','Borgele','Schalkhaar'],
+  personen:['Peter Snijders','Roelof Bleker'],
+  sport:['FC Twente','PEC Zwolle','Heracles Almelo','Heracles','De Grolsch Veste','MAC3PARK Stadion','Erve Asito','Go Ahead Eagles'],
+  landmarks:['Fundatie','Museum de Fundatie','Sassenpoort','Grote Kerk Zwolle','Peperbus','De Waag Deventer','Lebuinuskerk','Bergkerk','Rijksmuseum Twenthe','Overijssels Museum','Enschede Markt','Oude Markt Enschede','Hoge Hexel','Sallandse Heuvelrug','Lemelerberg','Weerribben-Wieden','Giethoorn','Vecht','IJssel','Regge','Dinkel','Twentekanaal'],
+  overig:['038','074','053','Keolis','Arriva','GGD Twente','GGD IJsselland','Isala','Isala Klinieken','MST','Medisch Spectrum Twente','ZGT','Ziekenhuisgroep Twente','Deventer Ziekenhuis','Saxion','Universiteit Twente','Windesheim','Provincie Overijssel','Overijssel','Twente','Salland','Kop van Overijssel']
 }
 
 };
