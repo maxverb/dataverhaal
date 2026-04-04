@@ -173,18 +173,21 @@ function monUpdateMin(){
   monFilter();
 }
 
-function monRestoreMin(){
+function monRestoreSettings(){
   try{
     const v=localStorage.getItem('metamax_mon_min');
     if(v){
       document.getElementById('mon-min-score').value=v;
       document.getElementById('mon-min-label').textContent=v;
     }
+    const o=localStorage.getItem('metamax_mon_omroep');
+    if(o) document.getElementById('mon-omroep').value=o;
   }catch(e){}
 }
 
 function monFilter(){
   const omroep=document.getElementById('mon-omroep').value;
+  try{localStorage.setItem('metamax_mon_omroep',omroep);}catch(e){}
   const minScore=parseInt(document.getElementById('mon-min-score').value)||1;
 
   if(!monAllArticles.length){
@@ -337,6 +340,6 @@ function scoreArticle(title,intro,text,entities){
 }
 
 // Restore settings on page load
-(function(){setTimeout(function(){monShowCacheInfo();monRestoreMin();},500);})();
+(function(){setTimeout(function(){monShowCacheInfo();monRestoreSettings();},500);})();
 
 // esc() defined in scraper.js
