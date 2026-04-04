@@ -176,7 +176,7 @@ function draw(){
   if(showBr){
     const sz=W*0.022*sf;
     ctx.font=`500 ${sz}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='right';ctx.textBaseline='bottom';
-    const brMap={dataverhaal:'dataverhaal.nl',maxverbeek:'Max Verbeek'};
+    const brMap={metamax:'MetaMax',maxverbeek:'Max Verbeek'};
     const brTxt=brMap[branding]||'Max Verbeek';
     ctx.fillText(brTxt,W-px*0.5,footY);
   }

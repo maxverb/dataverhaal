@@ -48,7 +48,7 @@ function exportPNG(){
   const fmtL=FMT[S.fmt].label.replace(/[\s/]/g,'-');
   const a=document.createElement('a');
   a.href=cv.toDataURL('image/png');
-  a.download=`${ttl}-${fmtL}-dataverhaal.png`;
+  a.download=`${ttl}-${fmtL}-metamax.png`;
   a.click();
 }
 
@@ -97,7 +97,7 @@ function loadCfg(name){
       if(el)el.checked=c.fg[k]!==false;
     });
     const brEl=document.getElementById('fg-br');
-    if(brEl) brEl.value=typeof c.fg.br==='string'?c.fg.br:(c.fg.br!==false?'dataverhaal':'none');
+    if(brEl) brEl.value=typeof c.fg.br==='string'?c.fg.br:(c.fg.br!==false?'metamax':'none');
   }
   setCT(c.ct||'bar');setPal(c.pal||'blauw');setFmt(c.fmt||'ig_post');
   parseData();
