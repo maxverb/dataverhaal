@@ -166,9 +166,26 @@ function monStop(){monStopped=true;}
 
 // ── FILTER + SCORE per regio ──
 
+function monUpdateMin(){
+  const v=document.getElementById('mon-min-score').value;
+  document.getElementById('mon-min-label').textContent=v;
+  try{localStorage.setItem('metamax_mon_min',v);}catch(e){}
+  monFilter();
+}
+
+function monRestoreMin(){
+  try{
+    const v=localStorage.getItem('metamax_mon_min');
+    if(v){
+      document.getElementById('mon-min-score').value=v;
+      document.getElementById('mon-min-label').textContent=v;
+    }
+  }catch(e){}
+}
+
 function monFilter(){
   const omroep=document.getElementById('mon-omroep').value;
-  const hideZero=document.getElementById('mon-hide-zero').checked;
+  const minScore=parseInt(document.getElementById('mon-min-score').value)||1;
 
   if(!monAllArticles.length){
     // Try loading from cache if we haven't fetched yet
@@ -185,10 +202,10 @@ function monFilter(){
       const entities=MONITOR_ENTITIES[omroep];
       if(!entities) return;
       const score=scoreArticle(art.fullTitle||art.title,art.intro||art.desc,art.fullText||'',entities);
-      if(hideZero&&score.total===0) return;
+      if(score.total<minScore) return;
       results.push({...art,score:score.total,scoreDetails:score.details});
     } else {
-      // No filter — show all with score 0
+      // No filter — show all
       results.push({...art,score:0,scoreDetails:[]});
     }
   });
@@ -319,7 +336,7 @@ function scoreArticle(title,intro,text,entities){
   return {total,details};
 }
 
-// Show cache info on page load
-(function(){setTimeout(monShowCacheInfo,500);})();
+// Restore settings on page load
+(function(){setTimeout(function(){monShowCacheInfo();monRestoreMin();},500);})();
 
 // esc() defined in scraper.js
