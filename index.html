@@ -303,33 +303,41 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 <div class="tab-content" id="tab-tab3">
 <div class="scraper-layout">
   <div class="scraper-input">
-    <!-- Omroep -->
+    <!-- Scrape -->
     <div class="psec">
-      <div class="sh"><span class="sl">Monitor</span></div>
+      <div class="sh"><span class="sl">RSS feeds</span></div>
       <div class="sc">
-        <select id="mon-omroep" style="font-size:11px;padding:4px 6px;margin-bottom:4px">
-          <option value="">Kies omroep...</option>
-          <option value="rijnmond">Rijnmond</option>
-          <option value="west">Omroep West</option>
-        </select>
-        <label class="chk" style="font-size:10px"><input type="checkbox" id="mon-scrape" checked> Scrape artikelen</label>
-        <div style="display:flex;gap:4px;margin-top:4px">
-          <button class="btn btn-p" onclick="startMonitor()" id="mon-start" style="flex:1;font-size:11px">▶ Start</button>
-          <button class="btn btn-sm" onclick="stopMonitor()" id="mon-stop" style="display:none;font-size:11px">⏹</button>
+        <div style="display:flex;gap:4px;margin-bottom:4px">
+          <button class="btn btn-p" onclick="monFetchAll()" id="mon-start" style="flex:1;font-size:11px">&#9654; Ophalen</button>
+          <button class="btn btn-sm" onclick="monStop()" id="mon-stop" style="display:none;font-size:11px">&#9632;</button>
         </div>
         <div id="mon-status" style="font-size:10px;color:var(--pm);margin-top:3px"></div>
         <div id="mon-progress-bar" style="display:none;height:3px;background:var(--ib);border-radius:2px;margin-top:3px;overflow:hidden">
           <div id="mon-progress-fill" style="height:100%;background:var(--ac);width:0%;transition:width .3s"></div>
         </div>
+        <div id="mon-cache-info" style="font-size:10px;color:var(--pm);margin-top:3px"></div>
+      </div>
+    </div>
+    <!-- Filter -->
+    <div class="psec">
+      <div class="sh"><span class="sl">Bekijk als</span></div>
+      <div class="sc">
+        <select id="mon-omroep" onchange="monFilter()" style="font-size:11px;padding:4px 6px;margin-bottom:4px">
+          <option value="">Alle artikelen</option>
+          <option value="rijnmond">Rijnmond</option>
+          <option value="west">Omroep West</option>
+        </select>
+        <label class="chk" style="font-size:10px"><input type="checkbox" id="mon-scrape" checked> Scrape voor diepere scoring</label>
+        <label class="chk" style="font-size:10px"><input type="checkbox" id="mon-hide-zero" checked onchange="monFilter()"> Verberg score 0</label>
       </div>
     </div>
   </div>
   <div class="scraper-output">
     <div id="mon-results">
       <div class="tab-empty">
-        <span class="tab-empty-icon">📡</span>
-        <p>Kies een omroep en start de monitor</p>
-        <p style="color:var(--pm);font-size:13px">Scant RSS feeds van alle andere omroepen en scoort op relevantie</p>
+        <span class="tab-empty-icon">&#128225;</span>
+        <p>Klik Ophalen om alle RSS feeds te scannen</p>
+        <p style="color:var(--pm);font-size:13px">Artikelen worden 48 uur gecachet — wissel direct tussen omroepen</p>
       </div>
     </div>
   </div>
