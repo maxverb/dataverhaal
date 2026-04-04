@@ -119,6 +119,12 @@ function dtFullParse(id){
     dtSources[id]=full;
     document.getElementById('dt-status-'+id).textContent=
       `✓ ${full.rows.length}r × ${full.headers.length}k`;
+    // Update dtResult if this was the active single source
+    if(dtResult&&dtResult._needsFullParse){
+      if((dtSources.a&&!dtSources.b)||(dtSources.b&&!dtSources.a)){
+        dtResult=full;
+      }
+    }
   }
 }
 
@@ -397,19 +403,26 @@ function dtExportCSV(){
 
 function dtExportXLSX(){
   dtFullParse('a');dtFullParse('b');
-  if(!dtResult) return;
-  const {headers,rows}=dtResult;
-  // Load XLSX lib if needed
+  if(!dtResult||!dtResult.rows.length) return;
   function doExport(){
-    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
-    const wb=XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,'Data');
-    XLSX.writeFile(wb,'merged_data.xlsx');
+    try{
+      const ws=XLSX.utils.aoa_to_sheet([dtResult.headers,...dtResult.rows]);
+      const wb=XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb,ws,'Data');
+      XLSX.writeFile(wb,'merged_data.xlsx');
+    }catch(e){alert('Excel export mislukt: '+e.message);}
   }
   if(typeof XLSX!=='undefined'){doExport();return;}
+  // Load XLSX lib
+  if(document.querySelector('script[src*="xlsx"]')){
+    // Script tag exists but XLSX not ready yet — wait
+    setTimeout(()=>{if(typeof XLSX!=='undefined')doExport();else alert('XLSX library kon niet geladen worden');},2000);
+    return;
+  }
   const sc=document.createElement('script');
   sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
   sc.onload=doExport;
+  sc.onerror=()=>alert('XLSX library kon niet geladen worden');
   document.head.appendChild(sc);
 }
 
