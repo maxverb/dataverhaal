@@ -73,27 +73,18 @@ function dtParseFileSource(e,id){
 }
 
 function dtParseCSV(raw,forceDelim){
-  const lines=raw.split('\n').map(l=>l.trim()).filter(l=>l);
-  if(!lines.length) return null;
+  if(!raw||!raw.trim()) return null;
+  // Strip BOM
+  if(raw.charCodeAt(0)===0xFEFF) raw=raw.slice(1);
 
-  // Detect delimiter: test tab, comma, semicolon on multiple lines
-  // Pick the one that gives consistent column count across lines
-  let delim=forceDelim||dtDetectDelim(lines);
+  // Detect delimiter from first line (before any multiline fields)
+  const firstLineEnd=raw.indexOf('\n');
+  const firstLine=firstLineEnd>0?raw.substring(0,firstLineEnd):raw;
+  let delim=forceDelim||dtDetectDelim(firstLine);
 
-  function parseLine(line){
-    const fields=[];
-    let field='',inQuote=false;
-    for(let i=0;i<line.length;i++){
-      const c=line[i];
-      if(c==='"'){if(inQuote&&line[i+1]==='"'){field+='"';i++;}else inQuote=!inQuote;}
-      else if(c===delim&&!inQuote){fields.push(field.trim());field='';}
-      else field+=c;
-    }
-    fields.push(field.trim());
-    return fields;
-  }
-
-  const allRows=lines.map(parseLine);
+  // Full RFC 4180 parse: handle newlines inside quoted fields
+  const allRows=dtParseRows(raw,delim);
+  if(!allRows.length) return null;
   if(allRows.length<2) return {headers:allRows[0]||[],rows:[],_delim:delim};
 
   const firstRow=allRows[0];
@@ -104,29 +95,80 @@ function dtParseCSV(raw,forceDelim){
   return result;
 }
 
-function dtDetectDelim(lines){
-  const candidates=['\t',',',';'];
-  const sample=lines.slice(0,Math.min(lines.length,10));
+// RFC 4180 compliant: walks char-by-char, handles newlines inside quotes
+function dtParseRows(raw,delim){
+  const rows=[];
+  let fields=[];
+  let field='';
+  let inQuote=false;
+  let i=0;
+  const len=raw.length;
 
-  // For each candidate, count fields per line (respecting quotes)
-  let best=null,bestScore=-1;
-  for(const d of candidates){
-    const counts=sample.map(line=>{
-      let n=1,inQ=false;
-      for(let i=0;i<line.length;i++){
-        if(line[i]==='"') inQ=!inQ;
-        else if(line[i]===d&&!inQ) n++;
+  while(i<len){
+    const c=raw[i];
+
+    if(inQuote){
+      if(c==='"'){
+        // Escaped quote "" or end of quoted field
+        if(i+1<len&&raw[i+1]==='"'){
+          field+='"';
+          i+=2;
+        } else {
+          inQuote=false;
+          i++;
+        }
+      } else {
+        // Any char inside quotes, including newlines
+        field+=c;
+        i++;
       }
-      return n;
-    });
-    // Must have >1 column
-    if(counts[0]<=1) continue;
-    // Score: consistent column count across lines = good
-    const target=counts[0];
-    const consistent=counts.filter(c=>c===target).length;
-    // Prefer higher consistency, then more columns (more specific delimiter)
-    const score=consistent*1000+target;
-    if(score>bestScore){bestScore=score;best=d;}
+    } else {
+      if(c==='"'){
+        inQuote=true;
+        i++;
+      } else if(c===delim){
+        fields.push(field.trim());
+        field='';
+        i++;
+      } else if(c==='\r'){
+        // Handle \r\n or lone \r as row end
+        fields.push(field.trim());
+        if(fields.some(f=>f)) rows.push(fields);
+        fields=[];
+        field='';
+        i++;
+        if(i<len&&raw[i]==='\n') i++;
+      } else if(c==='\n'){
+        fields.push(field.trim());
+        if(fields.some(f=>f)) rows.push(fields);
+        fields=[];
+        field='';
+        i++;
+      } else {
+        field+=c;
+        i++;
+      }
+    }
+  }
+  // Last field/row
+  if(field||fields.length){
+    fields.push(field.trim());
+    if(fields.some(f=>f)) rows.push(fields);
+  }
+  return rows;
+}
+
+function dtDetectDelim(firstLine){
+  const candidates=['\t',',',';'];
+  let best=null,bestCount=0;
+  for(const d of candidates){
+    // Count delimiters outside quotes
+    let n=0,inQ=false;
+    for(let i=0;i<firstLine.length;i++){
+      if(firstLine[i]==='"') inQ=!inQ;
+      else if(firstLine[i]===d&&!inQ) n++;
+    }
+    if(n>bestCount){bestCount=n;best=d;}
   }
   return best||',';
 }
