@@ -35,6 +35,141 @@ function makeAbs(src,sourceUrl){
   return src;
 }
 
+// ── NOS PARSER (React/styled-components) ──
+
+function parseNOS(html,sourceUrl){
+  const doc=new DOMParser().parseFromString(html,'text/html');
+  const main=doc.querySelector('main#content')||doc.querySelector('main')||doc.body;
+
+  // ── KOP ──
+  const headline=main.querySelector('h1')?.textContent?.trim()||
+    doc.querySelector('meta[property="og:title"]')?.content||'';
+
+  // ── CATEGORIE (label) ──
+  const labelEl=main.querySelector('[class*="LabelsContainer"] a span:last-child');
+  const category=labelEl?.textContent?.trim()||'';
+
+  // ── DATUM ──
+  const timeEl=main.querySelector('time[datetime]');
+  const pubDate=timeEl?.textContent?.trim()||'';
+  const dateISO=timeEl?.getAttribute('datetime')||'';
+
+  // ── AUTEUR / BRON ──
+  const metaDiv=main.querySelector('[data-sentry-component="MetaData"]');
+  const author=metaDiv?.querySelector('span:first-child')?.textContent?.trim()||'NOS';
+
+  // ── OG IMAGE ──
+  const ogImageRaw=doc.querySelector('meta[property="og:image"]')?.content||'';
+  const ogImage=ogImageRaw.split('?')[0];
+
+  // ── HEADER IMAGE ──
+  const images=[];
+  const headerFig=main.querySelector('[data-sentry-component="HeaderImage"] figure');
+  if(headerFig){
+    const img=headerFig.querySelector('img');
+    const caption=headerFig.querySelector('figcaption')?.textContent?.trim()||'';
+    const copyright=headerFig.querySelector('[class*="sc-568a4295"]')?.textContent?.trim()||'';
+    const src=(img?.getAttribute('src')||'').split('?')[0];
+    if(src) images.push({src,desc:caption+(copyright?' ('+copyright+')':'')});
+  }
+
+  // ── TEKST — walk ItemContainer divs ──
+  const textParts=[];
+  const links=[];
+  const rawParts=[];
+  const related=[];
+
+  if(headline) rawParts.push('[KOP] '+headline);
+  if(category) rawParts.push('[CATEGORIE] '+category);
+  if(author||pubDate) rawParts.push('[META] '+[author,pubDate].filter(Boolean).join(' · '));
+
+  // All content containers (paragraphs + subheadings)
+  const containers=main.querySelectorAll('[data-sentry-source-file="Article.tsx"] > div');
+  // Fallback: try all divs that contain p or h2 directly
+  const contentDivs=containers.length?containers:main.children;
+
+  // Track first paragraph as intro
+  let intro='';
+  let introSet=false;
+
+  // Process each ItemContainer
+  main.querySelectorAll('p, h2').forEach(el=>{
+    // Skip elements inside link containers, share sections, footer, tiles
+    if(el.closest('[data-testid="linkcontainer"]')) return;
+    if(el.closest('[data-sentry-component="ShareDropdown"]')) return;
+    if(el.closest('[data-sentry-component="ShareList"]')) return;
+    if(el.closest('[data-sentry-component="MetaFooter"]')) return;
+    if(el.closest('[class*="ListFourColumns"]')) return;
+    if(el.closest('[class*="ItemTile"]')) return;
+    if(el.closest('[class*="SectionHeader"]')) return;
+
+    if(el.tagName==='H2'){
+      const t=el.textContent.trim();
+      if(t&&t!==headline&&t!=='Meer bekijken?'){
+        textParts.push('\n[TUSSENKOP] '+t+'\n');
+        rawParts.push('[TUSSENKOP] '+t);
+      }
+      return;
+    }
+
+    // Paragraph
+    const t=el.textContent.trim();
+    if(!t||t.length<5) return;
+
+    if(!introSet){intro=t;introSet=true;rawParts.push('[INTRO] '+t);}
+
+    textParts.push(t);
+    rawParts.push('[TEKST] '+t);
+
+    // Links
+    el.querySelectorAll('a[href]').forEach(a=>{
+      let href=a.getAttribute('href')||'';
+      href=makeAbs(href,sourceUrl);
+      const linkText=a.textContent.trim();
+      if(href&&linkText&&!href.includes('twitter.com/intent')&&!href.includes('facebook.com/sharer')&&!href.includes('whatsapp.com')){
+        links.push({text:linkText,href});
+        rawParts.push('[LINK] '+linkText+' → '+href);
+      }
+    });
+  });
+
+  const bodyText=textParts.join('\n\n');
+
+  // ── RELATED (Bekijk ook) ──
+  main.querySelectorAll('[data-testid="linkcontainer"] a').forEach(a=>{
+    const title=a.querySelector('[class*="Title"]')?.textContent?.trim()||a.querySelector('span')?.textContent?.trim();
+    let href=makeAbs(a.getAttribute('href')||'',sourceUrl);
+    if(title&&href){
+      related.push({title,href});
+      rawParts.push('[LEES OOK] '+title+' → '+href);
+    }
+  });
+
+  // ── EMBEDS ──
+  const embeds=[];
+
+  // ── METADATA ──
+  const domain='nos.nl';
+  const urlMatch=sourceUrl.match(/\/artikel\/(\d+)/);
+  const urlArticleId=urlMatch?urlMatch[1]:'';
+  const cleanBodyText=bodyText.replace(/\[.*?\]/g,'').trim();
+  const wordCount=cleanBodyText?cleanBodyText.split(/\s+/).filter(w=>w).length:0;
+  const readTimeMin=wordCount>0?Math.max(1,Math.round(wordCount/200)):0;
+  const copyrights=[];
+  if(headerFig){
+    const cr=headerFig.querySelector('[class*="sc-568a4295"]')?.textContent?.trim();
+    if(cr) copyrights.push(cr);
+  }
+  const internalLinks=links.filter(l=>l.href.includes('nos.nl')).length;
+  const externalLinks=links.length-internalLinks;
+
+  return {headline,author,pubDate,ogImage,intro,bodyText,links,images,embeds,related,
+    urlArticleId,sourceUrl,category,readTimeMin,domain,quoteAuthors:[],copyrights,
+    internalLinks,externalLinks,
+    charKop:headline.length,charIntro:intro.length,charTekst:cleanBodyText.length,
+    rawText:rawParts.join('\n')};
+}
+
 // ── OMROEP FLEVOLAND PARSER (regiogroei legacy) ──
 
 function parseFlevoland(html,sourceUrl){
@@ -387,6 +522,7 @@ function parseArticle(html,sourceUrl){
   if(sourceUrl.includes('omroepbrabant.nl')) return parseBrabant(html,sourceUrl);
   if(sourceUrl.includes('nhnieuws.nl')) return parseNH(html,sourceUrl);
   if(sourceUrl.includes('omroepflevoland.nl')) return parseFlevoland(html,sourceUrl);
+  if(sourceUrl.includes('nos.nl')) return parseNOS(html,sourceUrl);
 
   const rawHtml=html; // keep raw string for regex fallbacks
   const doc=new DOMParser().parseFromString(html,'text/html');
