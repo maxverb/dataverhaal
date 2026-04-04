@@ -38,4 +38,8 @@ const MONITOR_FEEDS=[
   {id:'oost',name:'RTV Oost',url:'https://www.oost.nl/rss/nieuws.xml'},
   {id:'fryslan',name:'Omroep Fryslân',url:'https://www.omropfryslan.nl/rss/nieuws.xml'},
   {id:'utrecht',name:'RTV Utrecht',url:'https://www.rtvutrecht.nl/rss/nieuws.xml'},
+  {id:'brabant',name:'Omroep Brabant',url:'https://www.omroepbrabant.nl/rss/index.xml'},
+  {id:'nh',name:'NH Nieuws',url:'https://www.nhnieuws.nl/rss/index.xml'},
+  {id:'flevoland',name:'Omroep Flevoland',url:'https://www.omroepflevoland.nl/rss/index.xml'},
+  {id:'nos',name:'NOS',url:'https://feeds.nos.nl/nosnieuwsalgemeen'},
 ];
