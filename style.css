@@ -67,6 +67,17 @@ body{font-family:'Inter','Barlow',sans-serif;background:var(--bg);color:var(--pt
 .sd-top-item{display:flex;justify-content:space-between;font-size:12px;padding:2px 0;border-bottom:1px solid var(--pb)}
 .sd-top-item span:first-child{color:var(--pt)}
 .sd-top-item span:last-child{color:var(--ac);font-weight:700}
+/* VERKENNER */
+.dv-stats-row{display:flex;justify-content:space-between;font-size:11px;padding:2px 0;border-bottom:1px solid var(--ib)}
+.dv-stats-row span:first-child{color:var(--pm)}
+.dv-stats-row span:last-child{color:var(--pt);font-weight:600}
+.dv-freq-row{display:flex;align-items:center;gap:4px;font-size:11px;margin-bottom:2px}
+.dv-freq-label{color:var(--pt);width:80px;flex-shrink:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dv-freq-bar-wrap{flex:1;height:14px;background:var(--ib);border-radius:2px;overflow:hidden}
+.dv-freq-bar{height:100%;background:var(--ac);border-radius:2px;min-width:1px}
+.dv-freq-val{color:var(--ac);font-weight:700;width:30px;flex-shrink:0;text-align:right}
+.dv-group-card{cursor:pointer;transition:border-color .15s}
+.dv-group-card:hover{border-color:var(--ac)}
 /* MONITOR */
 .mon-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--pb);transition:background .15s}
 .mon-row:hover{background:var(--ib)}
