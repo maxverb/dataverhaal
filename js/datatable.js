@@ -406,7 +406,10 @@ function dtExportXLSX(){
   if(!dtResult||!dtResult.rows.length) return;
   function doExport(){
     try{
-      const ws=XLSX.utils.aoa_to_sheet([dtResult.headers,...dtResult.rows]);
+      // Excel cell limit: 32767 chars — truncate longer values
+      const MAX=32767;
+      const safeRows=dtResult.rows.map(r=>r.map(v=>v&&v.length>MAX?v.substring(0,MAX):v));
+      const ws=XLSX.utils.aoa_to_sheet([dtResult.headers,...safeRows]);
       const wb=XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb,ws,'Data');
       XLSX.writeFile(wb,'merged_data.xlsx');
