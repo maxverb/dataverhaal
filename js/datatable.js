@@ -3,6 +3,8 @@
 const dtSources={a:null,b:null}; // {headers:[], rows:[[]]}
 let dtResult=null;
 let dtMergeMode='append';
+let dtSteps=[]; // pipeline steps
+let dtStepCounter=0;
 
 // ── PARSING ──
 
@@ -16,8 +18,8 @@ function dtParseSource(id){
   status.style.color=d?'var(--ok)':'var(--err)';
   dtCheckMerge();
   // Auto-preview single source
-  if(dtSources.a&&!dtSources.b){dtResult=dtSources.a;dtRender();}
-  else if(dtSources.b&&!dtSources.a){dtResult=dtSources.b;dtRender();}
+  if(dtSources.a&&!dtSources.b){dtResult=dtSources.a;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
+  else if(dtSources.b&&!dtSources.a){dtResult=dtSources.b;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
 }
 
 function dtParseFileSource(e,id){
@@ -169,6 +171,8 @@ function dtMerge(){
 
   dtRender();
   document.getElementById('dt-export-section').style.display='';
+  document.getElementById('dt-pipeline-section').style.display='';
+  dtRenderSteps();
 }
 
 // ── RENDER ──
@@ -214,7 +218,7 @@ function dtExportCSV(){
 }
 
 function dtClear(){
-  dtSources.a=null;dtSources.b=null;dtResult=null;
+  dtSources.a=null;dtSources.b=null;dtResult=null;dtSteps=[];dtStepCounter=0;
   document.getElementById('dt-paste-a').value='';
   document.getElementById('dt-paste-b').value='';
   document.getElementById('dt-file-a').value='';
@@ -222,7 +226,148 @@ function dtClear(){
   document.getElementById('dt-status-a').textContent='';
   document.getElementById('dt-status-b').textContent='';
   document.getElementById('dt-merge-section').style.display='none';
+  document.getElementById('dt-pipeline-section').style.display='none';
   document.getElementById('dt-export-section').style.display='none';
+  dtRender();
+}
+
+// ── PIPELINE ──
+
+function dtGetHeaders(){return dtResult?dtResult.headers:[];}
+
+function dtAddStep(type){
+  const id=++dtStepCounter;
+  dtSteps.push({id,type,config:{}});
+  dtRenderSteps();
+  document.getElementById('dt-run-pipeline').disabled=false;
+}
+
+function dtRemoveStep(id){
+  dtSteps=dtSteps.filter(s=>s.id!==id);
+  dtRenderSteps();
+  if(!dtSteps.length) document.getElementById('dt-run-pipeline').disabled=true;
+}
+
+function dtRenderSteps(){
+  const el=document.getElementById('dt-steps-list');
+  if(!el) return;
+  const headers=dtGetHeaders();
+  const colOpts=headers.map(h=>`<option value="${esc(h)}">${esc(h)}</option>`).join('');
+
+  el.innerHTML=dtSteps.map((s,i)=>{
+    let controls='';
+    if(s.type==='filter'){
+      controls=`<div class="dt-step-controls">
+        <select onchange="dtSteps[${i}].config.col=this.value">${colOpts}</select>
+        <select onchange="dtSteps[${i}].config.op=this.value" style="width:50px">
+          <option value="contains">bevat</option>
+          <option value="eq">= exact</option>
+          <option value="neq">≠</option>
+          <option value="gt">></option>
+          <option value="lt"><</option>
+          <option value="empty">leeg</option>
+          <option value="notempty">niet leeg</option>
+        </select>
+        <input type="text" onchange="dtSteps[${i}].config.val=this.value" placeholder="waarde" style="flex:1">
+      </div>`;
+    } else if(s.type==='sort'){
+      controls=`<div class="dt-step-controls">
+        <select onchange="dtSteps[${i}].config.col=this.value">${colOpts}</select>
+        <select onchange="dtSteps[${i}].config.dir=this.value" style="width:55px">
+          <option value="asc">A→Z</option>
+          <option value="desc">Z→A</option>
+          <option value="num_asc">0→9</option>
+          <option value="num_desc">9→0</option>
+        </select>
+      </div>`;
+    } else if(s.type==='dedup'){
+      controls=`<div class="dt-step-controls">
+        <select onchange="dtSteps[${i}].config.col=this.value">${colOpts}</select>
+      </div>`;
+    } else if(s.type==='dropcol'){
+      controls=`<div class="dt-step-controls">
+        <select onchange="dtSteps[${i}].config.col=this.value">${colOpts}</select>
+      </div>`;
+    } else if(s.type==='rename'){
+      controls=`<div class="dt-step-controls">
+        <select onchange="dtSteps[${i}].config.col=this.value">${colOpts}</select>
+        <span style="color:var(--pm)">→</span>
+        <input type="text" onchange="dtSteps[${i}].config.newName=this.value" placeholder="nieuwe naam" style="flex:1">
+      </div>`;
+    }
+
+    const typeLabels={filter:'Filter',sort:'Sorteer',dedup:'Dedup',dropcol:'Kolom weg',rename:'Hernoem'};
+    return `<div class="dt-step">
+      <div class="dt-step-header">
+        <span class="dt-step-type">${typeLabels[s.type]||s.type}</span>
+        <button class="dt-step-remove" onclick="dtRemoveStep(${s.id})">✕</button>
+      </div>
+      ${controls}
+    </div>${i<dtSteps.length-1?'<div class="dt-step-arrow">↓</div>':''}`;
+  }).join('');
+
+  // Set defaults
+  dtSteps.forEach((s,i)=>{
+    if(!s.config.col&&headers.length) s.config.col=headers[0];
+    if(s.type==='filter'&&!s.config.op) s.config.op='contains';
+    if(s.type==='sort'&&!s.config.dir) s.config.dir='asc';
+  });
+}
+
+function dtRunPipeline(){
+  if(!dtResult) return;
+
+  // Start from merge result or single source
+  let data={headers:[...dtResult.headers],rows:dtResult.rows.map(r=>[...r])};
+
+  for(const step of dtSteps){
+    const col=step.config.col;
+    const colIdx=data.headers.indexOf(col);
+    if(colIdx<0&&step.type!=='rename') continue;
+
+    if(step.type==='filter'){
+      const op=step.config.op||'contains';
+      const val=(step.config.val||'').toLowerCase();
+      data.rows=data.rows.filter(r=>{
+        const cell=(r[colIdx]||'').toLowerCase();
+        if(op==='contains') return cell.includes(val);
+        if(op==='eq') return cell===val;
+        if(op==='neq') return cell!==val;
+        if(op==='gt') return parseFloat(r[colIdx])>parseFloat(step.config.val);
+        if(op==='lt') return parseFloat(r[colIdx])<parseFloat(step.config.val);
+        if(op==='empty') return !r[colIdx]||!r[colIdx].trim();
+        if(op==='notempty') return r[colIdx]&&r[colIdx].trim();
+        return true;
+      });
+    } else if(step.type==='sort'){
+      const dir=step.config.dir||'asc';
+      data.rows.sort((a,b)=>{
+        const va=a[colIdx]||'',vb=b[colIdx]||'';
+        if(dir==='num_asc') return parseFloat(va)-parseFloat(vb);
+        if(dir==='num_desc') return parseFloat(vb)-parseFloat(va);
+        if(dir==='desc') return vb.localeCompare(va,'nl');
+        return va.localeCompare(vb,'nl');
+      });
+    } else if(step.type==='dedup'){
+      const seen=new Set();
+      data.rows=data.rows.filter(r=>{
+        const key=r[colIdx]||'';
+        if(seen.has(key)) return false;
+        seen.add(key);return true;
+      });
+    } else if(step.type==='dropcol'){
+      const idx=data.headers.indexOf(col);
+      if(idx>=0){
+        data.headers.splice(idx,1);
+        data.rows=data.rows.map(r=>{r.splice(idx,1);return r;});
+      }
+    } else if(step.type==='rename'){
+      const idx=data.headers.indexOf(col);
+      if(idx>=0&&step.config.newName) data.headers[idx]=step.config.newName;
+    }
+  }
+
+  dtResult=data;
   dtRender();
 }
 

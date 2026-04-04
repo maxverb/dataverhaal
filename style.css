@@ -80,6 +80,15 @@ body{font-family:'Inter','Barlow',sans-serif;background:var(--bg);color:var(--pt
 .mon-score-num{font-family:'Sora',sans-serif;font-size:22px;font-weight:700;line-height:1;width:40px;text-align:right;flex-shrink:0}
 .mon-detail{padding:12px}
 .mon-detail-score{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+/* PIPELINE */
+.dt-step{background:var(--ib);border:1px solid var(--pb);border-radius:var(--r);padding:6px 8px;margin-bottom:4px;font-size:10px;position:relative}
+.dt-step-header{display:flex;align-items:center;gap:4px;margin-bottom:4px}
+.dt-step-type{font-family:'JetBrains Mono',monospace;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--ac)}
+.dt-step-remove{background:none;border:none;color:var(--pm);cursor:pointer;font-size:12px;margin-left:auto;padding:0 2px}
+.dt-step-remove:hover{color:var(--danger)}
+.dt-step-controls{display:flex;gap:3px;align-items:center}
+.dt-step-controls select,.dt-step-controls input{font-size:10px;padding:2px 4px}
+.dt-step-arrow{text-align:center;color:var(--pm);font-size:10px;margin:2px 0}
 /* DATA TABLE */
 .dt-table{width:100%;border-collapse:collapse;font-size:12px;background:var(--p);border:1px solid var(--pb)}
 .dt-table thead{background:var(--ac);color:#fff}

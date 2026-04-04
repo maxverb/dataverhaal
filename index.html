@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=98">
+<link rel="stylesheet" href="style.css?v=100">
 </head>
 <body>
 
@@ -382,6 +382,21 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
         <button class="btn btn-p" onclick="dtMerge()" style="width:100%;font-size:11px">▶ Merge</button>
       </div>
     </div>
+    <!-- PIPELINE -->
+    <div class="psec" id="dt-pipeline-section" style="display:none">
+      <div class="sh"><span class="sl">Stappen</span></div>
+      <div class="sc">
+        <div style="display:flex;gap:3px;flex-wrap:wrap;margin-bottom:6px">
+          <button class="btn btn-sm" onclick="dtAddStep('filter')" style="font-size:9px;padding:2px 6px">+ Filter</button>
+          <button class="btn btn-sm" onclick="dtAddStep('sort')" style="font-size:9px;padding:2px 6px">+ Sorteer</button>
+          <button class="btn btn-sm" onclick="dtAddStep('dedup')" style="font-size:9px;padding:2px 6px">+ Dedup</button>
+          <button class="btn btn-sm" onclick="dtAddStep('dropcol')" style="font-size:9px;padding:2px 6px">+ Kolom weg</button>
+          <button class="btn btn-sm" onclick="dtAddStep('rename')" style="font-size:9px;padding:2px 6px">+ Hernoem</button>
+        </div>
+        <div id="dt-steps-list"></div>
+        <button class="btn btn-p" onclick="dtRunPipeline()" style="width:100%;font-size:10px;margin-top:4px" id="dt-run-pipeline" disabled>▶ Voer stappen uit</button>
+      </div>
+    </div>
     <!-- EXPORT -->
     <div class="psec" id="dt-export-section" style="display:none">
       <div style="display:flex;gap:4px">
@@ -490,7 +505,7 @@ function updateContext(type,data){
 <script src="js/scraper.js?v=91"></script>
 <script src="js/data/entities.js?v=83"></script>
 <script src="js/monitor.js?v=91"></script>
-<script src="js/datatable.js?v=98"></script>
+<script src="js/datatable.js?v=100"></script>
 <script src="js/ui.js?v=87"></script>
 </body>
 </html>
