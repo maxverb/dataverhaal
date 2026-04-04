@@ -20,7 +20,7 @@
     <button class="tb-tab" onclick="switchTab('tab2',this)">Scraper</button>
     <button class="tb-tab" onclick="switchTab('tab3',this)">RSS Check</button>
     <button class="tb-tab" onclick="switchTab('tab4',this)">CSV Merge</button>
-    <button class="tb-tab" onclick="switchTab('tab5',this)">Tabblad 5</button>
+    <button class="tb-tab" onclick="switchTab('tab5',this)">Verkenner</button>
     <button class="tb-tab" onclick="switchTab('tab6',this)">Tabblad 6</button>
     <button class="tb-tab" onclick="switchTab('tab7',this)">Tabblad 7</button>
   </nav>
@@ -418,13 +418,49 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 </div>
 </div>
 
-<!-- TAB: TABBLAD 5 -->
+<!-- TAB: VERKENNER -->
 <div class="tab-content" id="tab-tab5">
-  <div class="tab-empty">
-    <span class="tab-empty-icon">5</span>
-    <p>Tabblad 5</p>
-    <p style="color:var(--pm);font-size:13px">Nog geen inhoud</p>
+<div class="scraper-layout">
+  <div class="scraper-input">
+    <!-- DATA INPUT -->
+    <div class="psec">
+      <div class="sh"><span class="sl">Data</span></div>
+      <div class="sc">
+        <textarea id="dv-paste" placeholder="Plak CSV/TSV data..." style="min-height:140px;font-size:11px" oninput="dvParseInput()"></textarea>
+        <div style="display:flex;gap:5px;align-items:center;margin-top:4px">
+          <div class="upz" onclick="document.getElementById('dv-file').click()" style="flex:1;padding:5px;font-size:10px">
+            &#8593; CSV/XLSX
+            <input type="file" id="dv-file" accept=".csv,.xlsx,.xls,.tsv" style="display:none" onchange="dvParseFile(event)">
+          </div>
+          <div id="dv-status" style="font-size:10px;color:var(--pm);flex:1;text-align:right"></div>
+        </div>
+      </div>
+    </div>
+    <!-- OPTIES -->
+    <div class="psec" id="dv-actions" style="display:none">
+      <div class="sh"><span class="sl">Analyse</span></div>
+      <div class="sc">
+        <div style="display:flex;gap:4px;align-items:center;margin-bottom:6px">
+          <span style="font-size:10px;color:var(--pm);flex-shrink:0">Groepeer op</span>
+          <select id="dv-groupby" style="flex:1;font-size:10px;padding:3px 5px">
+            <option value="">Geen groepering</option>
+          </select>
+        </div>
+        <button class="btn btn-p" onclick="dvAnalyze()" style="width:100%;font-size:11px">&#9654; Analyseer</button>
+        <button class="btn btn-sm" onclick="dvClear()" style="width:100%;font-size:10px;margin-top:4px">&#10005; Wis</button>
+      </div>
+    </div>
   </div>
+  <div class="scraper-output">
+    <div id="dv-results">
+      <div class="tab-empty">
+        <span class="tab-empty-icon">&#x1f50d;</span>
+        <p>Laad een dataset om te verkennen</p>
+        <p style="color:var(--pm);font-size:13px">Plak CSV/TSV of upload een bestand</p>
+      </div>
+    </div>
+  </div>
+</div>
 </div>
 
 <!-- TAB: TABBLAD 6 -->
@@ -507,6 +543,7 @@ function updateContext(type,data){
 <script src="js/data/entities.js?v=83"></script>
 <script src="js/monitor.js?v=91"></script>
 <script src="js/datatable.js?v=101"></script>
+<script src="js/explore.js?v=1"></script>
 <script src="js/ui.js?v=87"></script>
 </body>
 </html>
