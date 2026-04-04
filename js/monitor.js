@@ -144,8 +144,6 @@ async function startMonitor(){
   startBtn.disabled=false;startBtn.textContent='▶ Start monitor';
   stopBtn.style.display='none';
   if(monitorResults.length){
-    document.getElementById('mon-export-section').style.display='';
-    document.getElementById('mon-count').textContent=monitorResults.length;
     if(typeof updateContext==='function'){
       const top=monitorResults.sort((a,b)=>b.score-a.score)[0];
       updateContext('monitor',

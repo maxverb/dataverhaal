@@ -395,6 +395,24 @@ function dtExportCSV(){
   URL.revokeObjectURL(url);
 }
 
+function dtExportXLSX(){
+  dtFullParse('a');dtFullParse('b');
+  if(!dtResult) return;
+  const {headers,rows}=dtResult;
+  // Load XLSX lib if needed
+  function doExport(){
+    const ws=XLSX.utils.aoa_to_sheet([headers,...rows]);
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Data');
+    XLSX.writeFile(wb,'merged_data.xlsx');
+  }
+  if(typeof XLSX!=='undefined'){doExport();return;}
+  const sc=document.createElement('script');
+  sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+  sc.onload=doExport;
+  document.head.appendChild(sc);
+}
+
 function dtClear(){
   dtSources.a=null;dtSources.b=null;dtResult=null;dtSteps=[];dtStepCounter=0;
   dtRawText={a:'',b:''};

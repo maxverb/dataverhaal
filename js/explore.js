@@ -2,64 +2,103 @@
 
 let dvData=null; // {headers:[], rows:[][]}
 let dvColTypes=null; // [{type:'number'|'date'|'category'|'text'|'url', ...}]
-
-function dvParseInput(){
-  const txt=document.getElementById('dv-paste').value.trim();
-  if(!txt){dvData=null;dvRenderEmpty();return;}
-  // Detect delimiter
-  const lines=txt.split('\n').filter(l=>l.trim());
-  if(!lines.length){dvData=null;dvRenderEmpty();return;}
-  const tabCount=(lines[0].match(/\t/g)||[]).length;
-  const semiCount=(lines[0].match(/;/g)||[]).length;
-  const commaCount=(lines[0].match(/,/g)||[]).length;
-  const delim=tabCount>=semiCount&&tabCount>=commaCount?'\t':semiCount>=commaCount?';':',';
-  const headers=lines[0].split(delim).map(h=>h.replace(/^["']|["']$/g,'').trim());
-  const rows=[];
-  for(let i=1;i<lines.length;i++){
-    const vals=dvSplitCSVLine(lines[i],delim);
-    if(vals.length) rows.push(vals);
-  }
-  dvData={headers,rows};
-  dvColTypes=dvDetectTypes(headers,rows);
-  document.getElementById('dv-status').textContent=`${rows.length} rijen, ${headers.length} kolommen`;
-  document.getElementById('dv-status').style.color='var(--ac)';
-  document.getElementById('dv-actions').style.display='';
-  dvPopulateGroupBy();
-}
-
-function dvSplitCSVLine(line,delim){
-  const vals=[];let cur='',inQ=false;
-  for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'){if(inQ&&line[i+1]==='"'){cur+='"';i++;}else{inQ=!inQ;}}
-    else if(c===delim&&!inQ){vals.push(cur.trim());cur='';}
-    else{cur+=c;}
-  }
-  vals.push(cur.trim());
-  return vals;
-}
+let dvRawText='';
 
 function dvParseFile(e){
   const file=e.target.files[0];if(!file)return;
+  const st=document.getElementById('dv-status');
+  st.textContent='Laden...';st.style.color='var(--ac)';
   const ext=file.name.split('.').pop().toLowerCase();
   if(ext==='xlsx'||ext==='xls'){
-    const reader=new FileReader();
-    reader.onload=function(ev){
-      if(typeof XLSX==='undefined'){document.getElementById('dv-status').textContent='XLSX library niet geladen';return;}
-      const wb=XLSX.read(ev.target.result,{type:'array'});
-      const ws=wb.Sheets[wb.SheetNames[0]];
-      const csv=XLSX.utils.sheet_to_csv(ws);
-      document.getElementById('dv-paste').value=csv;
-      dvParseInput();
-    };
-    reader.readAsArrayBuffer(file);
+    if(typeof XLSX==='undefined'){
+      const sc=document.createElement('script');
+      sc.src='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+      sc.onload=()=>dvReadXLSX(file);
+      document.head.appendChild(sc);
+    } else dvReadXLSX(file);
   } else {
     const reader=new FileReader();
     reader.onload=function(ev){
       document.getElementById('dv-paste').value=ev.target.result;
-      dvParseInput();
+      st.textContent='Bestand geladen, klik Preview';st.style.color='var(--ac)';
     };
     reader.readAsText(file);
+  }
+}
+
+function dvReadXLSX(file){
+  const reader=new FileReader();
+  reader.onload=function(ev){
+    const wb=XLSX.read(ev.target.result,{type:'array'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    document.getElementById('dv-paste').value=XLSX.utils.sheet_to_csv(ws);
+    document.getElementById('dv-status').textContent='XLSX geladen, klik Preview';
+    document.getElementById('dv-status').style.color='var(--ac)';
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function dvPreview(){
+  const raw=document.getElementById('dv-paste').value.trim();
+  const st=document.getElementById('dv-status');
+  const out=document.getElementById('dv-results');
+  if(!raw){st.textContent='Geen data';st.style.color='var(--err)';return;}
+
+  dvRawText=raw;
+  const delimSel=document.getElementById('dv-delim').value;
+  const quoteSel=document.getElementById('dv-quote').value;
+  const startRow=parseInt(document.getElementById('dv-startrow').value)||1;
+  const opts={
+    delim:delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel,
+    quote:quoteSel,
+    startRow:startRow
+  };
+
+  // Quick preview: first ~100 rows
+  const previewRaw=dtTruncateRaw(raw,120,opts.quote||'"');
+  // Reuse dtParseCSV from datatable.js
+  const parsed=dtParseCSV(previewRaw,opts);
+
+  if(!parsed||!parsed.rows.length){
+    st.textContent='Geen data gevonden';st.style.color='var(--err)';
+    out.innerHTML='<div class="tab-empty"><p>Parsing mislukt</p><p style="color:var(--pm);font-size:13px">Probeer een ander scheidingsteken</p></div>';
+    return;
+  }
+
+  const isPartial=previewRaw.length<raw.length;
+  const delimName=parsed._delim==='\t'?'tab':parsed._delim===','?'komma':parsed._delim===';'?'puntkomma':parsed._delim==='|'?'pipe':'?';
+  st.textContent=`${isPartial?'~':''}${parsed.rows.length}r × ${parsed.headers.length}k (${delimName})${isPartial?' — preview':''}`;
+  st.style.color='var(--ok)';
+
+  // Show preview table
+  out.innerHTML=dtBuildPreviewTable(parsed,'Data',isPartial?raw.length:0);
+
+  // Store preview data, do full parse for analysis
+  dvData=parsed;
+  dvData._needsFullParse=isPartial;
+  dvColTypes=dvDetectTypes(parsed.headers,parsed.rows);
+  document.getElementById('dv-actions').style.display='';
+  dvPopulateGroupBy();
+}
+
+function dvFullParse(){
+  if(!dvData||!dvData._needsFullParse) return;
+  if(!dvRawText) return;
+  const delimSel=document.getElementById('dv-delim').value;
+  const quoteSel=document.getElementById('dv-quote').value;
+  const startRow=parseInt(document.getElementById('dv-startrow').value)||1;
+  const opts={
+    delim:delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel,
+    quote:quoteSel,
+    startRow:startRow
+  };
+  const full=dtParseCSV(dvRawText,opts);
+  if(full){
+    dvData=full;
+    dvColTypes=dvDetectTypes(full.headers,full.rows);
+    dvPopulateGroupBy();
+    document.getElementById('dv-status').textContent=`✓ ${full.rows.length}r × ${full.headers.length}k`;
+    document.getElementById('dv-status').style.color='var(--ok)';
   }
 }
 
@@ -103,6 +142,7 @@ function dvPopulateGroupBy(){
 }
 
 function dvAnalyze(){
+  dvFullParse();
   if(!dvData||!dvData.rows.length) return;
   const groupIdx=document.getElementById('dv-groupby').value;
   if(groupIdx===''){
@@ -401,9 +441,13 @@ const DV_MONTHS=['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','no
 function dvFmtDate(d){return d.getDate()+' '+DV_MONTHS[d.getMonth()]+' '+d.getFullYear();}
 
 function dvClear(){
-  dvData=null;dvColTypes=null;
+  dvData=null;dvColTypes=null;dvRawText='';
   document.getElementById('dv-paste').value='';
   document.getElementById('dv-file').value='';
+  document.getElementById('dv-delim').value='auto';
+  document.getElementById('dv-quote').value='"';
+  document.getElementById('dv-startrow').value='1';
+  document.getElementById('dv-actions').style.display='none';
   dvRenderEmpty();
 }
 
