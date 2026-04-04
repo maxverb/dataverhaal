@@ -8,32 +8,7 @@ let dtStepCounter=0;
 
 // ── PARSING ──
 
-function dtParseSource(id){
-  const raw=document.getElementById('dt-paste-'+id).value.trim();
-  const status=document.getElementById('dt-status-'+id);
-  if(!raw){dtSources[id]=null;status.textContent='';dtCheckMerge();dtRender();return;}
-  const delimSel=document.getElementById('dt-delim-'+id).value;
-  const forceDelim=delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel;
-  dtSources[id]=dtParseCSV(raw,forceDelim);
-  const d=dtSources[id];
-  if(d){
-    const delimName=d._delim==='\t'?'tab':d._delim===','?'komma':d._delim===';'?'puntkomma':'?';
-    status.textContent=`✓ ${d.rows.length}r × ${d.headers.length}k (${delimName})`;
-    status.style.color='var(--ok)';
-    // Auto-set dropdown to detected delimiter if on auto
-    if(delimSel==='auto'){
-      const sel=document.getElementById('dt-delim-'+id);
-      if(d._delim==='\t') sel.value='tab';
-      else sel.value=d._delim;
-    }
-  } else {
-    status.textContent='';status.style.color='var(--err)';
-  }
-  dtCheckMerge();
-  // Auto-preview single source
-  if(dtSources.a&&!dtSources.b){dtResult=dtSources.a;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
-  else if(dtSources.b&&!dtSources.a){dtResult=dtSources.b;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
-}
+let dtPreviewData={a:null,b:null}; // temp preview before confirm
 
 function dtParseFileSource(e,id){
   const f=e.target.files[0];if(!f)return;
@@ -48,12 +23,9 @@ function dtParseFileSource(e,id){
       r.onload=ev=>{
         const wb=XLSX.read(ev.target.result,{type:'binary'});
         const ws=wb.Sheets[wb.SheetNames[0]];
-        dtSources[id]=dtParseCSV(XLSX.utils.sheet_to_csv(ws));
-        const d=dtSources[id];
-        status.textContent=d?`✓ ${d.rows.length}r × ${d.headers.length}k`:'';
-        status.style.color='var(--ok)';
-        dtCheckMerge();
-        if(!dtSources[id==='a'?'b':'a']){dtResult=dtSources[id];dtRender();}
+        document.getElementById('dt-paste-'+id).value=XLSX.utils.sheet_to_csv(ws);
+        status.textContent='XLSX geladen, klik Preview';
+        status.style.color='var(--ac)';
       };
       r.readAsBinaryString(f);
     };
@@ -61,57 +33,152 @@ function dtParseFileSource(e,id){
   } else {
     const r=new FileReader();
     r.onload=ev=>{
-      dtSources[id]=dtParseCSV(ev.target.result);
-      const d=dtSources[id];
-      status.textContent=d?`✓ ${d.rows.length}r × ${d.headers.length}k`:'';
-      status.style.color='var(--ok)';
-      dtCheckMerge();
-      if(!dtSources[id==='a'?'b':'a']){dtResult=dtSources[id];dtRender();}
+      document.getElementById('dt-paste-'+id).value=ev.target.result;
+      status.textContent='Bestand geladen, klik Preview';
+      status.style.color='var(--ac)';
     };
     r.readAsText(f);
   }
 }
 
-function dtParseCSV(raw,forceDelim){
+function dtPreviewImport(){
+  const rawA=document.getElementById('dt-paste-a').value.trim();
+  const rawB=document.getElementById('dt-paste-b').value.trim();
+  if(!rawA&&!rawB) return;
+
+  const opts=dtGetImportOpts();
+
+  // Parse both sources with current options
+  if(rawA){
+    dtPreviewData.a=dtParseCSV(rawA,opts);
+    const d=dtPreviewData.a;
+    const st=document.getElementById('dt-status-a');
+    if(d){st.textContent=`${d.rows.length}r × ${d.headers.length}k`;st.style.color='var(--ac)';}
+    else{st.textContent='Geen data';st.style.color='var(--err)';}
+  }
+  if(rawB){
+    dtPreviewData.b=dtParseCSV(rawB,opts);
+    const d=dtPreviewData.b;
+    const st=document.getElementById('dt-status-b');
+    if(d){st.textContent=`${d.rows.length}r × ${d.headers.length}k`;st.style.color='var(--ac)';}
+    else{st.textContent='Geen data';st.style.color='var(--err)';}
+  }
+
+  // Show preview of first available source
+  const preview=dtPreviewData.a||dtPreviewData.b;
+  if(preview){
+    dtResult=preview;
+    dtRenderPreview(preview);
+    document.getElementById('dt-confirm-section').style.display='';
+    const delimName=preview._delim==='\t'?'tab':preview._delim===','?'komma':preview._delim===';'?'puntkomma':preview._delim==='|'?'pipe':'?';
+    document.getElementById('dt-preview-status').textContent=
+      `Gedetecteerd: ${delimName} · ${preview.headers.length} kolommen · ${preview.rows.length} rijen`;
+  }
+}
+
+function dtGetImportOpts(){
+  const delimSel=document.getElementById('dt-delim').value;
+  const quoteSel=document.getElementById('dt-quote').value;
+  const startRow=parseInt(document.getElementById('dt-startrow').value)||1;
+  return {
+    delim:delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel,
+    quote:quoteSel,
+    startRow:startRow
+  };
+}
+
+function dtConfirmImport(){
+  // Accept preview as final data
+  if(dtPreviewData.a) dtSources.a=dtPreviewData.a;
+  if(dtPreviewData.b) dtSources.b=dtPreviewData.b;
+
+  const stA=document.getElementById('dt-status-a');
+  const stB=document.getElementById('dt-status-b');
+  if(dtSources.a){stA.textContent=`✓ ${dtSources.a.rows.length}r × ${dtSources.a.headers.length}k`;stA.style.color='var(--ok)';}
+  if(dtSources.b){stB.textContent=`✓ ${dtSources.b.rows.length}r × ${dtSources.b.headers.length}k`;stB.style.color='var(--ok)';}
+
+  document.getElementById('dt-confirm-section').style.display='none';
+  dtCheckMerge();
+
+  // Auto-preview single source
+  if(dtSources.a&&!dtSources.b){dtResult=dtSources.a;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
+  else if(dtSources.b&&!dtSources.a){dtResult=dtSources.b;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
+  else if(dtSources.a&&dtSources.b){document.getElementById('dt-pipeline-section').style.display='none';document.getElementById('dt-export-section').style.display='none';}
+}
+
+function dtRenderPreview(data){
+  const out=document.getElementById('dt-results');
+  if(!data||!data.rows.length){out.innerHTML='<div class="tab-empty"><p>Geen data gevonden</p></div>';return;}
+
+  const {headers,rows}=data;
+  const maxRows=Math.min(rows.length,15);
+  let html=`<div style="padding:6px 8px;font-size:10px;color:var(--ac);border-bottom:1px solid var(--pb);font-weight:600">PREVIEW — controleer of de kolommen kloppen</div>`;
+  html+=`<div style="overflow:auto;padding:0"><table class="dt-table">`;
+  html+=`<thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>`;
+  html+=`<tbody>`;
+  for(let i=0;i<maxRows;i++){
+    html+=`<tr>${headers.map((_,j)=>{
+      const v=rows[i][j]||'';
+      // Truncate long values in preview
+      const display=v.length>80?v.substring(0,80)+'…':v;
+      return '<td>'+esc(display)+'</td>';
+    }).join('')}</tr>`;
+  }
+  html+=`</tbody></table>`;
+  if(rows.length>15) html+=`<div style="font-size:10px;color:var(--pm);padding:6px 8px">Preview: 15 van ${rows.length} rijen</div>`;
+  html+=`</div>`;
+  out.innerHTML=html;
+}
+
+function dtParseCSV(raw,opts){
   if(!raw||!raw.trim()) return null;
+  opts=opts||{};
   // Strip BOM
   if(raw.charCodeAt(0)===0xFEFF) raw=raw.slice(1);
 
   // Detect delimiter from first line (before any multiline fields)
   const firstLineEnd=raw.indexOf('\n');
-  const firstLine=firstLineEnd>0?raw.substring(0,firstLineEnd):raw;
-  let delim=forceDelim||dtDetectDelim(firstLine);
+  const firstLine=(firstLineEnd>0?raw.substring(0,firstLineEnd):raw).replace(/\r$/,'');
+  const delim=opts.delim||dtDetectDelim(firstLine);
+  const quote=opts.quote!==undefined?opts.quote:'"';
+  const startRow=opts.startRow||1;
 
   // Full RFC 4180 parse: handle newlines inside quoted fields
-  const allRows=dtParseRows(raw,delim);
+  const allRows=dtParseRows(raw,delim,quote);
   if(!allRows.length) return null;
-  if(allRows.length<2) return {headers:allRows[0]||[],rows:[],_delim:delim};
 
-  const firstRow=allRows[0];
+  // Skip rows before startRow
+  const skipped=startRow>1?allRows.slice(startRow-1):allRows;
+  if(!skipped.length) return null;
+
+  if(skipped.length<2) return {headers:skipped[0]||[],rows:[],_delim:delim};
+
+  const firstRow=skipped[0];
   const isHeader=firstRow.some(v=>isNaN(parseFloat(v.replace(/[^\d.-]/g,''))));
   const result=isHeader
-    ?{headers:firstRow,rows:allRows.slice(1),_delim:delim}
-    :{headers:firstRow.map((_,i)=>'Kolom '+(i+1)),rows:allRows,_delim:delim};
+    ?{headers:firstRow,rows:skipped.slice(1),_delim:delim}
+    :{headers:firstRow.map((_,i)=>'Kolom '+(i+1)),rows:skipped,_delim:delim};
   return result;
 }
 
 // RFC 4180 compliant: walks char-by-char, handles newlines inside quotes
-function dtParseRows(raw,delim){
+function dtParseRows(raw,delim,quoteChar){
   const rows=[];
   let fields=[];
   let field='';
   let inQuote=false;
   let i=0;
   const len=raw.length;
+  const hasQuote=quoteChar&&quoteChar.length===1;
 
   while(i<len){
     const c=raw[i];
 
     if(inQuote){
-      if(c==='"'){
-        // Escaped quote "" or end of quoted field
-        if(i+1<len&&raw[i+1]==='"'){
-          field+='"';
+      if(hasQuote&&c===quoteChar){
+        // Escaped quote (doubled) or end of quoted field
+        if(i+1<len&&raw[i+1]===quoteChar){
+          field+=quoteChar;
           i+=2;
         } else {
           inQuote=false;
@@ -123,7 +190,7 @@ function dtParseRows(raw,delim){
         i++;
       }
     } else {
-      if(c==='"'){
+      if(hasQuote&&c===quoteChar){
         inQuote=true;
         i++;
       } else if(c===delim){
@@ -131,7 +198,6 @@ function dtParseRows(raw,delim){
         field='';
         i++;
       } else if(c==='\r'){
-        // Handle \r\n or lone \r as row end
         fields.push(field.trim());
         if(fields.some(f=>f)) rows.push(fields);
         fields=[];
@@ -159,10 +225,9 @@ function dtParseRows(raw,delim){
 }
 
 function dtDetectDelim(firstLine){
-  const candidates=['\t',',',';'];
+  const candidates=['\t',',',';','|'];
   let best=null,bestCount=0;
   for(const d of candidates){
-    // Count delimiters outside quotes
     let n=0,inQ=false;
     for(let i=0;i<firstLine.length;i++){
       if(firstLine[i]==='"') inQ=!inQ;
@@ -299,6 +364,7 @@ function dtExportCSV(){
 
 function dtClear(){
   dtSources.a=null;dtSources.b=null;dtResult=null;dtSteps=[];dtStepCounter=0;
+  dtPreviewData={a:null,b:null};
   document.getElementById('dt-paste-a').value='';
   document.getElementById('dt-paste-b').value='';
   document.getElementById('dt-file-a').value='';
@@ -308,6 +374,10 @@ function dtClear(){
   document.getElementById('dt-merge-section').style.display='none';
   document.getElementById('dt-pipeline-section').style.display='none';
   document.getElementById('dt-export-section').style.display='none';
+  document.getElementById('dt-confirm-section').style.display='none';
+  document.getElementById('dt-delim').value='auto';
+  document.getElementById('dt-quote').value='"';
+  document.getElementById('dt-startrow').value='1';
   dtRender();
 }
 
