@@ -22,6 +22,28 @@ west:{
   sport:['ADO Den Haag','ADO','Cars Jeans Stadion','Bingoal Stadion','Quick Boys','Alphense Boys','FC Lisse','Haaglandse Golfclub','RKAVV'],
   landmarks:['Binnenhof','Vredespaleis','Madurodam','Pier Scheveningen','De Pier','Kurhaus','Mall of the Netherlands','Mall of NL','Grote Kerk Den Haag','Haagse Toren','Huis ten Bosch','Paleis Noordeinde','Noordeinde','Panorama Mesdag','Gemeentemuseum','Kunstmuseum Den Haag','Omniversum','AFAS Circustheater','World Forum','Lange Voorhout','Hofvijver','Passage Den Haag','Keukenhof','Space Expo','Corpus','Archeon','Duinrell','Wassenaarseslag','Meijendel','Kaag','Kagerplassen','Leidse Hout','Pieterskerk Leiden','Universiteit Leiden','TU Delft','Bieslandse Bos','Delftse Hout','Oostpoort Delft'],
   overig:['070','Hofstad','hofstad','Residentie','residentie','HTM','Randstadrail','GGD Haaglanden','Haaglanden','HMC','Haga Ziekenhuis','Haga','LUMC','Reinier de Graaf','Groene Hart Ziekenhuis','Alrijne','Ridderzaal','Prinsjesdag']
+},
+
+gld:{
+  name:'Omroep Gelderland',
+  rss:'https://www.gld.nl/rss/index.xml',
+  gemeenten:['Arnhem','Nijmegen','Apeldoorn','Ede','Doetinchem','Zutphen','Tiel','Harderwijk','Wageningen','Barneveld','Elburg','Ermelo','Putten','Nunspeet','Hattem','Heerde','Epe','Voorst','Brummen','Lochem','Berkelland','Winterswijk','Aalten','Oost Gelre','Bronckhorst','Montferland','Oude IJsselstreek','Zevenaar','Duiven','Westervoort','Overbetuwe','Lingewaard','Renkum','Rheden','Rozendaal','Berg en Dal','Heumen','Wijchen','Beuningen','Druten','West Maas en Waal','Neder-Betuwe','Culemborg','West Betuwe','Rivierenland'],
+  wijken:['Velp','Oosterbeek','Doorwerth','Wolfheze','Malburgen','Presikhaaf','Klarendal','Spijkerkwartier','Geitenkamp','Kronenburg','Lent','Dukenburg','Lindenholt','Hatert','Brakkenstein','Bottendaal','Benedenstad','Hengelo','Zelhem','Vorden','Eerbeek','Dieren','De Steeg','Elst','Bemmel','Huissen','Angeren','Gendt','Driel','Heveadorp'],
+  personen:['Ahmed Marcouch','Marcouch','Hubert Bruls','Bruls','Ton Heerts'],
+  sport:['Vitesse','NEC','NEC Nijmegen','De Graafschap','AGOVV','GelreDome','Goffertstadion','Stadion De Vijverberg','VVOG','Go Ahead Eagles'],
+  landmarks:['Burgers Zoo','Burgers\' Zoo','Openluchtmuseum','Nederlands Openluchtmuseum','Kröller-Müller','Kröller-Müller Museum','Park Sonsbeek','Sonsbeek','Musis Sacrum','Eusebius','Eusebiuskerk','John Frostbrug','Arnhem Centraal','Hoge Veluwe','De Hoge Veluwe','Posbank','Veluwezoom','Apenheul','Paleis Het Loo','Het Loo','Julianatoren','Koningspaleis','Walibi','Walibi Holland','Valkhof','Museum Het Valkhof','Doornroosje','LUX Nijmegen','Waalbrug','Rijn','Waal','IJssel','Betuwe','Veluwe','Achterhoek','Rivierenland'],
+  overig:['026','Breng','Connexxion','GGD Gelderland','Rijnstate','Radboudumc','Radboud','CWZ','Slingeland','Gelre ziekenhuizen','Gelre','Hogeschool Arnhem Nijmegen','HAN','Wageningen University','WUR','Provincie Gelderland']
+},
+
+brabant:{
+  name:'Omroep Brabant',
+  rss:'https://www.omroepbrabant.nl/rss/index.xml',
+  gemeenten:['Eindhoven','Tilburg','Breda','Den Bosch','\'s-Hertogenbosch','Hertogenbosch','Helmond','Oss','Roosendaal','Bergen op Zoom','Waalwijk','Uden','Veghel','Meierijstad','Oosterhout','Dongen','Gilze en Rijen','Goirle','Hilvarenbeek','Oisterwijk','Loon op Zand','Heusden','Altena','Geertruidenberg','Drimmelen','Moerdijk','Halderberge','Rucphen','Etten-Leur','Zundert','Baarle-Nassau','Alphen-Chaam','Woensdrecht','Steenbergen','Bernheze','Boekel','Landerd','Sint-Michielsgestel','Boxtel','Best','Son en Breugel','Nuenen','Geldrop-Mierlo','Geldrop','Laarbeek','Gemert-Bakel','Asten','Someren','Deurne','Cranendonck','Eersel','Bladel','Reusel-De Mierden','Bergeijk','Valkenswaard','Heeze-Leende','Veldhoven','Waalre','Vught','Boxmeer','Land van Cuijk','Cuijk','Grave','Mill'],
+  wijken:['Strijp','Woensel','Stratum','Gestel','Tongelre','Acht','Meerhoven','De Bergen','Binnenstad Breda','Princenhage','Teteringen','Reeshof','Berkel-Enschot','Udenhout','De Pettelaar','Rosmalen','Hintham','Kruiskamp','Binnenstad Den Bosch'],
+  personen:['Jeroen Dijsselbloem','John Jorritsma','Paul Depla','Jack Mikkers','Theo Weterings'],
+  sport:['PSV','PSV Eindhoven','Willem II','NAC','NAC Breda','FC Den Bosch','FC Eindhoven','RKC Waalwijk','RKC','TOP Oss','Philips Stadion','Koning Willem II Stadion','Rat Verlegh Stadion','Peter Bosz','De Mos','Noa Lang'],
+  landmarks:['Efteling','De Efteling','Van Gogh Museum','Vincentre','Van Abbemuseum','Philips Museum','DAF Museum','Evoluon','Glow Eindhoven','Strijp-S','Brainport','High Tech Campus','ASML','Brabanthallen','013','Mezz','Chassé Theater','Chassé','Markiezenhof','Sint-Janskathedraal','Sint-Jan','Jeroen Bosch','De Peel','Biesbosch','Loonse en Drunense Duinen','Oisterwijk Vennen','Kampina','Strabrechtse Heide','Kempen','Grote Markt Breda','Piazza Eindhoven','Dommel','Mark','Aa','Maas'],
+  overig:['040','Lichtstad','lichtstad','Brainport','brainport','GGD Brabant','Hermes','Arriva','Bravis','Amphia','Elisabeth-TweeSteden','ETZ','Catharina Ziekenhuis','Catharina','Jeroen Bosch Ziekenhuis','JBZ','Máxima Medisch Centrum','MMC','Fontys','TU Eindhoven','TU/e','Avans','NHTV','Breda University','Tilburg University','Provincie Brabant','Noord-Brabant']
 }
 
 };
