@@ -43,6 +43,7 @@ function dtParseFileSource(e,id){
 function dtPreviewSource(id){
   const raw=document.getElementById('dt-paste-'+id).value.trim();
   const st=document.getElementById('dt-status-'+id);
+  const out=document.getElementById('dt-results');
   if(!raw){st.textContent='Geen data';st.style.color='var(--err)';return;}
 
   const delimSel=document.getElementById('dt-delim-'+id).value;
@@ -54,28 +55,39 @@ function dtPreviewSource(id){
     startRow:startRow
   };
 
-  const parsed=dtParseCSV(raw,opts);
-  if(!parsed||!parsed.rows.length){st.textContent='Geen data gevonden';st.style.color='var(--err)';return;}
+  // Show loading state immediately
+  st.textContent='Laden...';st.style.color='var(--ac)';
+  out.innerHTML='<div style="padding:20px;color:var(--pm);font-size:12px">Parsen...</div>';
 
-  // Store as confirmed source immediately
-  dtSources[id]=parsed;
-  const delimName=parsed._delim==='\t'?'tab':parsed._delim===','?'komma':parsed._delim===';'?'puntkomma':parsed._delim==='|'?'pipe':'?';
-  st.textContent=`✓ ${parsed.rows.length}r × ${parsed.headers.length}k (${delimName})`;
-  st.style.color='var(--ok)';
+  // Use setTimeout to let the UI update before heavy parsing
+  setTimeout(()=>{
+    try{
+      const parsed=dtParseCSV(raw,opts);
+      if(!parsed||!parsed.rows.length){
+        st.textContent='Geen data gevonden';st.style.color='var(--err)';
+        out.innerHTML='<div class="tab-empty"><p>Parsing mislukt</p><p style="color:var(--pm);font-size:13px">Probeer een ander scheidingsteken</p></div>';
+        return;
+      }
 
-  // Show preview of this source
-  const out=document.getElementById('dt-results');
-  out.innerHTML=dtBuildPreviewTable(parsed,'Bron '+id.toUpperCase());
+      dtSources[id]=parsed;
+      const delimName=parsed._delim==='\t'?'tab':parsed._delim===','?'komma':parsed._delim===';'?'puntkomma':parsed._delim==='|'?'pipe':'?';
+      st.textContent=`✓ ${parsed.rows.length}r × ${parsed.headers.length}k (${delimName})`;
+      st.style.color='var(--ok)';
 
-  dtCheckMerge();
+      out.innerHTML=dtBuildPreviewTable(parsed,'Bron '+id.toUpperCase());
+      dtCheckMerge();
 
-  // Show pipeline/export if single source
-  if(dtSources.a&&!dtSources.b||dtSources.b&&!dtSources.a){
-    dtResult=dtSources[id];
-    document.getElementById('dt-pipeline-section').style.display='';
-    document.getElementById('dt-export-section').style.display='';
-    dtRenderSteps();
-  }
+      if((dtSources.a&&!dtSources.b)||(dtSources.b&&!dtSources.a)){
+        dtResult=dtSources[id];
+        document.getElementById('dt-pipeline-section').style.display='';
+        document.getElementById('dt-export-section').style.display='';
+        dtRenderSteps();
+      }
+    }catch(e){
+      st.textContent='Fout: '+e.message;st.style.color='var(--err)';
+      out.innerHTML='<div class="tab-empty"><p>Fout bij parsen</p><p style="color:var(--pm);font-size:13px">'+e.message+'</p></div>';
+    }
+  },30);
 }
 
 function dtBuildPreviewTable(data,label){
@@ -168,14 +180,14 @@ function dtParseRows(raw,delim,quoteChar){
         i++;
       } else if(c==='\r'){
         fields.push(field.trim());
-        if(fields.some(f=>f)) rows.push(fields);
+        if(fields.length>1||fields[0]) rows.push(fields);
         fields=[];
         field='';
         i++;
         if(i<len&&raw[i]==='\n') i++;
       } else if(c==='\n'){
         fields.push(field.trim());
-        if(fields.some(f=>f)) rows.push(fields);
+        if(fields.length>1||fields[0]) rows.push(fields);
         fields=[];
         field='';
         i++;
