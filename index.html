@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=92">
+<link rel="stylesheet" href="style.css?v=93">
 </head>
 <body>
 
@@ -237,38 +237,38 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 <div class="tab-content" id="tab-tab2">
 <div class="scraper-layout">
   <div class="scraper-input">
+    <!-- URLs -->
     <div class="psec">
-      <div class="sh"><span class="sl">Artikelen scrapen</span></div>
+      <div class="sh"><span class="sl">URLs</span></div>
       <div class="sc">
-        <div><label>URLs (één per regel)</label>
-          <textarea id="scrape-urls" placeholder="https://www.rijnmond.nl/nieuws/...&#10;https://www.omroepwest.nl/nieuws/...&#10;https://www.gld.nl/nieuws/..." style="min-height:160px;font-size:11px"></textarea>
+        <textarea id="scrape-urls" placeholder="Plak URLs, één per regel..." style="min-height:140px;font-size:11px"></textarea>
+        <div style="display:flex;gap:4px;margin-top:4px">
+          <button class="btn btn-p" onclick="scrapeBulk()" id="scrape-start" style="flex:1;font-size:11px">▶ Scrape</button>
+          <button class="btn btn-sm" onclick="stopBulk()" id="scrape-stop" style="display:none;font-size:11px">⏹</button>
         </div>
-        <div style="display:flex;gap:5px">
-          <button class="btn btn-p" onclick="scrapeBulk()" id="scrape-start" style="flex:1">▶ Scrape alles</button>
-          <button class="btn btn-sm" onclick="stopBulk()" id="scrape-stop" style="display:none">⏹ Stop</button>
-        </div>
-        <div id="scrape-progress" style="font-size:11px;color:var(--pm)"></div>
-        <div id="scrape-progress-bar" style="display:none;height:4px;background:var(--ib);border-radius:2px;margin-top:4px;overflow:hidden">
+        <div id="scrape-progress" style="font-size:10px;color:var(--pm);margin-top:3px"></div>
+        <div id="scrape-progress-bar" style="display:none;height:3px;background:var(--ib);border-radius:2px;margin-top:3px;overflow:hidden">
           <div id="scrape-progress-fill" style="height:100%;background:var(--ac);width:0%;transition:width .3s"></div>
         </div>
       </div>
     </div>
-    <div class="psec">
-      <div class="sh" onclick="tog(this)"><span class="sl">Enkel artikel (URL of HTML)</span><span class="st">▾</span></div>
-      <div class="sc hidden">
-        <div style="display:flex;gap:5px;margin-bottom:5px">
-          <input type="text" id="scrape-url" placeholder="Enkele URL..." style="flex:1">
-          <button class="btn btn-sm" onclick="scrapeURL()">Ophalen</button>
-        </div>
-        <textarea id="scrape-paste" placeholder="Of plak HTML broncode..." style="min-height:80px;font-size:11px"></textarea>
-        <button class="btn btn-sm" onclick="scrapeFromPaste()">Parseer HTML</button>
+    <!-- Export -->
+    <div class="psec" id="scrape-export-section" style="display:none">
+      <div style="display:flex;gap:4px">
+        <button class="btn btn-p" onclick="exportBulkCSV()" style="flex:1;font-size:10px">⬇ CSV (<span id="scrape-count">0</span>)</button>
+        <button class="btn btn-sm" onclick="clearBulkResults()" style="font-size:10px">✕ Wis</button>
       </div>
     </div>
-    <div class="psec" id="scrape-export-section" style="display:none">
-      <div class="sh"><span class="sl">Export</span></div>
-      <div class="sc">
-        <button class="btn btn-p" onclick="exportBulkCSV()" style="width:100%">⬇ Download CSV (<span id="scrape-count">0</span> artikelen)</button>
-        <button class="btn btn-sm" onclick="clearBulkResults()" style="width:100%;margin-top:4px">✕ Wis resultaten</button>
+    <!-- Enkel artikel -->
+    <div class="psec">
+      <div class="sh" onclick="tog(this)"><span class="sl">Enkel artikel</span><span class="st">▾</span></div>
+      <div class="sc hidden">
+        <div style="display:flex;gap:4px;margin-bottom:4px">
+          <input type="text" id="scrape-url" placeholder="URL..." style="flex:1;font-size:11px;padding:4px 6px">
+          <button class="btn btn-sm" onclick="scrapeURL()" style="font-size:10px">Go</button>
+        </div>
+        <textarea id="scrape-paste" placeholder="Of plak HTML..." style="min-height:60px;font-size:10px"></textarea>
+        <button class="btn btn-sm" onclick="scrapeFromPaste()" style="font-size:10px;margin-top:3px">Parseer</button>
       </div>
     </div>
   </div>
@@ -293,32 +293,29 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 <div class="tab-content" id="tab-tab3">
 <div class="scraper-layout">
   <div class="scraper-input">
+    <!-- Omroep -->
     <div class="psec">
       <div class="sh"><span class="sl">Monitor</span></div>
       <div class="sc">
-        <div><label>Scoor voor omroep</label>
-          <select id="mon-omroep" style="margin-bottom:5px">
-            <option value="">Kies...</option>
-            <option value="rijnmond">Rijnmond</option>
-            <option value="west">Omroep West</option>
-          </select>
+        <select id="mon-omroep" style="font-size:11px;padding:4px 6px;margin-bottom:4px">
+          <option value="">Kies omroep...</option>
+          <option value="rijnmond">Rijnmond</option>
+          <option value="west">Omroep West</option>
+        </select>
+        <label class="chk" style="font-size:10px"><input type="checkbox" id="mon-scrape" checked> Scrape artikelen</label>
+        <div style="display:flex;gap:4px;margin-top:4px">
+          <button class="btn btn-p" onclick="startMonitor()" id="mon-start" style="flex:1;font-size:11px">▶ Start</button>
+          <button class="btn btn-sm" onclick="stopMonitor()" id="mon-stop" style="display:none;font-size:11px">⏹</button>
         </div>
-        <label class="chk"><input type="checkbox" id="mon-scrape" checked> Artikelen scrapen (langzamer, meer data)</label>
-        <div style="display:flex;gap:5px;margin-top:5px">
-          <button class="btn btn-p" onclick="startMonitor()" id="mon-start" style="flex:1">▶ Start monitor</button>
-          <button class="btn btn-sm" onclick="stopMonitor()" id="mon-stop" style="display:none">⏹ Stop</button>
-        </div>
-        <div id="mon-status" style="font-size:11px;color:var(--pm);margin-top:4px"></div>
-        <div id="mon-progress-bar" style="display:none;height:4px;background:var(--ib);border-radius:2px;margin-top:4px;overflow:hidden">
+        <div id="mon-status" style="font-size:10px;color:var(--pm);margin-top:3px"></div>
+        <div id="mon-progress-bar" style="display:none;height:3px;background:var(--ib);border-radius:2px;margin-top:3px;overflow:hidden">
           <div id="mon-progress-fill" style="height:100%;background:var(--ac);width:0%;transition:width .3s"></div>
         </div>
       </div>
     </div>
+    <!-- Export -->
     <div class="psec" id="mon-export-section" style="display:none">
-      <div class="sh"><span class="sl">Export</span></div>
-      <div class="sc">
-        <button class="btn btn-p" onclick="exportMonitorCSV()" style="width:100%">⬇ Download CSV (<span id="mon-count">0</span> relevant)</button>
-      </div>
+      <button class="btn btn-p" onclick="exportMonitorCSV()" style="width:100%;font-size:10px">⬇ CSV (<span id="mon-count">0</span> relevant)</button>
     </div>
   </div>
   <div class="scraper-output">
