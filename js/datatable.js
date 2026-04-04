@@ -297,10 +297,11 @@ function dtRenderSteps(){
     }
 
     const typeLabels={filter:'Filter',sort:'Sorteer',dedup:'Dedup',dropcol:'Kolom weg',rename:'Hernoem'};
-    return `<div class="dt-step">
+    return `<div class="dt-step" onclick="dtPreviewStep(${s.id})" title="Klik voor tussenresultaat">
       <div class="dt-step-header">
         <span class="dt-step-type">${typeLabels[s.type]||s.type}</span>
-        <button class="dt-step-remove" onclick="dtRemoveStep(${s.id})">✕</button>
+        <span id="dt-step-count-${s.id}" style="font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--pm)"></span>
+        <button class="dt-step-remove" onclick="event.stopPropagation();dtRemoveStep(${s.id})">✕</button>
       </div>
       ${controls}
     </div>${i<dtSteps.length-1?'<div class="dt-step-arrow">↓</div>':''}`;
@@ -317,13 +318,24 @@ function dtRenderSteps(){
 function dtRunPipeline(){
   if(!dtResult) return;
 
-  // Start from merge result or single source
-  let data={headers:[...dtResult.headers],rows:dtResult.rows.map(r=>[...r])};
+  // Save original for re-running
+  const baseData=dtSources.a&&dtSources.b?dtResult:{headers:[...dtResult.headers],rows:dtResult.rows.map(r=>[...r])};
+  let data={headers:[...baseData.headers],rows:baseData.rows.map(r=>[...r])};
 
-  for(const step of dtSteps){
+  // Track snapshots per step
+  const snapshots=[{rows:data.rows.length,cols:data.headers.length}];
+
+  for(let si=0;si<dtSteps.length;si++){
+    const step=dtSteps[si];
+    const rowsBefore=data.rows.length;
     const col=step.config.col;
     const colIdx=data.headers.indexOf(col);
-    if(colIdx<0&&step.type!=='rename') continue;
+    if(colIdx<0&&step.type!=='rename'){
+      step._result={rows:data.rows.length,cols:data.headers.length,delta:0};
+      snapshots.push(step._result);
+      step._snapshot={headers:[...data.headers],rows:data.rows.map(r=>[...r])};
+      continue;
+    }
 
     if(step.type==='filter'){
       const op=step.config.op||'contains';
@@ -365,10 +377,47 @@ function dtRunPipeline(){
       const idx=data.headers.indexOf(col);
       if(idx>=0&&step.config.newName) data.headers[idx]=step.config.newName;
     }
+
+    const delta=data.rows.length-rowsBefore;
+    step._result={rows:data.rows.length,cols:data.headers.length,delta};
+    step._snapshot={headers:[...data.headers],rows:data.rows.map(r=>[...r])};
+    snapshots.push(step._result);
   }
 
   dtResult=data;
   dtRender();
+  dtUpdateStepCounts();
+}
+
+function dtUpdateStepCounts(){
+  dtSteps.forEach((s,i)=>{
+    const el=document.getElementById('dt-step-count-'+s.id);
+    if(el&&s._result){
+      const d=s._result.delta;
+      const deltaStr=d===0?'':'('+( d>0?'+'+d:d)+')';
+      el.innerHTML=`${s._result.rows}r × ${s._result.cols}k <span style="color:${d<0?'var(--danger)':d>0?'var(--ok)':'var(--pm)'}">${deltaStr}</span>`;
+    }
+  });
+}
+
+function dtPreviewStep(id){
+  const step=dtSteps.find(s=>s.id===id);
+  if(!step||!step._snapshot) return;
+  // Temporarily show this step's snapshot
+  const saved=dtResult;
+  dtResult=step._snapshot;
+  dtRender();
+  dtResult=saved;
+}
+
+function dtSendToGrafiek(){
+  if(!dtResult) return;
+  // Convert to tab-separated text for the grafiek data input
+  const {headers,rows}=dtResult;
+  const tsv=headers.join('\t')+'\n'+rows.map(r=>r.join('\t')).join('\n');
+  document.getElementById('di').value=tsv;
+  parseData();
+  switchTab('grafiek',document.querySelector('[onclick*="grafiek"]'));
 }
 
 // esc() defined in scraper.js
