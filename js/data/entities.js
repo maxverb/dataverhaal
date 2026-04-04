@@ -44,6 +44,28 @@ brabant:{
   sport:['PSV','PSV Eindhoven','Willem II','NAC','NAC Breda','FC Den Bosch','FC Eindhoven','RKC Waalwijk','RKC','TOP Oss','Philips Stadion','Koning Willem II Stadion','Rat Verlegh Stadion','Peter Bosz','De Mos','Noa Lang'],
   landmarks:['Efteling','De Efteling','Van Gogh Museum','Vincentre','Van Abbemuseum','Philips Museum','DAF Museum','Evoluon','Glow Eindhoven','Strijp-S','Brainport','High Tech Campus','ASML','Brabanthallen','013','Mezz','Chassé Theater','Chassé','Markiezenhof','Sint-Janskathedraal','Sint-Jan','Jeroen Bosch','De Peel','Biesbosch','Loonse en Drunense Duinen','Oisterwijk Vennen','Kampina','Strabrechtse Heide','Kempen','Grote Markt Breda','Piazza Eindhoven','Dommel','Mark','Aa','Maas'],
   overig:['040','Lichtstad','lichtstad','Brainport','brainport','GGD Brabant','Hermes','Arriva','Bravis','Amphia','Elisabeth-TweeSteden','ETZ','Catharina Ziekenhuis','Catharina','Jeroen Bosch Ziekenhuis','JBZ','Máxima Medisch Centrum','MMC','Fontys','TU Eindhoven','TU/e','Avans','NHTV','Breda University','Tilburg University','Provincie Brabant','Noord-Brabant']
+},
+
+zeeland:{
+  name:'Omroep Zeeland',
+  rss:'https://www.omroepzeeland.nl/rss/nieuws.xml',
+  gemeenten:['Middelburg','Vlissingen','Goes','Terneuzen','Hulst','Sluis','Veere','Schouwen-Duiveland','Tholen','Reimerswaal','Kapelle','Borsele','Noord-Beveland','Zierikzee','Renesse','Domburg','Westkapelle','Breskens','Cadzand','Yerseke','Kruiningen','Hansweert','Kortgene','Wissenkerke','Arnemuiden','Koudekerke','Oostkapelle','Aardenburg','Axel','Sas van Gent','Philippine','Brouwershaven','Bruinisse','Sint-Maartensdijk','Stavenisse'],
+  wijken:['Souburg','Oost-Souburg','Nieuw- en Sint Joosland','Ritthem','Serooskerke','Gapinge','Aagtekerke','Biggekerke','Meliskerke','Zoutelande','Dishoek'],
+  personen:['Han Polman','Harald Bergmann','Marga Vermue'],
+  sport:['FC Vlissingen','Hoek','Goes','JVOZ','Kloetinge','Zeelandia Middelburg'],
+  landmarks:['Deltawerken','Oosterscheldekering','Zeelandbrug','Neeltje Jans','Watersnoodmuseum','Lange Jan','Abbey Middelburg','Abdij Middelburg','Abdij','Veerse Meer','Veerse Gatdam','Grevelingenmeer','Westerscheldetunnel','Arsenaal Vlissingen','Het Arsenaal','Slot Moermond','Stadhuismuseum Zierikzee','Terra Maris','Polderhuis Westkapelle','Boulevard Vlissingen','Nollestrand','Cadzand-Bad','Mini Mundi','Deltapark','Zeeuws Museum'],
+  overig:['0118','Connexxion','Westerschelde','Oosterschelde','Veerse Meer','Grevelingen','GGD Zeeland','ADRZ','Admiraal de Ruyter Ziekenhuis','HZ University','HZ','UCR','Zeeuws-Vlaanderen','Walcheren','Zuid-Beveland','Noord-Beveland','Schouwen','Duiveland','Tholen','Sint-Philipsland','Provincie Zeeland']
+},
+
+l1:{
+  name:'L1',
+  rss:'https://www.l1nieuws.nl/rss/index.xml',
+  gemeenten:['Maastricht','Heerlen','Sittard-Geleen','Sittard','Geleen','Venlo','Roermond','Weert','Kerkrade','Landgraaf','Brunssum','Stein','Beek','Meerssen','Valkenburg aan de Geul','Valkenburg','Gulpen-Wittem','Vaals','Eijsden-Margraten','Simpelveld','Nuth','Onderbanken','Schinnen','Sittard-Geleen','Born','Susteren','Echt-Susteren','Maasgouw','Leudal','Nederweert','Peel en Maas','Venray','Horst aan de Maas','Beesel','Bergen','Gennep','Mook en Middelaar'],
+  wijken:['Wyck','Céramique','Jekerkwartier','Boschstraatkwartier','Heuvelland','Randwyck','Scharn','Amby','Wolder','Heugem','Borgharen','Itteren','Malberg','Caberg','Mariaberg','Daalhof','Pottenberg','Hoensbroek','Schaesberg','Nieuwenhagen','Bocholtz','Eygelshoven','Chevremont','Bleijerheide','Terwinselen'],
+  personen:['Annemarie Penn-te Strake','Penn-te Strake','Emile Roemer'],
+  sport:['Roda JC','Roda','MVV','MVV Maastricht','Fortuna Sittard','Fortuna','VVV-Venlo','VVV','Parkstad Limburg Stadion','De Geusselt','Fortuna Sittard Stadion','MECC'],
+  landmarks:['Bonnefantenmuseum','Bonnefanten','Sint-Servaasbasiliek','Sint Servaas','Onze-Lieve-Vrouwebasiliek','Vrijthof','Markt Maastricht','Sint-Pietersberg','Fort Sint Pieter','Grotten Valkenburg','Drielandenpunt','GaiaZoo','Mondo Verde','Snowworld','Kasteel Hoensbroek','Thermenmuseum','Maasmechelen Village','Designer Outlet Roermond','Outlet Roermond','Maas','Geul','Heuvelland','Mergelland'],
+  overig:['043','Arriva','GGD Zuid-Limburg','GGD Limburg-Noord','MUMC+','Maastricht UMC','Zuyderland','Zuyderland Medisch Centrum','VieCuri','Laurentius','Universiteit Maastricht','Zuyd Hogeschool','Zuyd','Fontys Venlo','Brightlands','Chemelot','Maastricht Aachen Airport','MAA','Provincie Limburg','Limburgs','Limburgse','Parkstad']
 }
 
 };
