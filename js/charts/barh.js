@@ -32,7 +32,7 @@ registerChart('barh',{label:'Horiz.',draw:function(ctx,data,x,y,w,h,O){
       const col=nc>1?p.bars[j%p.bars.length]:(oneClr?p.bars[0]:p.bars[i%p.bars.length]);
       ctx.fillStyle=col;
       if(lay==='strak') ctx.fillRect(cX,by,bW,subH-(nc>1?1:0));
-      else{const rr=Math.min(subH*0.3,W*0.005);rbar(ctx,cX,by,bW,subH-(nc>1?1:0),0,rr);}
+      else{const rr=Math.min(subH*0.3,W*0.005);rbarH(ctx,cX,by,bW,subH-(nc>1?1:0),rr);}
       if(showVal&&nc===1){
         const sz=Math.max(W*0.018,11);
         ctx.font=`600 ${sz}px Barlow`;ctx.fillStyle=p.text;ctx.textAlign='left';ctx.textBaseline='middle';

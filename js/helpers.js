@@ -19,6 +19,17 @@ function rbar(ctx,x,y,w,h,tR,bR){
   ctx.closePath();ctx.fill();
 }
 
+// Horizontal bar: rounded on the RIGHT side only
+function rbarH(ctx,x,y,w,h,rr){
+  if(h<=0||w<=0)return;
+  ctx.beginPath();
+  ctx.moveTo(x,y);
+  ctx.lineTo(x+w-rr,y);ctx.quadraticCurveTo(x+w,y,x+w,y+rr);
+  ctx.lineTo(x+w,y+h-rr);ctx.quadraticCurveTo(x+w,y+h,x+w-rr,y+h);
+  ctx.lineTo(x,y+h);
+  ctx.closePath();ctx.fill();
+}
+
 // ── TEXT HELPERS ───────────────────────────────────────────────────────────
 
 function wrap(ctx,text,maxW){
