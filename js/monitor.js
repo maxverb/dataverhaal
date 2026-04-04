@@ -40,13 +40,17 @@ async function monFetchAll(){
   const status=document.getElementById('mon-status');
   const bar=document.getElementById('mon-progress-bar');
   const fill=document.getElementById('mon-progress-fill');
+  const out=document.getElementById('mon-results');
   const startBtn=document.getElementById('mon-start');
   const stopBtn=document.getElementById('mon-stop');
 
   startBtn.disabled=true;startBtn.textContent='Bezig...';
   stopBtn.style.display='';
   bar.style.display='block';fill.style.width='0%';
+  status.textContent='RSS feeds ophalen...';status.style.color='var(--ac)';
+  out.innerHTML='<div style="padding:20px;color:var(--pm)">Feeds ophalen...</div>';
 
+  try{
   // Purge old cache
   const cache=monPurgeCache();
   const scrapeEnabled=document.getElementById('mon-scrape').checked;
@@ -56,8 +60,6 @@ async function monFetchAll(){
   monAllArticles=[];
   const startTime=Date.now();
 
-  // Step 1: Fetch RSS
-  status.textContent='RSS feeds ophalen...';status.style.color='var(--ac)';
   const rssArticles=[];
 
   for(let fi=0;fi<feeds.length;fi++){
@@ -132,6 +134,11 @@ async function monFetchAll(){
 
     art.fullText=fullText;
     monAllArticles.push(art);
+
+    // Progressive render every 10 articles
+    if(i%10===9||i===rssArticles.length-1){
+      monFilter();
+    }
   }
 
   fill.style.width='100%';
@@ -147,6 +154,12 @@ async function monFetchAll(){
 
   // Auto-filter with current omroep selection
   monFilter();
+
+  }catch(e){
+    status.textContent='Fout: '+e.message;status.style.color='var(--err)';
+    startBtn.disabled=false;startBtn.textContent='▶ Ophalen';
+    stopBtn.style.display='none';bar.style.display='none';
+  }
 }
 
 function monStop(){monStopped=true;}
