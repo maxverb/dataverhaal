@@ -40,61 +40,93 @@ function dtParseFileSource(e,id){
   }
 }
 
+// Raw text per source, for lazy full parse
+let dtRawText={a:'',b:''};
+
+function dtGetOpts(id){
+  const delimSel=document.getElementById('dt-delim-'+id).value;
+  const quoteSel=document.getElementById('dt-quote-'+id).value;
+  const startRow=parseInt(document.getElementById('dt-startrow-'+id).value)||1;
+  return {
+    delim:delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel,
+    quote:quoteSel,
+    startRow:startRow
+  };
+}
+
 function dtPreviewSource(id){
   const raw=document.getElementById('dt-paste-'+id).value.trim();
   const st=document.getElementById('dt-status-'+id);
   const out=document.getElementById('dt-results');
   if(!raw){st.textContent='Geen data';st.style.color='var(--err)';return;}
 
-  const delimSel=document.getElementById('dt-delim-'+id).value;
-  const quoteSel=document.getElementById('dt-quote-'+id).value;
-  const startRow=parseInt(document.getElementById('dt-startrow-'+id).value)||1;
-  const opts={
-    delim:delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel,
-    quote:quoteSel,
-    startRow:startRow
-  };
+  // Store raw for later full parse
+  dtRawText[id]=raw;
+  const opts=dtGetOpts(id);
 
-  // Show loading state immediately
-  st.textContent='Laden...';st.style.color='var(--ac)';
-  out.innerHTML='<div style="padding:20px;color:var(--pm);font-size:12px">Parsen...</div>';
+  // Quick preview: only parse first ~100 rows worth of text
+  const previewRaw=dtTruncateRaw(raw,120,opts.quote||'"');
+  const preview=dtParseCSV(previewRaw,opts);
 
-  // Use setTimeout to let the UI update before heavy parsing
-  setTimeout(()=>{
-    try{
-      const parsed=dtParseCSV(raw,opts);
-      if(!parsed||!parsed.rows.length){
-        st.textContent='Geen data gevonden';st.style.color='var(--err)';
-        out.innerHTML='<div class="tab-empty"><p>Parsing mislukt</p><p style="color:var(--pm);font-size:13px">Probeer een ander scheidingsteken</p></div>';
-        return;
-      }
+  if(!preview||!preview.rows.length){
+    st.textContent='Geen data gevonden';st.style.color='var(--err)';
+    out.innerHTML='<div class="tab-empty"><p>Parsing mislukt</p><p style="color:var(--pm);font-size:13px">Probeer een ander scheidingsteken</p></div>';
+    return;
+  }
 
-      dtSources[id]=parsed;
-      const delimName=parsed._delim==='\t'?'tab':parsed._delim===','?'komma':parsed._delim===';'?'puntkomma':parsed._delim==='|'?'pipe':'?';
-      st.textContent=`✓ ${parsed.rows.length}r × ${parsed.headers.length}k (${delimName})`;
-      st.style.color='var(--ok)';
+  // Store preview as source for now
+  dtSources[id]=preview;
+  dtSources[id]._needsFullParse=true;
+  const delimName=preview._delim==='\t'?'tab':preview._delim===','?'komma':preview._delim===';'?'puntkomma':preview._delim==='|'?'pipe':'?';
+  const isPartial=previewRaw.length<raw.length;
+  st.textContent=`${isPartial?'~':''}${preview.rows.length}r × ${preview.headers.length}k (${delimName})${isPartial?' — preview':''}`;
+  st.style.color='var(--ok)';
 
-      out.innerHTML=dtBuildPreviewTable(parsed,'Bron '+id.toUpperCase());
-      dtCheckMerge();
+  out.innerHTML=dtBuildPreviewTable(preview,'Bron '+id.toUpperCase(),isPartial?raw.length:0);
+  dtCheckMerge();
 
-      if((dtSources.a&&!dtSources.b)||(dtSources.b&&!dtSources.a)){
-        dtResult=dtSources[id];
-        document.getElementById('dt-pipeline-section').style.display='';
-        document.getElementById('dt-export-section').style.display='';
-        dtRenderSteps();
-      }
-    }catch(e){
-      st.textContent='Fout: '+e.message;st.style.color='var(--err)';
-      out.innerHTML='<div class="tab-empty"><p>Fout bij parsen</p><p style="color:var(--pm);font-size:13px">'+e.message+'</p></div>';
-    }
-  },30);
+  if((dtSources.a&&!dtSources.b)||(dtSources.b&&!dtSources.a)){
+    dtResult=dtSources[id];
+    document.getElementById('dt-pipeline-section').style.display='';
+    document.getElementById('dt-export-section').style.display='';
+    dtRenderSteps();
+  }
 }
 
-function dtBuildPreviewTable(data,label){
+// Truncate raw text to ~maxRows rows, respecting quoted fields
+function dtTruncateRaw(raw,maxRows,quoteChar){
+  let rowCount=0,inQ=false;
+  for(let i=0;i<raw.length;i++){
+    const c=raw[i];
+    if(c===quoteChar) inQ=!inQ;
+    else if(!inQ&&(c==='\n'||c==='\r')){
+      rowCount++;
+      if(c==='\r'&&i+1<raw.length&&raw[i+1]==='\n') i++;
+      if(rowCount>=maxRows) return raw.substring(0,i+1);
+    }
+  }
+  return raw; // file is smaller than maxRows
+}
+
+// Full parse a source (lazy, called when needed)
+function dtFullParse(id){
+  if(!dtSources[id]||!dtSources[id]._needsFullParse) return;
+  const raw=dtRawText[id];
+  if(!raw) return;
+  const opts=dtGetOpts(id);
+  const full=dtParseCSV(raw,opts);
+  if(full){
+    dtSources[id]=full;
+    document.getElementById('dt-status-'+id).textContent=
+      `✓ ${full.rows.length}r × ${full.headers.length}k`;
+  }
+}
+
+function dtBuildPreviewTable(data,label,totalBytes){
   const {headers,rows}=data;
   const delimName=data._delim==='\t'?'tab':data._delim===','?'komma':data._delim===';'?'puntkomma':data._delim==='|'?'pipe':'?';
-  const maxRows=Math.min(rows.length,10);
-  let html=`<div style="padding:6px 8px;font-size:10px;color:var(--ac);border-bottom:1px solid var(--pb);font-weight:600">${label} — ${rows.length} rijen · ${headers.length} kolommen · ${delimName}</div>`;
+  const maxRows=Math.min(rows.length,15);
+  let html=`<div style="padding:6px 8px;font-size:10px;color:var(--ac);border-bottom:1px solid var(--pb);font-weight:600">${label} — ${rows.length}${totalBytes?'+':''} rijen · ${headers.length} kolommen · ${delimName}</div>`;
   html+=`<div style="overflow:auto;padding:0"><table class="dt-table">`;
   html+=`<thead><tr>${headers.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead>`;
   html+=`<tbody>`;
@@ -106,7 +138,10 @@ function dtBuildPreviewTable(data,label){
     }).join('')}</tr>`;
   }
   html+=`</tbody></table>`;
-  if(rows.length>10) html+=`<div style="font-size:10px;color:var(--pm);padding:6px 8px">Toont 10 van ${rows.length} rijen</div>`;
+  let footer='';
+  if(rows.length>15) footer+=`Toont 15 van ${rows.length} rijen. `;
+  if(totalBytes) footer+=`Preview van eerste ~100 rijen (${Math.round(totalBytes/1024)}KB totaal). Volledige parse bij merge/export.`;
+  if(footer) html+=`<div style="font-size:10px;color:var(--pm);padding:6px 8px">${footer}</div>`;
   html+=`</div>`;
   return html;
 }
@@ -142,67 +177,82 @@ function dtParseCSV(raw,opts){
   return result;
 }
 
-// RFC 4180 compliant: walks char-by-char, handles newlines inside quotes
+// Line-based parser with multiline quote support
 function dtParseRows(raw,delim,quoteChar){
   const rows=[];
-  let fields=[];
-  let field='';
-  let inQuote=false;
-  let i=0;
-  const len=raw.length;
   const hasQuote=quoteChar&&quoteChar.length===1;
 
-  while(i<len){
-    const c=raw[i];
-
-    if(inQuote){
-      if(hasQuote&&c===quoteChar){
-        // Escaped quote (doubled) or end of quoted field
-        if(i+1<len&&raw[i+1]===quoteChar){
-          field+=quoteChar;
-          i+=2;
-        } else {
-          inQuote=false;
-          i++;
-        }
-      } else {
-        // Any char inside quotes, including newlines
-        field+=c;
-        i++;
-      }
-    } else {
-      if(hasQuote&&c===quoteChar){
-        inQuote=true;
-        i++;
-      } else if(c===delim){
-        fields.push(field.trim());
-        field='';
-        i++;
-      } else if(c==='\r'){
-        fields.push(field.trim());
-        if(fields.length>1||fields[0]) rows.push(fields);
-        fields=[];
-        field='';
-        i++;
-        if(i<len&&raw[i]==='\n') i++;
-      } else if(c==='\n'){
-        fields.push(field.trim());
-        if(fields.length>1||fields[0]) rows.push(fields);
-        fields=[];
-        field='';
-        i++;
-      } else {
-        field+=c;
-        i++;
-      }
+  if(!hasQuote){
+    // No quote char: simple fast split
+    const lines=raw.split(/\r?\n/);
+    for(let i=0;i<lines.length;i++){
+      if(!lines[i]) continue;
+      const fields=lines[i].split(delim).map(f=>f.trim());
+      if(fields.length>1||fields[0]) rows.push(fields);
     }
+    return rows;
   }
-  // Last field/row
-  if(field||fields.length){
-    fields.push(field.trim());
-    if(fields.some(f=>f)) rows.push(fields);
+
+  // Split on newlines, then rejoin lines that are inside quotes
+  const lines=raw.split('\n');
+  let curLine='';
+
+  for(let li=0;li<lines.length;li++){
+    let line=lines[li];
+    if(line.endsWith('\r')) line=line.slice(0,-1);
+
+    if(curLine){
+      curLine+='\n'+line;
+    } else {
+      curLine=line;
+    }
+
+    // Count quotes — if odd, we're inside a multiline quoted field
+    let qCount=0;
+    for(let ci=0;ci<curLine.length;ci++){
+      if(curLine[ci]===quoteChar) qCount++;
+    }
+    if(qCount%2!==0) continue;
+
+    // Parse complete line into fields
+    if(curLine){
+      const parsed=dtParseLine(curLine,delim,quoteChar);
+      if(parsed.length>1||parsed[0]) rows.push(parsed);
+    }
+    curLine='';
+  }
+  if(curLine){
+    const parsed=dtParseLine(curLine,delim,quoteChar);
+    if(parsed.length>1||parsed[0]) rows.push(parsed);
   }
   return rows;
+}
+
+function dtParseLine(line,delim,q){
+  const fields=[];
+  let i=0;
+  while(i<=line.length){
+    if(i<line.length&&line[i]===q){
+      // Quoted field
+      let j=i+1;
+      while(j<line.length){
+        if(line[j]===q){
+          if(j+1<line.length&&line[j+1]===q){j+=2;}
+          else break;
+        } else j++;
+      }
+      fields.push(line.substring(i+1,j).replace(new RegExp(q==='"'?'""':q+q,'g'),q).trim());
+      i=j+1;
+      if(i<line.length&&line[i]===delim) i++;
+    } else {
+      // Unquoted field
+      let j=line.indexOf(delim,i);
+      if(j<0) j=line.length;
+      fields.push(line.substring(i,j).trim());
+      i=j+1;
+    }
+  }
+  return fields;
 }
 
 function dtDetectDelim(firstLine){
@@ -243,6 +293,7 @@ function dtSetMerge(mode,btn){
 }
 
 function dtMerge(){
+  dtFullParse('a');dtFullParse('b');
   const a=dtSources.a, b=dtSources.b;
   if(!a||!b) return;
 
@@ -332,6 +383,7 @@ function dtRender(){
 }
 
 function dtExportCSV(){
+  dtFullParse('a');dtFullParse('b');
   if(!dtResult) return;
   const {headers,rows}=dtResult;
   function csvVal(v){const s=String(v||'').replace(/"/g,'""');return s.includes(',')||s.includes('"')||s.includes('\n')?'"'+s+'"':s;}
@@ -345,6 +397,7 @@ function dtExportCSV(){
 
 function dtClear(){
   dtSources.a=null;dtSources.b=null;dtResult=null;dtSteps=[];dtStepCounter=0;
+  dtRawText={a:'',b:''};
   document.getElementById('dt-paste-a').value='';
   document.getElementById('dt-paste-b').value='';
   document.getElementById('dt-file-a').value='';
@@ -447,6 +500,7 @@ function dtRenderSteps(){
 }
 
 function dtRunPipeline(){
+  dtFullParse('a');dtFullParse('b');
   if(!dtResult) return;
 
   // Save original for re-running
@@ -542,6 +596,7 @@ function dtPreviewStep(id){
 }
 
 function dtSendToGrafiek(){
+  dtFullParse('a');dtFullParse('b');
   if(!dtResult) return;
   // Convert to tab-separated text for the grafiek data input
   const {headers,rows}=dtResult;
