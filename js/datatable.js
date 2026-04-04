@@ -8,7 +8,6 @@ let dtStepCounter=0;
 
 // ── PARSING ──
 
-let dtPreviewData={a:null,b:null}; // temp preview before confirm
 
 function dtParseFileSource(e,id){
   const f=e.target.files[0];if(!f)return;
@@ -41,81 +40,42 @@ function dtParseFileSource(e,id){
   }
 }
 
-function dtPreviewImport(){
-  const rawA=document.getElementById('dt-paste-a').value.trim();
-  const rawB=document.getElementById('dt-paste-b').value.trim();
-  if(!rawA&&!rawB) return;
+function dtPreviewSource(id){
+  const raw=document.getElementById('dt-paste-'+id).value.trim();
+  const st=document.getElementById('dt-status-'+id);
+  if(!raw){st.textContent='Geen data';st.style.color='var(--err)';return;}
 
-  const opts=dtGetImportOpts();
-
-  // Parse both sources with current options
-  if(rawA){
-    dtPreviewData.a=dtParseCSV(rawA,opts);
-    const d=dtPreviewData.a;
-    const st=document.getElementById('dt-status-a');
-    if(d){st.textContent=`${d.rows.length}r × ${d.headers.length}k`;st.style.color='var(--ac)';}
-    else{st.textContent='Geen data';st.style.color='var(--err)';}
-  }
-  if(rawB){
-    dtPreviewData.b=dtParseCSV(rawB,opts);
-    const d=dtPreviewData.b;
-    const st=document.getElementById('dt-status-b');
-    if(d){st.textContent=`${d.rows.length}r × ${d.headers.length}k`;st.style.color='var(--ac)';}
-    else{st.textContent='Geen data';st.style.color='var(--err)';}
-  }
-
-  // Show preview of both sources
-  const hasA=dtPreviewData.a&&dtPreviewData.a.rows.length;
-  const hasB=dtPreviewData.b&&dtPreviewData.b.rows.length;
-  if(hasA||hasB){
-    dtRenderPreviewBoth(dtPreviewData.a,dtPreviewData.b);
-    document.getElementById('dt-confirm-section').style.display='';
-    let statusParts=[];
-    if(hasA) statusParts.push('A: '+dtPreviewData.a.rows.length+'r × '+dtPreviewData.a.headers.length+'k');
-    if(hasB) statusParts.push('B: '+dtPreviewData.b.rows.length+'r × '+dtPreviewData.b.headers.length+'k');
-    document.getElementById('dt-preview-status').textContent=statusParts.join(' · ');
-  }
-}
-
-function dtGetImportOpts(){
-  const delimSel=document.getElementById('dt-delim').value;
-  const quoteSel=document.getElementById('dt-quote').value;
-  const startRow=parseInt(document.getElementById('dt-startrow').value)||1;
-  return {
+  const delimSel=document.getElementById('dt-delim-'+id).value;
+  const quoteSel=document.getElementById('dt-quote-'+id).value;
+  const startRow=parseInt(document.getElementById('dt-startrow-'+id).value)||1;
+  const opts={
     delim:delimSel==='auto'?null:delimSel==='tab'?'\t':delimSel,
     quote:quoteSel,
     startRow:startRow
   };
-}
 
-function dtConfirmImport(){
-  // Accept preview as final data
-  if(dtPreviewData.a) dtSources.a=dtPreviewData.a;
-  if(dtPreviewData.b) dtSources.b=dtPreviewData.b;
+  const parsed=dtParseCSV(raw,opts);
+  if(!parsed||!parsed.rows.length){st.textContent='Geen data gevonden';st.style.color='var(--err)';return;}
 
-  const stA=document.getElementById('dt-status-a');
-  const stB=document.getElementById('dt-status-b');
-  if(dtSources.a){stA.textContent=`✓ ${dtSources.a.rows.length}r × ${dtSources.a.headers.length}k`;stA.style.color='var(--ok)';}
-  if(dtSources.b){stB.textContent=`✓ ${dtSources.b.rows.length}r × ${dtSources.b.headers.length}k`;stB.style.color='var(--ok)';}
+  // Store as confirmed source immediately
+  dtSources[id]=parsed;
+  const delimName=parsed._delim==='\t'?'tab':parsed._delim===','?'komma':parsed._delim===';'?'puntkomma':parsed._delim==='|'?'pipe':'?';
+  st.textContent=`✓ ${parsed.rows.length}r × ${parsed.headers.length}k (${delimName})`;
+  st.style.color='var(--ok)';
 
-  document.getElementById('dt-confirm-section').style.display='none';
+  // Show preview of this source
+  const out=document.getElementById('dt-results');
+  out.innerHTML=dtBuildPreviewTable(parsed,'Bron '+id.toUpperCase());
+
   dtCheckMerge();
 
-  // Auto-preview single source
-  if(dtSources.a&&!dtSources.b){dtResult=dtSources.a;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
-  else if(dtSources.b&&!dtSources.a){dtResult=dtSources.b;dtRender();document.getElementById('dt-pipeline-section').style.display='';document.getElementById('dt-export-section').style.display='';dtRenderSteps();}
-  else if(dtSources.a&&dtSources.b){document.getElementById('dt-pipeline-section').style.display='none';document.getElementById('dt-export-section').style.display='none';}
-}
-
-function dtRenderPreviewBoth(dataA,dataB){
-  const out=document.getElementById('dt-results');
-  let html='';
-
-  if(dataA&&dataA.rows.length) html+=dtBuildPreviewTable(dataA,'Bron A');
-  if(dataB&&dataB.rows.length) html+=dtBuildPreviewTable(dataB,'Bron B');
-
-  if(!html) html='<div class="tab-empty"><p>Geen data gevonden</p></div>';
-  out.innerHTML=html;
+  // Show pipeline/export if single source
+  if(dtSources.a&&!dtSources.b||dtSources.b&&!dtSources.a){
+    dtResult=dtSources[id];
+    document.getElementById('dt-pipeline-section').style.display='';
+    document.getElementById('dt-export-section').style.display='';
+    dtRenderSteps();
+  }
 }
 
 function dtBuildPreviewTable(data,label){
@@ -373,7 +333,6 @@ function dtExportCSV(){
 
 function dtClear(){
   dtSources.a=null;dtSources.b=null;dtResult=null;dtSteps=[];dtStepCounter=0;
-  dtPreviewData={a:null,b:null};
   document.getElementById('dt-paste-a').value='';
   document.getElementById('dt-paste-b').value='';
   document.getElementById('dt-file-a').value='';
@@ -383,10 +342,11 @@ function dtClear(){
   document.getElementById('dt-merge-section').style.display='none';
   document.getElementById('dt-pipeline-section').style.display='none';
   document.getElementById('dt-export-section').style.display='none';
-  document.getElementById('dt-confirm-section').style.display='none';
-  document.getElementById('dt-delim').value='auto';
-  document.getElementById('dt-quote').value='"';
-  document.getElementById('dt-startrow').value='1';
+  ['a','b'].forEach(id=>{
+    document.getElementById('dt-delim-'+id).value='auto';
+    document.getElementById('dt-quote-'+id).value='"';
+    document.getElementById('dt-startrow-'+id).value='1';
+  });
   dtRender();
 }
 
