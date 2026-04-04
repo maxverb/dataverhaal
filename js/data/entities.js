@@ -37,7 +37,7 @@ gld:{
 
 brabant:{
   name:'Omroep Brabant',
-  rss:'https://www.omroepbrabant.nl/rss/index.xml',
+  rss:'https://www.omroepbrabant.nl/rss',
   gemeenten:['Eindhoven','Tilburg','Breda','Den Bosch','\'s-Hertogenbosch','Hertogenbosch','Helmond','Oss','Roosendaal','Bergen op Zoom','Waalwijk','Uden','Veghel','Meierijstad','Oosterhout','Dongen','Gilze en Rijen','Goirle','Hilvarenbeek','Oisterwijk','Loon op Zand','Heusden','Altena','Geertruidenberg','Drimmelen','Moerdijk','Halderberge','Rucphen','Etten-Leur','Zundert','Baarle-Nassau','Alphen-Chaam','Woensdrecht','Steenbergen','Bernheze','Boekel','Landerd','Sint-Michielsgestel','Boxtel','Best','Son en Breugel','Nuenen','Geldrop-Mierlo','Geldrop','Laarbeek','Gemert-Bakel','Asten','Someren','Deurne','Cranendonck','Eersel','Bladel','Reusel-De Mierden','Bergeijk','Valkenswaard','Heeze-Leende','Veldhoven','Waalre','Vught','Boxmeer','Land van Cuijk','Cuijk','Grave','Mill'],
   wijken:['Strijp','Woensel','Stratum','Gestel','Tongelre','Acht','Meerhoven','De Bergen','Binnenstad Breda','Princenhage','Teteringen','Reeshof','Berkel-Enschot','Udenhout','De Pettelaar','Rosmalen','Hintham','Kruiskamp','Binnenstad Den Bosch'],
   personen:['Jeroen Dijsselbloem','John Jorritsma','Paul Depla','Jack Mikkers','Theo Weterings'],
@@ -104,8 +104,8 @@ const MONITOR_FEEDS=[
   {id:'oost',name:'RTV Oost',url:'https://www.oost.nl/rss/nieuws.xml'},
   {id:'fryslan',name:'Omroep Fryslân',url:'https://www.omropfryslan.nl/rss/nieuws.xml'},
   {id:'utrecht',name:'RTV Utrecht',url:'https://www.rtvutrecht.nl/rss/nieuws.xml'},
-  {id:'brabant',name:'Omroep Brabant',url:'https://www.omroepbrabant.nl/rss/index.xml'},
-  {id:'nh',name:'NH Nieuws',url:'https://www.nhnieuws.nl/rss/index.xml'},
-  {id:'flevoland',name:'Omroep Flevoland',url:'https://www.omroepflevoland.nl/rss/index.xml'},
+  {id:'brabant',name:'Omroep Brabant',url:'https://www.omroepbrabant.nl/rss'},
+  {id:'nh',name:'NH Nieuws',url:'https://rss.nhnieuws.nl/rss'},
+  {id:'flevoland',name:'Omroep Flevoland',url:'https://www.omroepflevoland.nl/RSS/rss.aspx'},
   {id:'nos',name:'NOS',url:'https://feeds.nos.nl/nosnieuwsalgemeen'},
 ];
