@@ -51,39 +51,57 @@ async function monFetchAll(){
   out.innerHTML='<div style="padding:20px;color:var(--pm)">Feeds ophalen...</div>';
 
   try{
-  // Purge old cache
+  // Purge old local cache
   const cache=monPurgeCache();
   const scrapeEnabled=document.getElementById('mon-scrape').checked;
 
-  // Fetch ALL feeds (no omroep filter)
-  const feeds=MONITOR_FEEDS;
   monAllArticles=[];
   const startTime=Date.now();
-
   const rssArticles=[];
 
-  for(let fi=0;fi<feeds.length;fi++){
-    if(monStopped) break;
-    const feed=feeds[fi];
-    status.textContent=`RSS ${fi+1}/${feeds.length}: ${feed.name}...`;
-    fill.style.width=Math.round((fi/feeds.length)*30)+'%';
-    try{
-      const feedUrl=`https://dataverhaal-scraper.maxverb.workers.dev/?url=${encodeURIComponent(feed.url)}`;
-      const resp=await fetch(feedUrl);
-      if(!resp.ok) continue;
-      const xml=await resp.text();
-      const doc=new DOMParser().parseFromString(xml,'text/xml');
-      doc.querySelectorAll('item').forEach(item=>{
-        const title=item.querySelector('title')?.textContent?.trim()||'';
-        const link=item.querySelector('link')?.textContent?.trim()||'';
-        const desc=item.querySelector('description')?.textContent?.trim()||'';
-        const pubDate=item.querySelector('pubDate')?.textContent?.trim()||'';
-        const enclosure=item.querySelector('enclosure');
-        const mediaContent=item.querySelector('content');
-        const image=enclosure?.getAttribute('url')||mediaContent?.getAttribute('url')||'';
-        if(title&&link) rssArticles.push({title,link,desc,pubDate,image,source:feed.name,sourceId:feed.id});
-      });
-    }catch(e){}
+  // Step 1: Try server-side RSS cache first
+  let usedServerCache=false;
+  try{
+    status.textContent='Server cache ophalen...';
+    const cacheResp=await fetch('https://dataverhaal-scraper.maxverb.workers.dev/rss-cache');
+    if(cacheResp.ok){
+      const cacheData=await cacheResp.json();
+      if(cacheData.articles&&cacheData.articles.length>0){
+        cacheData.articles.forEach(a=>rssArticles.push(a));
+        usedServerCache=true;
+        const ageMin=cacheData.updated?Math.round((Date.now()-new Date(cacheData.updated).getTime())/60000):0;
+        status.textContent=`✓ ${rssArticles.length} artikelen uit server cache (${ageMin}min oud)`;
+        fill.style.width='30%';
+      }
+    }
+  }catch(e){}
+
+  // Fallback: fetch feeds individually via proxy
+  if(!rssArticles.length){
+    const feeds=MONITOR_FEEDS;
+    for(let fi=0;fi<feeds.length;fi++){
+      if(monStopped) break;
+      const feed=feeds[fi];
+      status.textContent=`RSS ${fi+1}/${feeds.length}: ${feed.name}...`;
+      fill.style.width=Math.round((fi/feeds.length)*30)+'%';
+      try{
+        const feedUrl=`https://dataverhaal-scraper.maxverb.workers.dev/?url=${encodeURIComponent(feed.url)}`;
+        const resp=await fetch(feedUrl);
+        if(!resp.ok) continue;
+        const xml=await resp.text();
+        const doc=new DOMParser().parseFromString(xml,'text/xml');
+        doc.querySelectorAll('item').forEach(item=>{
+          const title=item.querySelector('title')?.textContent?.trim()||'';
+          const link=item.querySelector('link')?.textContent?.trim()||'';
+          const desc=item.querySelector('description')?.textContent?.trim()||'';
+          const pubDate=item.querySelector('pubDate')?.textContent?.trim()||'';
+          const enclosure=item.querySelector('enclosure');
+          const mediaContent=item.querySelector('content');
+          const image=enclosure?.getAttribute('url')||mediaContent?.getAttribute('url')||'';
+          if(title&&link) rssArticles.push({title,link,desc,pubDate,image,source:feed.name,sourceId:feed.id});
+        });
+      }catch(e){}
+    }
   }
 
   if(!rssArticles.length&&!monStopped){
@@ -146,7 +164,7 @@ async function monFetchAll(){
   const totalTime=totalSec>=60?Math.floor(totalSec/60)+'m '+totalSec%60+'s':totalSec+'s';
   status.textContent=monStopped
     ?`Gestopt (${totalTime})`
-    :`✓ ${rssArticles.length} artikelen (${scraped} nieuw, ${cached} cache) in ${totalTime}`;
+    :`✓ ${rssArticles.length} artikelen (${usedServerCache?'server + ':''}${scraped} nieuw, ${cached} cache) in ${totalTime}`;
   status.style.color='var(--ok)';
   startBtn.disabled=false;startBtn.textContent='▶ Ophalen';
   stopBtn.style.display='none';
