@@ -6,22 +6,90 @@ rijnmond:{
   name:'Rijnmond',
   rss:'https://www.rijnmond.nl/rss/index.xml',
   gemeenten:['Rotterdam','Schiedam','Vlaardingen','Maassluis','Capelle aan den IJssel','Krimpen aan den IJssel','Lansingerland','Albrandswaard','Barendrecht','Ridderkerk','Nissewaard','Voorne aan Zee','Hoeksche Waard','Goeree-Overflakkee','Hellevoetsluis','Brielle','Westvoorne','Spijkenisse','Berkel en Rodenrijs','Bergschenhoek','Bleiswijk'],
-  wijken:['Kralingen','Delfshaven','Feijenoord','Lombardijen','Ommoord','Pernis','Rozenburg','Overschie','Hillegersberg','Schiebroek','Charlois','IJsselmonde','Prins Alexander','Zuidwijk','Pendrecht','Katendrecht','Kop van Zuid','Crooswijk','Blijdorp','Nesselande','Carnisse','Afrikaanderwijk','Bospolder','Tussendijken','Cool','West-Kruiskade','Europoort','Botlek','Maasvlakte','Heijplaat'],
-  personen:['Aboutaleb','Ahmed Aboutaleb','Carola Schouten','Marco Pastors','Joost Eerdmans','Leefbaar Rotterdam','Vincent Karremans','Bonte','Simons'],
-  sport:['Feyenoord','Sparta Rotterdam','Sparta','Excelsior','SBV Excelsior','De Kuip','Stadion Feijenoord','Het Kasteel','Van Donge & De Roo Stadion','Arne Slot','Robin van Persie','Te Kloese','Dennis te Kloese'],
-  landmarks:['Erasmusbrug','Euromast','Markthal Rotterdam','Markthal','SS Rotterdam','Rotterdam Ahoy','Ahoy','Diergaarde Blijdorp','Blijdorp','Hotel New York','Centraal Station Rotterdam','Willemsbrug','Koningshaven','De Hef','Luxor Theater','Luxor','Kunsthal','Museum Boijmans','Boijmans','Witte de Withstraat','Lijnbaan','Coolsingel','Grote Markt Rotterdam','Rivoli','Attractiepark Rotterdam','Havengebied','Maasvlakte','Europoort','World Port Center','Tropicana','Maeslantkering','Waterweg','Nieuwe Waterweg','Benelux Tunnel','Beneluxtunnel','Maastunnel','Brielse Meer','Oostvoornse Meer','Rockanje','Ouddorp'],
-  overig:['010','Havenstad','havenstad','Randstadrail','RET','GGD Rijnmond','Rijnmondband','Erasmus MC','Erasmus Universiteit','Erasmus','Sophia Kinderziekenhuis','Ikazia','Maasstad Ziekenhuis','Maasstad','Franciscus Gasthuis','Havenbedrijf Rotterdam','Port of Rotterdam','Deltalinqs']
+  wijken:['Kralingen','Delfshaven','Feijenoord','Lombardijen','Ommoord','Pernis','Rozenburg','Overschie','Hillegersberg','Schiebroek','Charlois','IJsselmonde','Prins Alexander','Zuidwijk','Pendrecht','Katendrecht','Kop van Zuid','Crooswijk','Blijdorp','Nesselande','Carnisse','Afrikaanderwijk','Bospolder','Tussendijken','Cool','West-Kruiskade','Europoort','Botlek','Maasvlakte','Heijplaat','Hoogvliet','Rhoon','Poortugaal','Hendrik-Ido-Ambacht','Zwijndrecht','Oud-Beijerland','Strijen','Middelharnis','Ouddorp','Stellendam','Goedereede','Dirksland','Sommelsdijk'],
+  personen:[
+    // Politiek Rotterdam
+    'Aboutaleb','Ahmed Aboutaleb','Carola Schouten','Marco Pastors','Joost Eerdmans','Leefbaar Rotterdam','Vincent Karremans','Bonte','Simons',
+    'Judith Bokhove','Robert Sobczak','Said Kasmi','Faouzi Achbar','Nadia Arsieni','Barbara Kathmann','Stephan van Baarle','DENK Rotterdam',
+    'Marco Derksen','Ronald Buijt','Cors Groeneveld','Pex Langenberg','Sven de Langen',
+    // Politiek regio
+    'Cor Lamers','Ahmed Marcouch','Pieter Kromdijk','Ada Grootenboer','Foort van Oosten',
+    // Journalisten/media
+    'Ruud de Boer','Peter Schmeits','Jelle Akerboom','Carrie ten Napel',
+    // Cultuur/bekende Rotterdammers
+    'Jules Deelder','Deelder','André van Duin','Lee Towers','Willeke Alberti','Ruth Jacott','Gerard Cox','Jiskefet','Hans Teeuwen',
+    'Ebru Umar','Ronald Waterreus','Pierre van Hooijdonk','Giovanni van Bronckhorst','Dirk Kuijt','Ruud Gullit','Frank Rijkaard',
+    'Willem van Hanegem','De Kromme','Mario Been','Dick Advocaat','Ronald Koeman','Erwin Koeman',
+    // Ondernemers/bestuurders
+    'Allard Castelein','Boudewijn Siemons','Peter Smit','Annette Mosman',
+    // Muziek/entertainment
+    'Ronnie Flex','Lil Kleine','Sevn Alias','Broederliefde','Architrackz','Kempi','Hef','Dio','The Opposites','Gers Pardoel',
+    'Jandino Asporaat','Jandino','Najib Amhali','Tino Martin','Jan Smit Voorne','Brigitte Kaandorp'
+  ],
+  sport:['Feyenoord','Sparta Rotterdam','Sparta','Excelsior','SBV Excelsior','De Kuip','Stadion Feijenoord','Het Kasteel','Van Donge & De Roo Stadion',
+    'Arne Slot','Robin van Persie','Te Kloese','Dennis te Kloese',
+    'Brian Priske','Santiago Gimenez','Gimenez','Igor Paixão','Paixão','Quilindschy Hartman','Hartman','David Hancko','Hancko','Justin Bijlow','Bijlow','Lutsharel Geertruida','Geertruida','Orkun Kökçü','Kökçü',
+    'Jeroen Rijsdijk','Maurice Steijn','Henk Fraser','Fraser','Giovanni van Bronckhorst',
+    'Kralingse Bos','Rotterdam Marathon','NN Marathon','ABN AMRO World Tennis','ABNAMRO Open','Rotterdam Topsport','Ahoy Tennis',
+    'Excelsior Maassluis','FC Dordrecht','Kozakken Boys','ASWH','OVV','Neptunus'],
+  landmarks:['Erasmusbrug','Euromast','Markthal Rotterdam','Markthal','SS Rotterdam','Rotterdam Ahoy','Ahoy','Diergaarde Blijdorp','Blijdorp','Hotel New York','Centraal Station Rotterdam','Willemsbrug','Koningshaven','De Hef','Luxor Theater','Luxor','Kunsthal','Museum Boijmans','Boijmans','Witte de Withstraat','Lijnbaan','Coolsingel','Grote Markt Rotterdam','Rivoli','Attractiepark Rotterdam','Havengebied','Maasvlakte','Europoort','World Port Center','Tropicana','Maeslantkering','Waterweg','Nieuwe Waterweg','Benelux Tunnel','Beneluxtunnel','Maastunnel',
+    'Brielse Meer','Oostvoornse Meer','Rockanje','Ouddorp','Depot Boijmans','FENIX Food Factory','Fenix','Witte Huis','Laurenskerk','Sint-Laurenskerk',
+    'Kralingse Plas','Zuiderpark','Het Park','Wereldmuseum','Natuurhistorisch Museum','Chabot Museum','Kijk-Kubus','Kubuswoningen','Van Nelle Fabriek','Van Nellefabriek',
+    'Spido','Waterbus','Watertaxi','Delfshavense Schie','Oude Haven','Scheepvaartkwartier','Veerhaven','Parkhaven','Leuvehaven','Maritiem Museum',
+    'Kinderdijk','Molens Kinderdijk','Biesbosch','Nationaal Park','Grevelingenmeer','Haringvliet','Hollandse IJssel','Bernisse','Brielse Maas'],
+  overig:['010','Havenstad','havenstad','Randstadrail','RET','GGD Rijnmond','Rijnmondband','Erasmus MC','Erasmus Universiteit','Erasmus','Sophia Kinderziekenhuis','Ikazia','Maasstad Ziekenhuis','Maasstad','Franciscus Gasthuis','Havenbedrijf Rotterdam','Port of Rotterdam','Deltalinqs',
+    'Hogeschool Rotterdam','Codarts','Willem de Kooning Academie','Inholland Rotterdam','STC','Scheepvaart en Transport College',
+    'Kamer van Koophandel','Unilever','Coolblue','Nationale-Nederlanden','Robeco','Rotterdam The Hague Airport','Zestienhoven',
+    'Wereldhavendagen','Zomercarnaval','North Sea Jazz','IFFR','Filmfestival Rotterdam','Poeziezomer','Dakendagen','Rotterdam Unlimited',
+    'Veiligheidsregio Rotterdam-Rijnmond','Politie Rotterdam','Openbaar Ministerie Rotterdam','Rechtbank Rotterdam']
 },
 
 west:{
   name:'Omroep West',
   rss:'https://www.omroepwest.nl/rss/index.xml',
   gemeenten:['Den Haag','Delft','Leiden','Zoetermeer','Westland','Rijswijk','Leidschendam-Voorburg','Leidschendam','Voorburg','Wassenaar','Voorschoten','Oegstgeest','Katwijk','Noordwijk','Hillegom','Lisse','Teylingen','Midden-Delfland','Pijnacker-Nootdorp','Pijnacker','Nootdorp','Alphen aan den Rijn','Nieuwkoop','Bodegraven-Reeuwijk','Bodegraven','Reeuwijk','Waddinxveen','Gouda','Zuidplas','Krimpenerwaard','Kaag en Braassem','Leiderdorp','Zoeterwoude','Sassenheim','Voorhout','Warmond','Naaldwijk','Monster','Wateringen','Kwintsheul'],
-  wijken:['Scheveningen','Loosduinen','Laak','Transvaal','Ypenburg','Leidschenveen','Bezuidenhout','Benoordenhout','Statenkwartier','Archipel','Duinoord','Regentessekwartier','Schilderswijk','Moerwijk','Morgenstond','Bouwlust','Vrederust','Escamp','Mariahoeve','Haagse Hout','Binckhorst','Kijkduin','Houtwijk','Segbroek','Bohemen','Waldeck','Vogelwijk','Belgisch Park','Bollenstreek'],
-  personen:['Jan van Zanen','Van Zanen','Marja van Bijsterveldt','Liesbeth Spies','Charlie Aptroot','Richard de Mos','Hart voor Den Haag','Pieter van Aartsen'],
-  sport:['ADO Den Haag','ADO','Cars Jeans Stadion','Bingoal Stadion','Quick Boys','Alphense Boys','FC Lisse','Haaglandse Golfclub','RKAVV'],
-  landmarks:['Binnenhof','Vredespaleis','Madurodam','Pier Scheveningen','De Pier','Kurhaus','Mall of the Netherlands','Mall of NL','Grote Kerk Den Haag','Haagse Toren','Huis ten Bosch','Paleis Noordeinde','Noordeinde','Panorama Mesdag','Gemeentemuseum','Kunstmuseum Den Haag','Omniversum','AFAS Circustheater','World Forum','Lange Voorhout','Hofvijver','Passage Den Haag','Keukenhof','Space Expo','Corpus','Archeon','Duinrell','Wassenaarseslag','Meijendel','Kaag','Kagerplassen','Leidse Hout','Pieterskerk Leiden','Universiteit Leiden','TU Delft','Bieslandse Bos','Delftse Hout','Oostpoort Delft'],
-  overig:['070','Hofstad','hofstad','Residentie','residentie','HTM','Randstadrail','GGD Haaglanden','Haaglanden','HMC','Haga Ziekenhuis','Haga','LUMC','Reinier de Graaf','Groene Hart Ziekenhuis','Alrijne','Ridderzaal','Prinsjesdag']
+  wijken:['Scheveningen','Loosduinen','Laak','Transvaal','Ypenburg','Leidschenveen','Bezuidenhout','Benoordenhout','Statenkwartier','Archipel','Duinoord','Regentessekwartier','Schilderswijk','Moerwijk','Morgenstond','Bouwlust','Vrederust','Escamp','Mariahoeve','Haagse Hout','Binckhorst','Kijkduin','Houtwijk','Segbroek','Bohemen','Waldeck','Vogelwijk','Belgisch Park','Bollenstreek',
+    'Centrum Den Haag','Zeeheldenkwartier','Rivierenbuurt Den Haag','Zuiderpark','Wateringse Veld','Nootdorp','Oud-Voorburg','Leidschenveen','Stevenshof','Merenwijk','Roomburg','Professorenwijk','Boskoop','Moordrecht','Nieuwerkerk aan den IJssel'],
+  personen:[
+    // Politiek Den Haag (gemeente)
+    'Jan van Zanen','Van Zanen','Marja van Bijsterveldt','Liesbeth Spies','Charlie Aptroot','Richard de Mos','Hart voor Den Haag','Pieter van Aartsen',
+    'Saskia Bruines','Robert van Asten','Hilbert Bredemeijer','Rachid Guernaoui','Boudewijn Revis','Kavita Parbhudayal',
+    // Politiek regio
+    'Henri Lenferink','Marja van Bijsterveldt','Frank Dales','Marianne Witteveen','Pieter Verhoeve',
+    // Landelijke politici (wonen/werken in regio)
+    'Mark Rutte','Rutte','Geert Wilders','Wilders','Frans Timmermans','Timmermans','Pieter Omtzigt','Omtzigt','Dilan Yeşilgöz','Yeşilgöz',
+    'Rob Jetten','Jetten','Sigrid Kaag','Kaag','Jesse Klaver','Klaver','Caroline van der Plas','Van der Plas','Thierry Baudet','Baudet',
+    'Fleur Agema','Agema','Barry Madlener','Schoof','Dick Schoof',
+    // Koninklijk huis
+    'Koning Willem-Alexander','Willem-Alexander','Koningin Máxima','Máxima','Prinses Amalia','Amalia','Prinses Beatrix','Beatrix',
+    // Journalisten/media
+    'Sven Kockelmann','Jeroen Pauw','Eva Jinek','Beau van Erven Dorens','Humberto Tan','Khalid Kasem',
+    // Cultuur/bekende Hagenaars & Leidenaren
+    'Paul van Vliet','Jochem Myjer','Najib Amhali','Freek de Jonge','Herman Finkers','Youp van \'t Hek',
+    'Tiësto','Martin Garrix','Hardwell','Afrojack','Armin van Buuren',
+    // Ondernemers
+    'Marcel Boekhoorn','John de Mol','De Mol','Joop van den Ende','Sywert van Lienden',
+    // Oud-sporters/trainers
+    'Ruud Krol','Michael van Praag','Martin Jol','Co Adriaanse','Henk ten Cate'
+  ],
+  sport:['ADO Den Haag','ADO','Cars Jeans Stadion','Bingoal Stadion','Quick Boys','Alphense Boys','FC Lisse','Haaglandse Golfclub','RKAVV',
+    'FC Den Haag','Natio Suriname','CTO Den Haag','Haagsche Rugby Club','HBS Craeyenhout','Laakkwartier','SVB','GONA',
+    'Scheveningen voetbal','FC Scheveningen','Nootdorp voetbal',
+    'CHIO','Jumping Den Haag','Volvo Ocean Race','KLM Open','World Padel Tour'],
+  landmarks:['Binnenhof','Vredespaleis','Madurodam','Pier Scheveningen','De Pier','Kurhaus','Mall of the Netherlands','Mall of NL','Grote Kerk Den Haag','Haagse Toren','Huis ten Bosch','Paleis Noordeinde','Noordeinde','Panorama Mesdag','Gemeentemuseum','Kunstmuseum Den Haag','Omniversum','AFAS Circustheater','World Forum','Lange Voorhout','Hofvijver','Passage Den Haag','Keukenhof','Space Expo','Corpus','Archeon','Duinrell','Wassenaarseslag','Meijendel','Kaag','Kagerplassen','Leidse Hout','Pieterskerk Leiden','Universiteit Leiden','TU Delft','Bieslandse Bos','Delftse Hout','Oostpoort Delft',
+    'Mauritshuis','Escher in Het Paleis','Museon','Louwman Museum','Fotomuseum Den Haag','Plein','Grote Markt Den Haag','Haagse Markt',
+    'Scheveningen Boulevard','Kijkduin Strand','Zuiderpark','Clingendael','Westbroekpark','Japanse Tuin',
+    'De Nieuwe Kerk Delft','Vermeer Centrum','Prinsenhof Delft','Museum Prinsenhof','Oude Kerk Delft','Molen de Roos','Beestenmarkt Delft',
+    'Naturalis','Museum Volkenkunde','Lakenhal','Burcht van Leiden','Hortus Botanicus Leiden',
+    'Sint-Janskerk Gouda','Goudse Waag','Kaasmarkt Gouda','Reeuwijkse Plassen','Reeuwijk','Gouwe',
+    'Deltapark Neeltje Jans','Avifauna','Linnaeushof','Drievliet'],
+  overig:['070','Hofstad','hofstad','Residentie','residentie','HTM','Randstadrail','GGD Haaglanden','Haaglanden','HMC','Haga Ziekenhuis','Haga','LUMC','Reinier de Graaf','Groene Hart Ziekenhuis','Alrijne','Ridderzaal','Prinsjesdag',
+    'Haagse Hogeschool','Inholland Den Haag','Hogeschool Leiden','KABK','Koninklijk Conservatorium',
+    'Europol','Eurojust','ICC','Internationaal Strafhof','OPCW','Vredespaleis','Internationaal Gerechtshof',
+    'KPN','Shell Rijswijk','Aegon','Nationale-Nederlanden Den Haag','Siemens','TNO','RIVM',
+    'Veiligheidsregio Haaglanden','Politie Den Haag','Openbaar Ministerie Den Haag','Rechtbank Den Haag',
+    'Leidsche Ommelanden','Duin- en Bollenstreek','Greenport','Veiling Naaldwijk','Flora Holland',
+    'Koningsdag','Bevrijdingsdag','Vlaggetjesdag','Haringparty','Tong Tong Fair','Crossing Border','The Hague Jazz','Parkpop','Nacht van de Kaap']
 },
 
 gld:{
