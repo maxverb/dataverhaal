@@ -74,8 +74,8 @@ function draw(){
   }
 
   // Gestapeld H: full canvas takeover
-  if(S.ct==='stackedh'){
-    const chart=CHARTS.stackedh;
+  if(S.ct==='stackedh'||S.ct==='blocks'){
+    const chart=CHARTS[S.ct];
     if(chart&&S.data.length){
       let data=S.data.map(d=>({label:d.label,values:[...d.values]}));
       const O={W,H,p,sf,wide,lay:S.lay,showVal:true,
