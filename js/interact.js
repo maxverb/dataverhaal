@@ -29,6 +29,29 @@ function reverseData(){
   sched();
 }
 
+function transposeData(){
+  const ta=document.getElementById('di');
+  const raw=ta.value.trim();
+  if(!raw) return;
+  // Split into rows, detect delimiter
+  const lines=raw.split('\n').filter(l=>l.trim());
+  if(lines.length<2) return;
+  const delim=lines[0].includes('\t')?'\t':lines[0].includes(';')?';':',';
+  const grid=lines.map(l=>l.split(delim).map(c=>c.trim()));
+  // Transpose
+  const maxCols=Math.max(...grid.map(r=>r.length));
+  const transposed=[];
+  for(let c=0;c<maxCols;c++){
+    const row=[];
+    for(let r=0;r<grid.length;r++){
+      row.push(grid[r][c]||'');
+    }
+    transposed.push(row);
+  }
+  ta.value=transposed.map(r=>r.join(delim)).join('\n');
+  parseData();
+}
+
 // ── URL SHARE ────────────────────────────────────────────────────────────
 function shareURL(){
   const cfg={

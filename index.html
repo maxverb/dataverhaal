@@ -109,6 +109,7 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
           &#8593; CSV/XLSX
           <input type="file" id="fi" accept=".csv,.xlsx,.xls" style="display:none" onchange="handleFile(event)">
         </div>
+        <button class="btn btn-sm" onclick="transposeData()" style="font-size:10px;padding:3px 8px" title="Rijen en kolommen omdraaien">&#8645; Flip</button>
         <div id="ds" style="font-size:10px;color:var(--pm);flex:1;text-align:right"></div>
       </div>
       <div id="colsel"></div>
@@ -676,7 +677,7 @@ function updateContext(type,data){
 <script src="js/charts/geomap.js?v=119"></script>
 <script src="js/suggest.js?v=119"></script>
 <script src="js/overlays.js?v=119"></script>
-<script src="js/interact.js?v=119"></script>
+<script src="js/interact.js?v=146"></script>
 <script src="js/scraper.js?v=125"></script>
 <script src="js/data/entities.js?v=133"></script>
 <script src="js/monitor.js?v=134"></script>
