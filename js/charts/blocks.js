@@ -60,15 +60,21 @@ registerChart('blocks',{label:'Blokken',draw:function(ctx,data,x,y,w,h,O){
   // ── BLOCKS ──
   // Find global max for proportional sizing (only non-zero values)
   let globalMax=0;
-  rows.forEach(d=>{cols.slice(0,nc).forEach(ci=>{const v=d.values[ci]||0;if(v>globalMax)globalMax=v;});});
+  // Count actual rows (with non-zero values)
+  let activeRows=0;
+  rows.forEach(d=>{
+    let hasVal=false;
+    cols.slice(0,nc).forEach(ci=>{const v=d.values[ci]||0;if(v>globalMax)globalMax=v;if(v>0)hasVal=true;});
+    if(hasVal) activeRows++;
+  });
   if(!globalMax) globalMax=1;
+  if(!activeRows) return;
 
-  // Calculate space
-  const footerH=H*0.09;
+  // Calculate space — spread evenly over available height
+  const footerH=H*0.08;
   const availH=H-cy-footerH;
-  const rowCount=rows.length;
-  const rowH=availH/rowCount;
-  const blockH=Math.min(rowH*0.5,W*0.07);
+  const rowH=availH/activeRows;
+  const blockH=Math.min(Math.max(rowH*0.45,W*0.04),W*0.09);
   const blockGap=W*0.005;
 
   rows.forEach((d,ri)=>{
@@ -78,7 +84,7 @@ registerChart('blocks',{label:'Blokken',draw:function(ctx,data,x,y,w,h,O){
       const v=d.values[ci]||0;
       if(v>0) rowBlocks.push({v,j,ci,name:colNames[ci]||''});
     });
-    if(!rowBlocks.length) return;
+    if(!rowBlocks.length) return; // skip empty rows entirely
 
     const showNames=rowBlocks.length>1; // hide column name if only 1 block
 
@@ -127,7 +133,7 @@ registerChart('blocks',{label:'Blokken',draw:function(ctx,data,x,y,w,h,O){
       bx+=blockW+blockGap;
     });
 
-    cy+=blockH+rowH*0.18;
+    cy+=blockH+(rowH-blockH-lblSz*1.3)*0.8;
   });
 
   // ── FOOTER ──
