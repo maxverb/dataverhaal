@@ -1,33 +1,14 @@
 // ── BIG NUMBER / UITGELICHT GETAL ──
 // Economist-style: eyebrow top, huge number center, divider line, subtitle below
+// Works WITHOUT data — uses only the text fields
 
 registerChart('bignum',{label:'Getal',draw:function(ctx,data,x,y,w,h,O){
-  const {W,H,p,cols,showVal,eyebrow,title,subtitle,sf,wide}=O;
-  // This chart ignores the normal data — it uses the text fields differently:
-  // Title field → the big number (e.g. "40%")
-  // Eyebrow → small label above the number
-  // Subtitle → description below the divider line
+  const {W,H,p,sf,wide}=O;
+  const title=O.title||'';
+  const eyebrow=O.eyebrow||'';
+  const subtitle=O.subtitle||'';
 
-  const px=W*0.07;
-  const centerY=H*0.42;
-
-  // ── EYEBROW (already drawn by render.js, but we draw it bigger & positioned) ──
-  // We skip the default header and draw our own layout
-  // The draw() function already drew eyebrow/title/subtitle, so we work in the chart area
-
-  // Use first data value as the big number if no title provided
-  let bigNum=title||'';
-  if(!bigNum&&data.length){
-    const v=data[0].values[cols[0]||0];
-    bigNum=fmtN(v,O.unit);
-  }
-
-  // If title was used as big number, use data label as context
-  const descText=subtitle||'';
-  const topLabel=eyebrow||'';
-
-  // Clear the chart area (we override default header positioning)
-  // Actually we draw over the whole canvas since this is a full-canvas chart
+  // This chart takes over the full canvas
   ctx.fillStyle=p.bg;
   ctx.fillRect(0,0,W,H);
 
@@ -40,63 +21,94 @@ registerChart('bignum',{label:'Getal',draw:function(ctx,data,x,y,w,h,O){
     ctx.stroke();
   }
 
-  // ── TOP LABEL (eyebrow) ──
-  let cy=H*0.18;
-  if(topLabel){
-    const sz=W*0.032*sf;
-    ctx.font=`600 ${sz}px Barlow`;
-    ctx.fillStyle=p.text;
-    ctx.textAlign='left';
-    ctx.textBaseline='top';
-    const lines=wrap(ctx,topLabel,W-2*px);
-    lines.forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.3;});
-    cy+=sz*0.5;
+  const px=W*0.07;
+  const maxW=W-2*px;
+
+  // Calculate total content height first to center vertically
+  const eyeSz=W*0.028*sf;
+  const numSz=W*0.16*sf;
+  const descSz=W*0.030*sf;
+  const linePad=H*0.025;
+
+  // Measure heights
+  let totalH=0;
+  if(eyebrow){
+    ctx.font=`600 ${eyeSz}px Barlow`;
+    totalH+=wrap(ctx,eyebrow.toUpperCase(),maxW).length*eyeSz*1.3+eyeSz*0.3;
+  }
+  // Accent line after eyebrow
+  if(eyebrow) totalH+=Math.max(3,W*0.004)+linePad*0.6;
+  if(title){
+    ctx.font=`900 ${numSz}px Sora`;
+    let actSz=numSz;
+    while(ctx.measureText(title).width>maxW&&actSz>W*0.06){actSz*=0.9;ctx.font=`900 ${actSz}px Sora`;}
+    totalH+=actSz*1.15+linePad*0.4;
+  }
+  // Divider
+  totalH+=Math.max(3,W*0.004)+linePad;
+  if(subtitle){
+    ctx.font=`400 ${descSz}px Barlow`;
+    totalH+=wrap(ctx,subtitle,maxW).length*descSz*1.45;
   }
 
-  // ── BIG NUMBER ──
-  if(bigNum){
-    const sz=W*0.18*sf;
-    ctx.font=`900 ${sz}px Sora`;
+  // Start Y — vertically center the content block
+  let cy=Math.max(H*0.08,(H-totalH)/2);
+
+  // ── EYEBROW ──
+  if(eyebrow){
+    ctx.font=`600 ${eyeSz}px Barlow`;
+    ctx.fillStyle=p.acc;
+    ctx.textAlign='left';
+    ctx.textBaseline='top';
+    wrap(ctx,eyebrow.toUpperCase(),maxW).forEach(l=>{ctx.fillText(l,px,cy);cy+=eyeSz*1.3;});
+    cy+=eyeSz*0.3;
+    // Accent line under eyebrow
+    ctx.fillStyle=p.acc;
+    ctx.fillRect(px,cy,maxW,Math.max(3,W*0.004));
+    cy+=Math.max(3,W*0.004)+linePad*0.6;
+  }
+
+  // ── BIG NUMBER (title field) ──
+  if(title){
+    let actSz=numSz;
+    ctx.font=`900 ${actSz}px Sora`;
+    while(ctx.measureText(title).width>maxW&&actSz>W*0.06){actSz*=0.9;ctx.font=`900 ${actSz}px Sora`;}
     ctx.fillStyle=p.text;
     ctx.textAlign='left';
     ctx.textBaseline='top';
-    // Measure and auto-shrink if too wide
-    let numSz=sz;
-    while(ctx.measureText(bigNum).width>w-px&&numSz>W*0.06){
-      numSz*=0.9;
-      ctx.font=`900 ${numSz}px Sora`;
-    }
-    ctx.fillText(bigNum,px,cy);
-    cy+=numSz*1.1;
+    ctx.fillText(title,px,cy);
+    cy+=actSz*1.15+linePad*0.4;
   }
 
   // ── DIVIDER LINE ──
-  cy+=H*0.02;
-  ctx.fillStyle=p.acc;
-  ctx.fillRect(px,cy,W-2*px,Math.max(3,W*0.004));
-  cy+=H*0.04;
+  if(!eyebrow){
+    // Only draw divider if no eyebrow line was drawn
+    ctx.fillStyle=p.acc;
+    ctx.fillRect(px,cy,maxW,Math.max(3,W*0.004));
+    cy+=Math.max(3,W*0.004)+linePad;
+  } else {
+    cy+=linePad*0.4;
+  }
 
-  // ── DESCRIPTION (subtitle) ──
-  if(descText){
-    const sz=W*0.032*sf;
-    ctx.font=`400 ${sz}px Barlow`;
+  // ── DESCRIPTION (subtitle field) ──
+  if(subtitle){
+    ctx.font=`400 ${descSz}px Barlow`;
     ctx.fillStyle=p.muted;
     ctx.textAlign='left';
     ctx.textBaseline='top';
-    const lines=wrap(ctx,descText,W-2*px);
-    lines.forEach(l=>{ctx.fillText(l,px,cy);cy+=sz*1.45;});
+    wrap(ctx,subtitle,maxW).forEach(l=>{ctx.fillText(l,px,cy);cy+=descSz*1.45;});
   }
 
-  // ── BRON + DATUM (footer) ──
+  // ── FOOTER: bron + datum ──
   const bron=document.getElementById('bron').value;
   const datum=document.getElementById('datum').value;
+  const footY=H-H*0.045;
   if(bron||datum){
-    const sz=W*0.02*sf;
+    const sz=W*0.021*sf;
     ctx.font=`400 ${sz}px Barlow`;
     ctx.fillStyle=p.muted;
     ctx.textAlign='left';
     ctx.textBaseline='bottom';
-    const footY=H-H*0.05;
     ctx.fillText([bron,datum].filter(Boolean).join(' · '),px,footY);
   }
 
@@ -109,6 +121,15 @@ registerChart('bignum',{label:'Getal',draw:function(ctx,data,x,y,w,h,O){
     ctx.textAlign='right';
     ctx.textBaseline='bottom';
     const brMap={metamax:'MetaMax',maxverbeek:'Max Verbeek'};
-    ctx.fillText(brMap[branding]||'Max Verbeek',W-px,H-H*0.05);
+    ctx.fillText(brMap[branding]||'Max Verbeek',W-px,footY);
+  }
+
+  // ── PLACEHOLDER if nothing filled ──
+  if(!title&&!eyebrow&&!subtitle){
+    ctx.font=`400 ${W*0.027}px Barlow`;
+    ctx.fillStyle=p.muted;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('Vul Eyebrow, Titel en Subtitel in',W/2,H/2);
   }
 }});

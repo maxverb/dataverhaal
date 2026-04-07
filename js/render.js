@@ -129,7 +129,7 @@ function draw(){
   const cH=chartBot-chartTop-valPad;
   const cW=W-2*px;
 
-  if(!S.data.length){
+  if(!S.data.length&&S.ct!=='bignum'){
     ctx.strokeStyle=p.muted+'40';ctx.setLineDash([W*0.012,W*0.012]);ctx.lineWidth=1;
     ctx.strokeRect(px,chartTop,cW,cH);ctx.setLineDash([]);
     ctx.font=`400 ${W*0.027}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='center';ctx.textBaseline='middle';
