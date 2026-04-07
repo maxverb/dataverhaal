@@ -1,6 +1,6 @@
 // ── BLOCKS CHART — Economist-style grouped blocks ──
 // Each row = a group with label above, columns as proportional blocks side by side
-// Max 4 rows, max 3 columns. Column name + value inside each block.
+// Max 4 rows, max 3 columns. Skip 0-values. Hide column name if only 1 block in row.
 
 registerChart('blocks',{label:'Blokken',draw:function(ctx,data,x,y,w,h,O){
   const {showVal,lay,W,H,p,cols,colNames,sf,wide,eyebrow,title,subtitle}=O;
@@ -32,7 +32,6 @@ registerChart('blocks',{label:'Blokken',draw:function(ctx,data,x,y,w,h,O){
     ctx.textAlign='left';ctx.textBaseline='top';
     ctx.fillText(eyebrow.toUpperCase(),px,cy);
     cy+=sz*1.4;
-    // Accent line
     ctx.fillStyle=p.acc;
     ctx.fillRect(px,cy,W*0.08,Math.max(3,W*0.005));
     cy+=W*0.018;
@@ -59,65 +58,76 @@ registerChart('blocks',{label:'Blokken',draw:function(ctx,data,x,y,w,h,O){
   }
 
   // ── BLOCKS ──
-  // Find global max for proportional sizing
+  // Find global max for proportional sizing (only non-zero values)
   let globalMax=0;
   rows.forEach(d=>{cols.slice(0,nc).forEach(ci=>{const v=d.values[ci]||0;if(v>globalMax)globalMax=v;});});
   if(!globalMax) globalMax=1;
 
   // Calculate space
-  const footerH=H*0.1;
+  const footerH=H*0.09;
   const availH=H-cy-footerH;
-  const rowH=availH/rows.length;
-  const blockH=rowH*0.48;
-  const labelH=rowH*0.28;
-  const gapH=rowH*0.24;
+  const rowCount=rows.length;
+  const rowH=availH/rowCount;
+  const blockH=Math.min(rowH*0.5,W*0.07);
   const blockGap=W*0.005;
 
   rows.forEach((d,ri)=>{
+    // Get non-zero values for this row
+    const rowBlocks=[];
+    cols.slice(0,nc).forEach((ci,j)=>{
+      const v=d.values[ci]||0;
+      if(v>0) rowBlocks.push({v,j,ci,name:colNames[ci]||''});
+    });
+    if(!rowBlocks.length) return;
+
+    const showNames=rowBlocks.length>1; // hide column name if only 1 block
+
     // Group label
     const lblSz=W*0.026*sf;
     ctx.font=`700 ${lblSz}px Sora`;
     ctx.fillStyle=p.text;
     ctx.textAlign='left';ctx.textBaseline='top';
     ctx.fillText(d.label,px,cy);
-    cy+=lblSz*1.4;
+    cy+=lblSz*1.3;
 
-    // Draw blocks for this row
-    const rowVals=cols.slice(0,nc).map(ci=>d.values[ci]||0);
-    const rowTotal=rowVals.reduce((s,v)=>s+v,0);
-
-    // Block widths proportional to value (relative to global max * nc to keep scale)
+    // Draw blocks
     let bx=px;
-    rowVals.forEach((v,j)=>{
-      const blockW=Math.max(W*0.04,(v/globalMax)*maxW*0.85);
-      const col=p.bars[j%p.bars.length];
+    rowBlocks.forEach((blk)=>{
+      const blockW=Math.max(W*0.06,(blk.v/globalMax)*maxW*0.8);
+      const col=p.bars[blk.j%p.bars.length];
 
-      // Block with border
-      ctx.fillStyle=col+'20'; // light fill
+      // Block with border + light fill
+      ctx.fillStyle=col+'20';
       ctx.strokeStyle=col;
       ctx.lineWidth=Math.max(2,W*0.002);
       const rr=Math.min(blockH*0.12,W*0.004);
       rrect(ctx,bx,cy,blockW,blockH,rr);
       ctx.fill();ctx.stroke();
 
-      // Column name inside block
-      const nameSz=Math.max(W*0.019,10);
-      ctx.font=`600 ${nameSz}px Barlow`;
-      ctx.fillStyle=p.text;
-      ctx.textAlign='left';ctx.textBaseline='top';
-      const name=colNames[cols[j]]||'';
-      ctx.fillText(trunc(ctx,name,blockW-W*0.015),bx+W*0.012,cy+blockH*0.2);
+      // Column name inside block (only if multiple blocks)
+      let textY=cy+blockH*0.25;
+      if(showNames){
+        const nameSz=Math.max(W*0.019,10);
+        ctx.font=`600 ${nameSz}px Barlow`;
+        ctx.fillStyle=p.text;
+        ctx.textAlign='left';ctx.textBaseline='top';
+        ctx.fillText(trunc(ctx,blk.name,blockW-W*0.02),bx+W*0.012,cy+blockH*0.18);
+        textY=cy+blockH*0.52;
+      } else {
+        textY=cy+blockH*0.3;
+      }
 
-      // Value below name
-      const valSz=Math.max(W*0.022,12);
+      // Value
+      const valSz=Math.max(W*0.024,13);
       ctx.font=`700 ${valSz}px Barlow`;
       ctx.fillStyle=p.text;
-      ctx.fillText(fmtN(v)+(rowTotal>0?'':''),bx+W*0.012,cy+blockH*0.52);
+      ctx.textAlign='left';ctx.textBaseline='top';
+      ctx.fillText(fmtN(blk.v),bx+W*0.012,textY);
 
       bx+=blockW+blockGap;
     });
 
-    cy+=blockH+gapH;
+    cy+=blockH+rowH*0.18;
   });
 
   // ── FOOTER ──
