@@ -153,7 +153,7 @@ function draw(){
     }
     const annots={};
     annotRaw.split(';').forEach(a=>{const m=a.match(/^(\d+):(.+)$/);if(m)annots[parseInt(m[1])-1]=m[2].trim();});
-    const O={showGrid,gridStyle,showVal,showXL,showPctChg,showTrend,showMA,showAvg,refVal,refLbl,annots,lay:S.lay,W,p,oneClr,cols:S.cols,colNames:S.colNames,sf,dispmode};
+    const O={showGrid,gridStyle,showVal,showXL,showPctChg,showTrend,showMA,showAvg,refVal,refLbl,annots,lay:S.lay,W,H,p,oneClr,cols:S.cols,colNames:S.colNames,sf,wide,dispmode,eyebrow,title,subtitle,unit:(document.getElementById('unit')||{}).value||'auto'};
     const chart=CHARTS[S.ct];
     if(chart) chart.draw(ctx,data,px,chartTop+valPad,cW,cH,O);
   }
