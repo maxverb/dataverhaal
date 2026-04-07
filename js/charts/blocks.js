@@ -5,7 +5,7 @@
 registerChart('blocks',{label:'Blokken',draw:function(ctx,data,x,y,w,h,O){
   const {showVal,lay,W,H,p,cols,colNames,sf,wide,eyebrow,title,subtitle}=O;
   const nc=Math.min(cols.length,3);
-  const rows=data.slice(0,4);
+  const rows=data.slice(0,5);
   if(!rows.length||nc<1) return;
 
   // Full canvas takeover
