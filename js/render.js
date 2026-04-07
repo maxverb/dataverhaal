@@ -73,6 +73,21 @@ function draw(){
     return;
   }
 
+  // Gestapeld H: full canvas takeover
+  if(S.ct==='stackedh'){
+    const chart=CHARTS.stackedh;
+    if(chart&&S.data.length){
+      let data=S.data.map(d=>({label:d.label,values:[...d.values]}));
+      const O={W,H,p,sf,wide,lay:S.lay,showVal:true,
+        cols:S.cols,colNames:S.colNames,
+        eyebrow:document.getElementById('eyebrow').value,
+        title:document.getElementById('ttl').value,
+        subtitle:document.getElementById('sub').value};
+      chart.draw(ctx,data,0,0,W,H,O);
+    }
+    return;
+  }
+
   const padPct = S.lay==='strak' ? 0.063 : 0.07;
   const px=W*padPct;
 
