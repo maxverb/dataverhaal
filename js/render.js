@@ -53,6 +53,26 @@ function draw(){
     p={...p, bg:'#0F172A', text:'#F1F5F9', muted:'#94A3B8'};
   }
 
+  // Apply custom color override to palette
+  if(S.customClr){
+    p.acc=S.customClr;
+    p.bars=[S.customClr,...p.bars.slice(1)];
+  }
+
+  // Bignum: full canvas takeover, skip all normal rendering
+  if(S.ct==='bignum'){
+    const chart=CHARTS.bignum;
+    if(chart){
+      const O={W,H,p,sf,wide,lay:S.lay,
+        eyebrow:document.getElementById('eyebrow').value,
+        title:document.getElementById('ttl').value,
+        subtitle:document.getElementById('sub').value,
+        acc:p.acc};
+      chart.draw(ctx,null,0,0,W,H,O);
+    }
+    return;
+  }
+
   const padPct = S.lay==='strak' ? 0.063 : 0.07;
   const px=W*padPct;
 
@@ -86,12 +106,6 @@ function draw(){
   const bron=document.getElementById('bron').value;
   const datum=document.getElementById('datum').value;
   const oneClr=true;
-
-  // Apply custom color override to palette
-  if(S.customClr){
-    p.acc=S.customClr;
-    p.bars=[S.customClr,...p.bars.slice(1)];
-  }
 
   let cy=H*(wide?0.045:0.064);
 
@@ -129,7 +143,7 @@ function draw(){
   const cH=chartBot-chartTop-valPad;
   const cW=W-2*px;
 
-  if(!S.data.length&&S.ct!=='bignum'){
+  if(!S.data.length){
     ctx.strokeStyle=p.muted+'40';ctx.setLineDash([W*0.012,W*0.012]);ctx.lineWidth=1;
     ctx.strokeRect(px,chartTop,cW,cH);ctx.setLineDash([]);
     ctx.font=`400 ${W*0.027}px Barlow`;ctx.fillStyle=p.muted;ctx.textAlign='center';ctx.textBaseline='middle';
