@@ -161,6 +161,8 @@ def scrape():
                         "file": os.path.basename(path),
                         "meta": res.meta.__dict__,
                         "rows": res.rows,
+                        "incomplete": res.incomplete,
+                        "warning": res.warning,
                     },
                 ))
             except SessionError as e:
@@ -170,6 +172,9 @@ def scrape():
             finally:
                 q.put(("end", None))
 
+        # Primer: ~2KB commentaar dwingt browsers/proxies de stream meteen te
+        # flushen i.p.v. eerst te bufferen (anders zie je geen live voortgang).
+        yield ": " + (" " * 2048) + "\n\n"
         threading.Thread(target=worker, daemon=True).start()
         while True:
             event, data = q.get()
@@ -177,7 +182,15 @@ def scrape():
                 break
             yield _sse(event, data)
 
-    return Response(stream(), mimetype="text/event-stream")
+    return Response(
+        stream(),
+        mimetype="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @app.route("/api/download/<path:name>")

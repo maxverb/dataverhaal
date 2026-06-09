@@ -150,6 +150,7 @@
 
   <!-- Resultaat -->
   <div class="card hide" id="resCard">
+    <div id="warnBox" class="hide" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;padding:10px 12px;border-radius:var(--r);font-size:13px;margin-bottom:12px"></div>
     <div class="meta" id="metaBox"></div>
     <div style="margin:6px 0 12px"><a id="dl"><button class="ghost">⬇ Download Excel</button></a></div>
     <div class="tbl-scroll">
@@ -244,6 +245,14 @@ $('#liSidGo').addEventListener('click', ()=>{
 
 function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function fmtTime(iso){ if(!iso) return ''; try{return new Date(iso).toLocaleString('nl-NL');}catch(e){return iso;} }
+function fmtDur(sec){
+  if(sec==null||!isFinite(sec)) return '';
+  sec=Math.max(0,Math.round(sec));
+  if(sec<60) return sec+'s';
+  const m=Math.floor(sec/60), s=sec%60;
+  if(m<60) return m+'m'+(s?' '+s+'s':'');
+  const h=Math.floor(m/60); return h+'u '+(m%60)+'m';
+}
 
 function renderRows(rows){
   const tb=$('#rows'); tb.innerHTML='';
@@ -276,24 +285,35 @@ $('#go').addEventListener('click', ()=>{
   ev.addEventListener('progress', e=>{
     const d=JSON.parse(e.data);
     if(d.phase==='meta'){
-      $('#pstat').textContent=`Post gevonden — ~${d.total} comments. Ophalen…`;
+      $('#pstat').textContent=`Post gevonden — ~${d.total} top-level comments. Ophalen…`;
     }else if(d.phase==='comments'){
       if(d.total>0){
         const pct=Math.min(100, Math.round(d.done/d.total*100));
         bar.className='bar'; bar.style.width=pct+'%';
       }
-      $('#pstat').textContent=`${d.done}${d.total?(' / ~'+d.total):''} comments · ${d.rows} rijen`;
+      let t=`${d.done}${d.total?(' / ~'+d.total):''} comments · ${d.rows} rijen`;
+      if(d.elapsed!=null) t+=` · ${fmtDur(d.elapsed)} bezig`;
+      if(d.eta!=null) t+=` · nog ~${fmtDur(d.eta)}`;
+      $('#pstat').textContent=t;
+    }else if(d.phase==='retry'){
+      $('#pstat').innerHTML=`<span class="err">${esc(d.message||'Instagram-fout, opnieuw proberen…')}</span> `+
+        `(${d.done} comments tot nu toe — niets gaat verloren)`;
     }
   });
 
   ev.addEventListener('done', e=>{
     const d=JSON.parse(e.data); ev.close();
     bar.className='bar'; bar.style.width='100%';
-    $('#pstat').textContent=`Klaar: ${d.rows.length} rijen.`;
+    $('#pstat').textContent = d.incomplete
+      ? `Gestopt met ${d.rows.length} rijen (gedeeltelijk).`
+      : `Klaar: ${d.rows.length} rijen.`;
+    const warn=$('#warnBox');
+    if(d.incomplete && d.warning){ warn.textContent='⚠ '+d.warning; warn.classList.remove('hide'); }
+    else warn.classList.add('hide');
     const m=d.meta;
     $('#metaBox').innerHTML=
-      `<div><b>${d.rows.length}</b><span>rijen (comments+replies)</span></div>`+
-      `<div><b>${m.comment_count}</b><span>comments (IG-telling)</span></div>`+
+      `<div><b>${d.rows.length}</b><span>rijen (comments + replies)</span></div>`+
+      `<div><b>${m.comment_count}</b><span>top-level (IG-telling)</span></div>`+
       `<div><b>${m.likes_count}</b><span>post-likes</span></div>`+
       `<div><b>@${esc(m.owner_username)}</b><span>${esc((m.caption||'').slice(0,60))}</span></div>`;
     $('#dl').href='/api/download/'+encodeURIComponent(d.file);
