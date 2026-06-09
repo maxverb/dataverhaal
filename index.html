@@ -21,7 +21,7 @@
     <button class="tb-tab" onclick="switchTab('tab3',this)">RSS Check</button>
     <button class="tb-tab" onclick="switchTab('tab4',this)">CSV Merge</button>
     <button class="tb-tab" onclick="switchTab('tab5',this)">Verkenner</button>
-    <button class="tb-tab" onclick="switchTab('tab6',this)">Tabblad 6</button>
+    <button class="tb-tab" onclick="switchTab('tab6',this)">IG Comments</button>
     <button class="tb-tab" onclick="switchTab('tab7',this)">Tabblad 7</button>
     <button class="tb-tab" onclick="switchTab('tab8',this)">Tabblad 8</button>
     <button class="tb-tab" onclick="switchTab('tab9',this)">Tabblad 9</button>
@@ -545,10 +545,22 @@ Sla instellingen op met een naam. Laden herstelan alles. Opgeslagen in je browse
 
 <!-- TAB: TABBLAD 6 -->
 <div class="tab-content" id="tab-tab6">
-  <div class="tab-empty">
-    <span class="tab-empty-icon">6</span>
-    <p>Tabblad 6</p>
-    <p style="color:var(--pm);font-size:13px">Nog geen inhoud</p>
+  <div class="tab-empty" style="max-width:640px;text-align:left;align-items:flex-start">
+    <span class="tab-empty-icon">💬</span>
+    <p>Instagram comment-scraper</p>
+    <p style="color:var(--pm);font-size:13px;line-height:1.6">
+      Voor sentimentanalyse scrapen we comments + replies van Instagram-posts.
+      Dat kan niet in de browser (Instagram eist een ingelogde sessie en blokt
+      anonieme requests met een 429), dus dit draait als losse Python-tool —
+      gratis, via <code>instaloader</code>, géén betaalde services.<br><br>
+      <strong>Locatie:</strong> <code>scrapers/instagram/</code><br>
+      <strong>Draaien:</strong> <code>python scrape.py https://www.instagram.com/p/&lt;shortcode&gt;/</code><br>
+      <strong>Resultaat:</strong> <code>output/ig_comments_&lt;timestamp&gt;.xlsx</code>
+      (sheet <em>comments</em> = platte tabel, sheet <em>post_metadata</em>).<br><br>
+      Open de gegenereerde Excel en plak de comment-tabel in het tabblad
+      <strong>Verkenner</strong> of <strong>Grafiek</strong> om te visualiseren.
+      Setup en eenmalige login: zie <code>scrapers/instagram/README.md</code>.
+    </p>
   </div>
 </div>
 
