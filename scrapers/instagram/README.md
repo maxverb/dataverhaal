@@ -24,23 +24,32 @@ of paden instellen nodig.
 
 ```bash
 cd scrapers/instagram
-pip install -r requirements.txt
-instaloader -l JOUW_BURNER_USERNAME    # eenmalig inloggen (zie hieronder)
+python -m pip install -r requirements.txt
 python server.py
 ```
 
 `server.py` opent vanzelf <http://127.0.0.1:5000> in je browser. Daar:
 
-1. Bovenaan zie je een groene badge **"Ingelogd als @…"** als je sessie
-   gevonden is (rood + instructie als dat niet zo is).
-2. Plak een post-URL (`https://www.instagram.com/p/DZSz1VDNeID/`) en klik
+1. **Inloggen kan direct in de browser.** Klik op **"Inloggen / sessie
+   verversen"**, vul je burner-gebruikersnaam + wachtwoord in (en een 2FA-code
+   als die gevraagd wordt). De sessie wordt opgeslagen op de standaardplek, dus
+   de volgende keer ben je meteen ingelogd. Je hoeft dus géén
+   `instaloader -l` in de terminal te draaien.
+2. Een groene badge **"Ingelogd als @…"** bevestigt dat je goed zit. Is je
+   sessie verlopen? Klik dan opnieuw op die knop om 'm te verversen.
+3. Plak een post-URL (`https://www.instagram.com/p/DZSz1VDNeID/`) en klik
    **Scrapen**.
-3. Een **voortgangsbalk** loopt mee terwijl de comments binnenkomen.
-4. Je krijgt een tabel te zien én een **Download Excel**-knop. Hetzelfde
+4. Een **voortgangsbalk** loopt mee terwijl de comments binnenkomen.
+5. Je krijgt een tabel te zien én een **Download Excel**-knop. Hetzelfde
    bestand staat ook in `output/`.
 
-> De app draait alleen lokaal (127.0.0.1) — je sessie en data verlaten je
-> machine niet.
+> 🔒 De app draait alleen lokaal (127.0.0.1) — je wachtwoord wordt alleen
+> gebruikt om de sessie te maken en **niet opgeslagen**; je sessie en data
+> verlaten je machine niet.
+
+> 💡 Op Windows is `pip`/`instaloader` soms niet als los commando beschikbaar.
+> Gebruik dan `python -m pip …`. Inloggen via de browserknop omzeilt dat
+> sowieso.
 
 ---
 

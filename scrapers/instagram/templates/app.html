@@ -59,8 +59,38 @@
 
   <!-- Loginstatus -->
   <div class="card" id="statusCard">
-    <span class="badge no" id="statusBadge"><span class="dot"></span><span id="statusText">Login controleren…</span></span>
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <span class="badge no" id="statusBadge"><span class="dot"></span><span id="statusText">Login controleren…</span></span>
+      <button class="ghost" id="toggleLogin" style="padding:6px 12px;font-size:13px">Inloggen / sessie verversen</button>
+    </div>
     <pre class="hint hide" id="statusHint"></pre>
+
+    <!-- Login-formulier -->
+    <div id="loginForm" class="hide" style="margin-top:14px;border-top:1px solid var(--bd);padding-top:14px">
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <div style="flex:1;min-width:160px">
+          <label for="liUser">Gebruikersnaam (burner)</label>
+          <input id="liUser" type="text" autocomplete="username" placeholder="bv. metamax_test">
+        </div>
+        <div style="flex:1;min-width:160px">
+          <label for="liPass">Wachtwoord</label>
+          <input id="liPass" type="password" autocomplete="current-password" placeholder="••••••••">
+        </div>
+      </div>
+      <div id="twoFaWrap" class="hide" style="margin-top:10px">
+        <label for="liCode">2FA-code (uit je authenticator/sms)</label>
+        <input id="liCode" type="text" inputmode="numeric" placeholder="6-cijferige code" style="max-width:200px">
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+        <button id="liGo">Inloggen &amp; sessie opslaan</button>
+        <span id="liStat" class="muted" style="font-size:12px"></span>
+      </div>
+      <p class="muted" style="font-size:12px;margin:10px 0 0">
+        🔒 Draait lokaal op je eigen machine. Je wachtwoord wordt alleen gebruikt
+        om de instaloader-sessie aan te maken en wordt <strong>niet opgeslagen</strong>.
+        Gebruik een <strong>burner-account</strong>.
+      </p>
+    </div>
   </div>
 
   <!-- Invoer -->
@@ -109,17 +139,58 @@ const $ = s => document.querySelector(s);
 let loggedIn = false;
 
 function setStatus(){
-  fetch('/api/status').then(r=>r.json()).then(d=>{
+  return fetch('/api/status').then(r=>r.json()).then(d=>{
     const b=$('#statusBadge'), t=$('#statusText'), h=$('#statusHint');
     if(d.logged_in){
       loggedIn=true; b.className='badge ok'; t.textContent='Ingelogd als @'+d.username;
       h.classList.add('hide'); $('#go').disabled=false;
+      if(!$('#liUser').value) $('#liUser').value=d.username;
     }else{
       loggedIn=false; b.className='badge no'; t.textContent='Niet ingelogd';
       h.textContent=d.message; h.classList.remove('hide'); $('#go').disabled=true;
     }
   }).catch(()=>{ $('#statusText').textContent='Kan serverstatus niet ophalen'; });
 }
+
+// --- Inloggen / sessie verversen vanuit de browser ---
+let twoFaToken=null;
+$('#toggleLogin').addEventListener('click', ()=>{
+  $('#loginForm').classList.toggle('hide');
+});
+
+function resetTwoFa(){ twoFaToken=null; $('#twoFaWrap').classList.add('hide'); $('#liCode').value=''; }
+
+$('#liGo').addEventListener('click', ()=>{
+  const stat=$('#liStat');
+  const go=$('#liGo'); go.disabled=true;
+  let url, payload;
+  if(twoFaToken){
+    url='/api/login/2fa';
+    payload={token:twoFaToken, code:$('#liCode').value.trim()};
+    stat.textContent='2FA controleren…';
+  }else{
+    url='/api/login';
+    payload={username:$('#liUser').value.trim(), password:$('#liPass').value};
+    stat.textContent='Inloggen…';
+  }
+  fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+    .then(r=>r.json()).then(d=>{
+      go.disabled=false;
+      if(d.ok){
+        stat.textContent='✓ Ingelogd, sessie opgeslagen.';
+        $('#liPass').value=''; resetTwoFa();
+        setStatus().then(()=>{ setTimeout(()=>$('#loginForm').classList.add('hide'), 800); });
+      }else if(d.two_factor_required){
+        twoFaToken=d.token;
+        $('#twoFaWrap').classList.remove('hide');
+        stat.textContent='2FA vereist — vul de code in en klik opnieuw.';
+        $('#liCode').focus();
+      }else{
+        stat.innerHTML='<span class="err">'+esc(d.error||'Inloggen mislukt')+'</span>';
+        if(!d.token) resetTwoFa();
+      }
+    }).catch(e=>{ go.disabled=false; stat.innerHTML='<span class="err">Netwerkfout: '+esc(''+e)+'</span>'; });
+});
 
 function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
 function fmtTime(iso){ if(!iso) return ''; try{return new Date(iso).toLocaleString('nl-NL');}catch(e){return iso;} }
