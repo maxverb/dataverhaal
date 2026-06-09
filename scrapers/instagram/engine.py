@@ -149,8 +149,10 @@ def password_login(username: str, password: str, pause: float = 3.0):
     # login() garandeert authenticated:true, maar check de cookie voor de zekerheid.
     if not active_sessionid(loader):
         raise LoginError(
-            "Login leek te lukken maar er is geen sessie aangemaakt "
-            "(mogelijk een beveiligingscheck van Instagram)."
+            "Instagram bevestigde de login wél, maar gaf geen sessie (sessionid) "
+            "terug — een bekende anti-bot-blokkade, vaak na rate-limiting. "
+            "Gebruik in plaats daarvan de optie 'sessionid plakken' (je cookie "
+            "uit een browser waar je al ingelogd bent). Zie de README."
         )
     return ("ok", loader)
 
@@ -168,6 +170,35 @@ def complete_two_factor(loader, code: str):
         raise LoginError(f"2FA-code afgewezen: {e}")
     except ConnectionException as e:
         raise LoginError(f"2FA mislukte door een verbindingsfout: {e}")
+
+
+def session_from_sessionid(username: str, sessionid: str, pause: float = 3.0):
+    """Bouw een sessie uit een handmatig geplakte `sessionid`-cookie.
+
+    Dit is de betrouwbaarste gratis route: instaloader's wachtwoord-login wordt
+    door Instagram vaak geblokt (authenticated maar géén sessionid), terwijl een
+    `sessionid` uit een browser waar je al ingelogd bent gewoon werkt.
+    """
+    import urllib.parse
+
+    sessionid = (sessionid or "").strip().strip('"').strip("'")
+    if not sessionid:
+        raise LoginError("Plak je sessionid-cookie.")
+
+    loader = build_loader(pause)
+    jar = loader.context._session.cookies
+    jar.set("sessionid", sessionid, domain=".instagram.com", path="/")
+    # ds_user_id = het getal vóór de eerste ':' in de (url-gedecodeerde) sessionid.
+    decoded = urllib.parse.unquote(sessionid)
+    user_id = decoded.split(":", 1)[0] if ":" in decoded else ""
+    if user_id.isdigit():
+        jar.set("ds_user_id", user_id, domain=".instagram.com", path="/")
+        loader.context.user_id = int(user_id)
+    loader.context.username = username or None
+
+    if not active_sessionid(loader):
+        raise LoginError("Kon de sessionid niet instellen — controleer de waarde.")
+    return loader
 
 
 def save_session(loader, username: str) -> str:

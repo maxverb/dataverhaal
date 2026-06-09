@@ -111,6 +111,24 @@ def api_login_2fa():
     return jsonify(ok=True, username=user, session_file=path)
 
 
+@app.route("/api/login/cookie", methods=["POST"])
+def api_login_cookie():
+    """Log in met een handmatig geplakte sessionid-cookie (betrouwbaarste route)."""
+    data = request.get_json(silent=True) or {}
+    user = (data.get("username") or "").strip()
+    sid = (data.get("sessionid") or "").strip()
+    if not user or not sid:
+        return jsonify(ok=False, error="Vul gebruikersnaam én sessionid in."), 400
+    try:
+        loader = engine.session_from_sessionid(user, sid, pause=DEFAULT_PAUSE)
+    except LoginError as e:
+        return jsonify(ok=False, error=str(e))
+    except Exception as e:  # noqa: BLE001
+        return jsonify(ok=False, error=f"{type(e).__name__}: {e}")
+    path = engine.save_session(loader, user)
+    return jsonify(ok=True, username=user, session_file=path)
+
+
 def _sse(event: str, data) -> str:
     return f"event: {event}\ndata: {json.dumps(data)}\n\n"
 
