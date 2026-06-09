@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MetaMax · IG comment-scraper</title>
+<style>
+  :root{--ac:#0d9373;--bg:#f8f8f8;--card:#fff;--bd:#e0e0e0;--tx:#1a1a1a;--mut:#888;
+        --ok:#16a34a;--warn:#d97706;--err:#dc2626;--r:6px}
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+       background:var(--bg);color:var(--tx)}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 60px}
+  h1{font-size:20px;margin:0 0 2px}
+  .sub{color:var(--mut);font-size:13px;margin:0 0 20px}
+  .card{background:var(--card);border:1px solid var(--bd);border-radius:var(--r);padding:16px;margin-bottom:16px}
+  .badge{display:inline-flex;align-items:center;gap:8px;font-size:13px;padding:6px 12px;border-radius:20px}
+  .badge.ok{background:#e7f6ef;color:#0b7a5e}
+  .badge.no{background:#fdecec;color:#b42318}
+  .badge .dot{width:8px;height:8px;border-radius:50%;background:currentColor}
+  label{display:block;font-size:12px;color:var(--mut);margin:0 0 4px}
+  input[type=text],input[type=number]{width:100%;padding:9px 11px;border:1px solid var(--bd);
+       border-radius:var(--r);font-size:14px;background:#fff;color:var(--tx)}
+  .row{display:flex;gap:10px;align-items:flex-end}
+  .row .grow{flex:1}
+  .row .pause{width:120px}
+  button{background:var(--ac);color:#fff;border:0;border-radius:var(--r);padding:10px 18px;
+       font-size:14px;font-weight:600;cursor:pointer}
+  button:disabled{background:#bcd;opacity:.6;cursor:not-allowed}
+  button.ghost{background:#fff;color:var(--ac);border:1px solid var(--ac)}
+  .hide{display:none}
+  .barwrap{height:10px;background:#eee;border-radius:6px;overflow:hidden;margin:10px 0 6px}
+  .bar{height:100%;width:0;background:var(--ac);transition:width .3s ease}
+  .bar.indet{width:35%;animation:slide 1.2s ease-in-out infinite}
+  @keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
+  .pstat{font-size:13px;color:var(--mut)}
+  .meta{display:flex;flex-wrap:wrap;gap:18px;font-size:13px;margin-bottom:8px}
+  .meta b{display:block;font-size:18px;color:var(--tx)}
+  .meta span{color:var(--mut);font-size:12px}
+  pre.hint{white-space:pre-wrap;background:#f3f4f6;padding:10px;border-radius:var(--r);
+       font-size:12px;color:#444;margin:8px 0 0}
+  code{background:#f0f0f0;padding:1px 5px;border-radius:3px;font-size:12px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 9px;border-bottom:1px solid #eee;vertical-align:top}
+  th{color:var(--mut);font-weight:600;font-size:12px;position:sticky;top:0;background:#fff}
+  tr.reply td:first-child{padding-left:26px}
+  tr.reply{color:#555}
+  .tag{font-size:11px;padding:1px 7px;border-radius:10px;background:#eef;color:#447}
+  .tag.reply{background:#f1f1f1;color:#777}
+  .tbl-scroll{max-height:520px;overflow:auto;border:1px solid var(--bd);border-radius:var(--r)}
+  .muted{color:var(--mut)}
+  .err{color:var(--err)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Instagram comment-scraper</h1>
+  <p class="sub">Plak een post-URL → voortgangsbalk → comments + replies. Gratis, via instaloader.</p>
+
+  <!-- Loginstatus -->
+  <div class="card" id="statusCard">
+    <span class="badge no" id="statusBadge"><span class="dot"></span><span id="statusText">Login controleren…</span></span>
+    <pre class="hint hide" id="statusHint"></pre>
+  </div>
+
+  <!-- Invoer -->
+  <div class="card">
+    <div class="row">
+      <div class="grow">
+        <label for="url">Post-URL of shortcode</label>
+        <input id="url" type="text" placeholder="https://www.instagram.com/p/DZSz1VDNeID/" autofocus>
+      </div>
+      <div class="pause">
+        <label for="pause">Pauze (s)</label>
+        <input id="pause" type="number" min="0" step="0.5" value="{{ default_pause }}">
+      </div>
+      <button id="go" disabled>Scrapen</button>
+    </div>
+    <p class="muted" style="font-size:12px;margin:10px 0 0">
+      Rustiger = veiliger tegen blokkades. Een post met veel comments kan even duren —
+      de balk laat de voortgang zien.
+    </p>
+  </div>
+
+  <!-- Voortgang -->
+  <div class="card hide" id="progCard">
+    <div class="barwrap"><div class="bar" id="bar"></div></div>
+    <div class="pstat" id="pstat">Bezig…</div>
+  </div>
+
+  <!-- Resultaat -->
+  <div class="card hide" id="resCard">
+    <div class="meta" id="metaBox"></div>
+    <div style="margin:6px 0 12px"><a id="dl"><button class="ghost">⬇ Download Excel</button></a></div>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>#</th><th>Type</th><th>Gebruiker</th><th>Tekst</th><th>👍</th><th>Tijd</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Fout -->
+  <div class="card hide" id="errCard"><span class="err" id="errText"></span><pre class="hint hide" id="errHint"></pre></div>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+let loggedIn = false;
+
+function setStatus(){
+  fetch('/api/status').then(r=>r.json()).then(d=>{
+    const b=$('#statusBadge'), t=$('#statusText'), h=$('#statusHint');
+    if(d.logged_in){
+      loggedIn=true; b.className='badge ok'; t.textContent='Ingelogd als @'+d.username;
+      h.classList.add('hide'); $('#go').disabled=false;
+    }else{
+      loggedIn=false; b.className='badge no'; t.textContent='Niet ingelogd';
+      h.textContent=d.message; h.classList.remove('hide'); $('#go').disabled=true;
+    }
+  }).catch(()=>{ $('#statusText').textContent='Kan serverstatus niet ophalen'; });
+}
+
+function esc(s){return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+function fmtTime(iso){ if(!iso) return ''; try{return new Date(iso).toLocaleString('nl-NL');}catch(e){return iso;} }
+
+function renderRows(rows){
+  const tb=$('#rows'); tb.innerHTML='';
+  rows.forEach((r,i)=>{
+    const tr=document.createElement('tr');
+    if(r.type==='reply') tr.className='reply';
+    tr.innerHTML=`<td>${i+1}</td>`+
+      `<td><span class="tag ${r.type}">${r.type}</span></td>`+
+      `<td>@${esc(r.username)}</td>`+
+      `<td>${esc(r.text)}</td>`+
+      `<td>${r.like_count}</td>`+
+      `<td class="muted">${fmtTime(r.timestamp)}</td>`;
+    tb.appendChild(tr);
+  });
+}
+
+$('#go').addEventListener('click', ()=>{
+  const url=$('#url').value.trim(); if(!url) return;
+  const pause=$('#pause').value || '3';
+  // reset UI
+  $('#errCard').classList.add('hide'); $('#resCard').classList.add('hide');
+  $('#progCard').classList.remove('hide'); $('#go').disabled=true;
+  const bar=$('#bar'); bar.className='bar indet'; bar.style.width='';
+  $('#pstat').textContent='Verbinden…';
+
+  const ev=new EventSource(`/api/scrape?url=${encodeURIComponent(url)}&pause=${encodeURIComponent(pause)}`);
+
+  ev.addEventListener('login', e=>{ $('#pstat').textContent='Ingelogd, post ophalen…'; });
+
+  ev.addEventListener('progress', e=>{
+    const d=JSON.parse(e.data);
+    if(d.phase==='meta'){
+      $('#pstat').textContent=`Post gevonden — ~${d.total} comments. Ophalen…`;
+    }else if(d.phase==='comments'){
+      if(d.total>0){
+        const pct=Math.min(100, Math.round(d.done/d.total*100));
+        bar.className='bar'; bar.style.width=pct+'%';
+      }
+      $('#pstat').textContent=`${d.done}${d.total?(' / ~'+d.total):''} comments · ${d.rows} rijen`;
+    }
+  });
+
+  ev.addEventListener('done', e=>{
+    const d=JSON.parse(e.data); ev.close();
+    bar.className='bar'; bar.style.width='100%';
+    $('#pstat').textContent=`Klaar: ${d.rows.length} rijen.`;
+    const m=d.meta;
+    $('#metaBox').innerHTML=
+      `<div><b>${d.rows.length}</b><span>rijen (comments+replies)</span></div>`+
+      `<div><b>${m.comment_count}</b><span>comments (IG-telling)</span></div>`+
+      `<div><b>${m.likes_count}</b><span>post-likes</span></div>`+
+      `<div><b>@${esc(m.owner_username)}</b><span>${esc((m.caption||'').slice(0,60))}</span></div>`;
+    $('#dl').href='/api/download/'+encodeURIComponent(d.file);
+    renderRows(d.rows);
+    $('#resCard').classList.remove('hide');
+    $('#go').disabled=false;
+  });
+
+  ev.addEventListener('error', e=>{
+    ev.close(); $('#progCard').classList.add('hide'); $('#go').disabled=!loggedIn;
+    let msg='Er ging iets mis (verbinding verbroken).', hint='';
+    if(e.data){ try{const d=JSON.parse(e.data); msg=d.message||msg; if(d.kind==='session') hint=d.message;}catch(_){} }
+    $('#errText').textContent=msg;
+    const h=$('#errHint'); if(hint){h.textContent=hint;h.classList.remove('hide');}else h.classList.add('hide');
+    $('#errCard').classList.remove('hide');
+  });
+});
+
+setStatus();
+</script>
+</body>
+</html>
