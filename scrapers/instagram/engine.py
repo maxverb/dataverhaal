@@ -96,26 +96,39 @@ def password_login(username: str, password: str, pause: float = 3.0):
     from instaloader.exceptions import (
         BadCredentialsException,
         InvalidArgumentException,
+        LoginException,
         TwoFactorAuthRequiredException,
     )
 
     loader = build_loader(pause)
     try:
         loader.login(username, password)
-        return ("ok", loader)
     except TwoFactorAuthRequiredException:
         return ("2fa", loader)
     except BadCredentialsException:
         raise LoginError("Gebruikersnaam of wachtwoord onjuist.")
     except InvalidArgumentException as e:
         raise LoginError(str(e) or "Onbekende gebruikersnaam.")
-    except ConnectionException as e:
-        # Vaak een checkpoint/challenge: Instagram wil bevestiging in de app.
+    except LoginException as e:
+        # Checkpoint/challenge of onverwacht antwoord (bv. geblokkeerd IP).
         raise LoginError(
-            "Instagram blokkeert de login — waarschijnlijk een "
-            "beveiligingscheck. Open Instagram als dit account, bevestig de "
-            f"melding 'was jij dit?', en probeer opnieuw.\n(detail: {e})"
+            "Instagram weigerde de login — vaak een beveiligingscheck. Open "
+            "Instagram als dit account, bevestig een eventuele melding 'was jij "
+            f"dit?', en probeer opnieuw.\n(detail: {e})"
         )
+    except ConnectionException as e:
+        raise LoginError(
+            "Verbindingsfout bij het inloggen — probeer het zo opnieuw.\n"
+            f"(detail: {e})"
+        )
+
+    # login() garandeert authenticated:true, maar check de cookie voor de zekerheid.
+    if not loader.context._session.cookies.get("sessionid"):
+        raise LoginError(
+            "Login leek te lukken maar er is geen sessie aangemaakt "
+            "(mogelijk een beveiligingscheck van Instagram)."
+        )
+    return ("ok", loader)
 
 
 def complete_two_factor(loader, code: str):
@@ -274,15 +287,29 @@ class InstagramEngine:
                 + self._login_hint()
             )
 
-        # Verifieer dat we daadwerkelijk ingelogd zijn.
-        who = self.loader.test_login()
-        if not who:
+        # Ingelogd? Dat bepalen we op de sessionid-cookie, NIET op
+        # instaloader.test_login(): die query wordt door Instagram geblokt/
+        # gerate-limit (401 "please wait a few minutes"), geeft daardoor een
+        # vals-negatief én hamert bij retries op een geblokkeerde endpoint — wat
+        # je burner juist verder in de problemen brengt. Een dode sessie blijkt
+        # vanzelf bij de eerste scrape-request, met een nette foutmelding.
+        if not self._has_session_cookie():
             raise SessionError(
-                "Sessie geladen maar je bent niet (meer) ingelogd — waarschijnlijk "
-                "verlopen.\n" + self._login_hint()
+                "De sessie bevat geen login (geen sessionid-cookie) — "
+                "waarschijnlijk verlopen of niet goed aangemaakt.\n"
+                + self._login_hint()
             )
-        self.username = who
+        if not self.username and self.session_file:
+            self.username = os.path.basename(self.session_file)[len("session-"):] or None
         self._logged_in = True
+
+    def _has_session_cookie(self) -> bool:
+        """True als de geladen sessie een Instagram login-cookie (sessionid) heeft."""
+        try:
+            sess = self.loader.context._session
+            return bool(sess and sess.cookies.get("sessionid"))
+        except Exception:
+            return False
 
     def _login_hint(self) -> str:
         user = self.username or "JOUW_BURNER_USERNAME"
