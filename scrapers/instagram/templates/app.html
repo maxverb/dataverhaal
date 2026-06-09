@@ -136,7 +136,11 @@
       </div>
       <button id="go" disabled>Scrapen</button>
     </div>
-    <p class="muted" style="font-size:12px;margin:10px 0 0">
+    <label style="display:flex;align-items:center;gap:7px;margin:12px 0 0;font-size:13px;color:var(--tx);cursor:pointer">
+      <input id="skipReplies" type="checkbox" style="width:auto">
+      Replies overslaan (alleen top-level comments — veel sneller, minder kans op blokkade)
+    </label>
+    <p class="muted" style="font-size:12px;margin:8px 0 0">
       Rustiger = veiliger tegen blokkades. Een post met veel comments kan even duren —
       de balk laat de voortgang zien.
     </p>
@@ -272,13 +276,14 @@ function renderRows(rows){
 $('#go').addEventListener('click', ()=>{
   const url=$('#url').value.trim(); if(!url) return;
   const pause=$('#pause').value || '3';
+  const replies=$('#skipReplies').checked ? '0' : '1';
   // reset UI
   $('#errCard').classList.add('hide'); $('#resCard').classList.add('hide');
   $('#progCard').classList.remove('hide'); $('#go').disabled=true;
   const bar=$('#bar'); bar.className='bar indet'; bar.style.width='';
   $('#pstat').textContent='Verbinden…';
 
-  const ev=new EventSource(`/api/scrape?url=${encodeURIComponent(url)}&pause=${encodeURIComponent(pause)}`);
+  const ev=new EventSource(`/api/scrape?url=${encodeURIComponent(url)}&pause=${encodeURIComponent(pause)}&replies=${replies}`);
 
   ev.addEventListener('login', e=>{ $('#pstat').textContent='Ingelogd, post ophalen…'; });
 
@@ -324,10 +329,11 @@ $('#go').addEventListener('click', ()=>{
 
   ev.addEventListener('error', e=>{
     ev.close(); $('#progCard').classList.add('hide'); $('#go').disabled=!loggedIn;
-    let msg='Er ging iets mis (verbinding verbroken).', hint='';
-    if(e.data){ try{const d=JSON.parse(e.data); msg=d.message||msg; if(d.kind==='session') hint=d.message;}catch(_){} }
-    $('#errText').textContent=msg;
-    const h=$('#errHint'); if(hint){h.textContent=hint;h.classList.remove('hide');}else h.classList.add('hide');
+    let msg='Er ging iets mis (verbinding verbroken).';
+    if(e.data){ try{const d=JSON.parse(e.data); msg=d.message||msg;}catch(_){} }
+    // Behoud regeleinden uit duidelijke meldingen (bv. de blokkade-uitleg).
+    $('#errText').innerHTML=esc(msg).replace(/\n/g,'<br>');
+    $('#errHint').classList.add('hide');
     $('#errCard').classList.remove('hide');
   });
 });

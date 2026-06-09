@@ -25,6 +25,7 @@ import engine
 from engine import (
     InstagramEngine,
     LoginError,
+    ScrapeBlockedError,
     SessionError,
     default_session_dir,
     discover_session_files,
@@ -141,6 +142,7 @@ def scrape():
         pause = float(request.args.get("pause", DEFAULT_PAUSE))
     except ValueError:
         pause = DEFAULT_PAUSE
+    include_replies = (request.args.get("replies", "1") != "0")
 
     if not url:
         return jsonify(error="Geen URL opgegeven"), 400
@@ -153,7 +155,10 @@ def scrape():
                 eng = InstagramEngine(pause=pause)
                 eng.login()
                 q.put(("login", {"username": eng.username}))
-                res = eng.scrape_post(url, progress=lambda ev: q.put(("progress", ev)))
+                res = eng.scrape_post(
+                    url, progress=lambda ev: q.put(("progress", ev)),
+                    include_replies=include_replies,
+                )
                 path = export_excel(OUT_DIR, res.rows, [res.meta.__dict__])
                 q.put((
                     "done",
@@ -167,6 +172,8 @@ def scrape():
                 ))
             except SessionError as e:
                 q.put(("error", {"message": str(e), "kind": "session"}))
+            except ScrapeBlockedError as e:
+                q.put(("error", {"message": str(e), "kind": "blocked"}))
             except Exception as e:  # noqa: BLE001
                 q.put(("error", {"message": f"{type(e).__name__}: {e}"}))
             finally:

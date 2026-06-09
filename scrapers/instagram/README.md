@@ -213,12 +213,17 @@ De sessie wordt opgeslagen op de standaardplek; daarna werkt scrapen normaal.
 - **Login wordt geweigerd met een beveiligingscheck.** Open Instagram als dat
   (burner-)account in de app/browser, bevestig de melding *"was jij dit?"*, en
   log daarna opnieuw in.
-- **`ConnectionException ... "something went wrong, please try again"` halverwege.**
-  Instagram knijpt dan de comments-endpoint tijdelijk af. De scraper probeert
-  het een paar keer opnieuw met backoff; lukt het niet, dan **stopt hij netjes
-  met de comments die al binnen zijn** (je krijgt nog steeds een Excel, met een
-  ⚠-melding dat het onvolledig is). Verhoog de pauze (bv. 5–8s) en draai 'm
-  later nog eens.
+- **`ConnectionException ... "something went wrong, please try again"`.**
+  Instagram knijpt dan de comments-endpoint af — meestal een **tijdelijke
+  rate-limit/soft-block op je account** na te veel pogingen. De app toont live
+  dat hij opnieuw probeert; lukt het tijdens het ophalen niet meer, dan **stopt
+  hij met de comments die al binnen zijn** (je krijgt nog steeds een Excel met
+  een ⚠-melding). Lukt zelfs de éérste aanvraag niet, dan krijg je een duidelijke
+  blokkade-melding (geen leeg bestand). Wat helpt:
+  - **Wacht echt 30–60 min** (minuten/uren, niet seconden) voordat je opnieuw probeert.
+  - Zet de **pauze op 8–12s**.
+  - Vink **"Replies overslaan"** aan — dat scheelt enorm veel requests.
+  - Helpt dat niet, gebruik dan een **verse burner**.
 - **"185 comments" maar je ziet er meer.** Die 185 is Instagram's telling van
   **top-level** comments. Replies (comments-op-comments) halen we óók op, dus je
   Excel bevat meestal méér rijen dan 185. In de tabel staat per rij of het een
