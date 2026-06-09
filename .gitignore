@@ -1,0 +1,21 @@
+# --- Secrets & sessies (NOOIT committen) ---
+.env
+*.env
+!.env.example
+# instaloader-sessiebestanden
+session-*
+*.session
+scrapers/instagram/output/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db
