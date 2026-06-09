@@ -177,6 +177,22 @@ De scraper resolvet automatisch de shortcode uit een URL
 
 ---
 
+## Problemen oplossen
+
+- **"Niet ingelogd" terwijl het inloggen wél lukte.** Opgelost: de login-status
+  wordt nu bepaald op de `sessionid`-cookie van je sessie, niet op
+  instaloader's `test_login()` — die laatste raakt een endpoint die Instagram
+  blokt/rate-limit en gaf daardoor een vals-negatief.
+- **`401 ... "Please wait a few minutes before you try again"`.** Je account/IP
+  is tijdelijk gerate-limit (vaak door te veel snelle requests). Wacht 10–15
+  minuten, verhoog daarna `--pause` (of het pauzeveld in de app), en probeer
+  opnieuw. Liever traag dan geband.
+- **Login wordt geweigerd met een beveiligingscheck.** Open Instagram als dat
+  (burner-)account in de app/browser, bevestig de melding *"was jij dit?"*, en
+  log daarna opnieuw in.
+
+---
+
 ## Zelf testen
 
 Live testen vereist jouw eigen sessie, dus dat is hier bewust **niet**
