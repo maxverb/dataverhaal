@@ -77,6 +77,30 @@ def default_session_filename(username: str) -> str:
     return os.path.join(default_session_dir(), f"session-{username}")
 
 
+def active_sessionid(loader) -> str | None:
+    """Geef de niet-lege `sessionid`-cookie van een loader terug, of None.
+
+    We itereren bewust over de cookiejar i.p.v. `cookies.get("sessionid")`:
+    instaloader seedt bij het inloggen een lege `sessionid`-cookie, waardoor
+    `.get()` óf die lege waarde teruggeeft óf een CookieConflictError gooit als
+    Instagram daarna de echte cookie zet. Itereren + filteren op een niet-lege
+    waarde geeft betrouwbaar de echte sessie.
+    """
+    try:
+        sess = loader.context._session
+    except Exception:
+        return None
+    if not sess:
+        return None
+    try:
+        for c in sess.cookies:
+            if c.name == "sessionid" and c.value:
+                return c.value
+    except Exception:
+        return None
+    return None
+
+
 # --- Inloggen met wachtwoord (voor de web-app) -------------------------------
 
 class LoginError(RuntimeError):
@@ -123,7 +147,7 @@ def password_login(username: str, password: str, pause: float = 3.0):
         )
 
     # login() garandeert authenticated:true, maar check de cookie voor de zekerheid.
-    if not loader.context._session.cookies.get("sessionid"):
+    if not active_sessionid(loader):
         raise LoginError(
             "Login leek te lukken maar er is geen sessie aangemaakt "
             "(mogelijk een beveiligingscheck van Instagram)."
@@ -304,12 +328,8 @@ class InstagramEngine:
         self._logged_in = True
 
     def _has_session_cookie(self) -> bool:
-        """True als de geladen sessie een Instagram login-cookie (sessionid) heeft."""
-        try:
-            sess = self.loader.context._session
-            return bool(sess and sess.cookies.get("sessionid"))
-        except Exception:
-            return False
+        """True als de geladen sessie een (niet-lege) Instagram login-cookie heeft."""
+        return bool(active_sessionid(self.loader))
 
     def _login_hint(self) -> str:
         user = self.username or "JOUW_BURNER_USERNAME"
