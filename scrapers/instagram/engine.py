@@ -72,6 +72,75 @@ def discover_session_files() -> list:
     return sorted(glob.glob(os.path.join(default_session_dir(), "session-*")))
 
 
+def default_session_filename(username: str) -> str:
+    """Standaardpad voor de sessie van een username (zelfde plek als de CLI)."""
+    return os.path.join(default_session_dir(), f"session-{username}")
+
+
+# --- Inloggen met wachtwoord (voor de web-app) -------------------------------
+
+class LoginError(RuntimeError):
+    """Inloggen mislukte — met een nette, leesbare boodschap voor de UI."""
+
+
+def password_login(username: str, password: str, pause: float = 3.0):
+    """Log in met username + wachtwoord.
+
+    Returns:
+        ("ok", loader)   – ingelogd, sessie kan opgeslagen worden
+        ("2fa", loader)  – 2FA vereist; bewaar de loader en roep
+                           complete_two_factor(loader, code) aan
+
+    Raises LoginError bij verkeerde credentials of een blokkade.
+    """
+    from instaloader.exceptions import (
+        BadCredentialsException,
+        InvalidArgumentException,
+        TwoFactorAuthRequiredException,
+    )
+
+    loader = build_loader(pause)
+    try:
+        loader.login(username, password)
+        return ("ok", loader)
+    except TwoFactorAuthRequiredException:
+        return ("2fa", loader)
+    except BadCredentialsException:
+        raise LoginError("Gebruikersnaam of wachtwoord onjuist.")
+    except InvalidArgumentException as e:
+        raise LoginError(str(e) or "Onbekende gebruikersnaam.")
+    except ConnectionException as e:
+        # Vaak een checkpoint/challenge: Instagram wil bevestiging in de app.
+        raise LoginError(
+            "Instagram blokkeert de login — waarschijnlijk een "
+            "beveiligingscheck. Open Instagram als dit account, bevestig de "
+            f"melding 'was jij dit?', en probeer opnieuw.\n(detail: {e})"
+        )
+
+
+def complete_two_factor(loader, code: str):
+    """Maak een 2FA-login af met de code uit de authenticator/sms."""
+    from instaloader.exceptions import (
+        BadCredentialsException,
+        InvalidArgumentException,
+    )
+
+    try:
+        loader.two_factor_login(code)
+    except (BadCredentialsException, InvalidArgumentException) as e:
+        raise LoginError(f"2FA-code afgewezen: {e}")
+    except ConnectionException as e:
+        raise LoginError(f"2FA mislukte door een verbindingsfout: {e}")
+
+
+def save_session(loader, username: str) -> str:
+    """Sla de sessie op waar de scraper 'm automatisch terugvindt."""
+    target = os.getenv("IG_SESSION_FILE") or default_session_filename(username)
+    os.makedirs(os.path.dirname(target), exist_ok=True)
+    loader.save_session_to_file(target)
+    return target
+
+
 # --- Beleefde rate-controller ------------------------------------------------
 
 class PoliteRateController(instaloader.RateController):
@@ -87,6 +156,21 @@ class PoliteRateController(instaloader.RateController):
     def query_waittime(self, query_type, current_time, untracked_queries=False):
         base = super().query_waittime(query_type, current_time, untracked_queries)
         return max(base, self.min_interval)
+
+
+def build_loader(pause: float = 3.0) -> "instaloader.Instaloader":
+    """Maak een instaloader-instance met onze (zuinige, beleefde) instellingen."""
+    return instaloader.Instaloader(
+        quiet=True,
+        download_pictures=False,
+        download_videos=False,
+        download_video_thumbnails=False,
+        download_geotags=False,
+        download_comments=False,
+        save_metadata=False,
+        compress_json=False,
+        rate_controller=lambda ctx: PoliteRateController(ctx, pause),
+    )
 
 
 # --- Datamodel ---------------------------------------------------------------
@@ -127,17 +211,7 @@ class InstagramEngine:
         self.max_retries = int(max_retries)
         self.backoff_base = float(backoff_base)
 
-        self.loader = instaloader.Instaloader(
-            quiet=True,
-            download_pictures=False,
-            download_videos=False,
-            download_video_thumbnails=False,
-            download_geotags=False,
-            download_comments=False,
-            save_metadata=False,
-            compress_json=False,
-            rate_controller=lambda ctx: PoliteRateController(ctx, self.pause),
-        )
+        self.loader = build_loader(self.pause)
         self._logged_in = False
 
     # --- login ---------------------------------------------------------------
