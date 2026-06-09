@@ -258,6 +258,8 @@ class PostMeta:
 class ScrapeResult:
     meta: PostMeta
     rows: list = field(default_factory=list)
+    incomplete: bool = False
+    warning: str = ""
 
 
 # --- Engine ------------------------------------------------------------------
@@ -463,45 +465,86 @@ class InstagramEngine:
         comments_iter = self._with_backoff(
             lambda: post.get_comments(), what=f"comments {shortcode}"
         )
+        comments_it = iter(comments_iter)
+        total = meta.comment_count or 0
         n = 0
-        for c in comments_iter:
+        start = time.monotonic()
+        incomplete = False
+        warning = ""
+        err_streak = 0
+
+        def add_comment_rows(c):
             comment_id = str(c.id)
             answers = list(getattr(c, "answers", []) or [])
-            rows.append(
-                {
-                    "post_url": post_url,
-                    "post_shortcode": shortcode,
-                    "type": "comment",
-                    "comment_id": comment_id,
-                    "parent_comment_id": None,
-                    "username": self._username_of(c.owner),
-                    "text": c.text or "",
-                    "timestamp": self._iso(c.created_at_utc),
-                    "like_count": getattr(c, "likes_count", 0) or 0,
-                    "reply_count": len(answers),
-                }
-            )
+            rows.append({
+                "post_url": post_url, "post_shortcode": shortcode,
+                "type": "comment", "comment_id": comment_id,
+                "parent_comment_id": None, "username": self._username_of(c.owner),
+                "text": c.text or "", "timestamp": self._iso(c.created_at_utc),
+                "like_count": getattr(c, "likes_count", 0) or 0,
+                "reply_count": len(answers),
+            })
             for a in answers:
-                rows.append(
-                    {
-                        "post_url": post_url,
-                        "post_shortcode": shortcode,
-                        "type": "reply",
-                        "comment_id": str(a.id),
-                        "parent_comment_id": comment_id,
-                        "username": self._username_of(a.owner),
-                        "text": a.text or "",
-                        "timestamp": self._iso(a.created_at_utc),
-                        "like_count": getattr(a, "likes_count", 0) or 0,
-                        "reply_count": 0,
-                    }
-                )
+                rows.append({
+                    "post_url": post_url, "post_shortcode": shortcode,
+                    "type": "reply", "comment_id": str(a.id),
+                    "parent_comment_id": comment_id, "username": self._username_of(a.owner),
+                    "text": a.text or "", "timestamp": self._iso(a.created_at_utc),
+                    "like_count": getattr(a, "likes_count", 0) or 0,
+                    "reply_count": 0,
+                })
+
+        last_error = ""
+        while True:
+            try:
+                c = next(comments_it)
+                err_streak = 0
+            except StopIteration:
+                # Een generator die een fout gooide is daarna 'op': als we net een
+                # connectiefout zagen, is dit GEEN natuurlijk einde maar een
+                # afgebroken stream → markeer als onvolledig.
+                if err_streak > 0:
+                    incomplete = True
+                    warning = (
+                        f"Gestopt na {n} comments doordat Instagram de comments-data "
+                        f"tijdelijk blokte ({last_error}). De rest is niet opgehaald "
+                        "— probeer later opnieuw en zet de pauze hoger."
+                    )
+                    print("  " + warning)
+                break
+            except (TooManyRequestsException, ConnectionException) as e:
+                # Instagram knijpt de comments-endpoint af. Even wachten en nog
+                # eens proberen; lukt het niet meer, dan stoppen we netjes met wat
+                # we al hebben (geen verloren werk).
+                err_streak += 1
+                last_error = str(e)
+                if err_streak > self.max_retries:
+                    incomplete = True
+                    warning = (
+                        f"Gestopt na {n} comments doordat Instagram de comments-data "
+                        f"tijdelijk blokte ({e}). De rest is niet opgehaald — probeer "
+                        "later opnieuw en zet de pauze hoger."
+                    )
+                    print("  " + warning)
+                    break
+                wait = self.backoff_base * (2 ** (err_streak - 1))
+                emit({"phase": "retry", "done": n, "total": total,
+                      "rows": len(rows), "wait": round(wait),
+                      "message": f"Instagram-fout, even wachten ({wait:.0f}s)…"})
+                print(f"  [comments] {e}. Wacht {wait:.0f}s (poging {err_streak}/{self.max_retries})…")
+                time.sleep(wait)
+                continue
+
+            add_comment_rows(c)
             n += 1
+            elapsed = time.monotonic() - start
+            eta = None
+            if total and n and elapsed > 0:
+                eta = max(0, (elapsed / n) * (total - n))
             emit({
-                "phase": "comments",
-                "done": n,
-                "total": meta.comment_count,
-                "rows": len(rows),
+                "phase": "comments", "done": n, "total": total,
+                "rows": len(rows), "elapsed": round(elapsed),
+                "eta": round(eta) if eta is not None else None,
             })
             if n % 25 == 0:
                 print(f"  …{n} top-level comments verwerkt ({len(rows)} rijen)")
@@ -509,8 +552,9 @@ class InstagramEngine:
             if self.pause:
                 time.sleep(self.pause)
 
-        print(f"  Klaar: {n} comments, {len(rows)} rijen totaal voor {shortcode}")
-        return ScrapeResult(meta=meta, rows=rows)
+        status = "onvolledig" if incomplete else "klaar"
+        print(f"  {status.capitalize()}: {n} comments, {len(rows)} rijen voor {shortcode}")
+        return ScrapeResult(meta=meta, rows=rows, incomplete=incomplete, warning=warning)
 
 
 class SessionError(RuntimeError):
