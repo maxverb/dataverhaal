@@ -177,6 +177,29 @@ De scraper resolvet automatisch de shortcode uit een URL
 
 ---
 
+## Inloggen lukt niet? Plak je `sessionid` (betrouwbaarste route)
+
+Instagram blokt de wachtwoord-login soms volledig: je krijgt wel `authenticated`,
+maar Instagram levert **geen sessie** (`sessionid`) — vaak na rate-limiting of een
+checkpoint op het account. Ook `instaloader -l` slaat dan een lege sessie op.
+
+De oplossing die vrijwel altijd werkt: pak je `sessionid` uit een browser waar je
+al ingelogd bent.
+
+1. Log met je **burner** in op `instagram.com` in je browser.
+2. Open DevTools (`F12`) → **Application** (Chrome/Edge) of **Storage** (Firefox).
+3. **Cookies → https://www.instagram.com** → kopieer de waarde van `sessionid`.
+4. In de app: open **"Inloggen / sessie verversen"**, vul je gebruikersnaam in,
+   klap **"Lukt inloggen niet? Plak je sessionid"** uit, plak de waarde en klik
+   **Sessionid gebruiken & opslaan**.
+
+De sessie wordt opgeslagen op de standaardplek; daarna werkt scrapen normaal.
+
+> De `sessionid` is een inloggeheim — deel 'm met niemand, en gebruik echt een
+> burner. Hij blijft lokaal op je machine.
+
+---
+
 ## Problemen oplossen
 
 - **"Niet ingelogd" terwijl het inloggen wél lukte.** Opgelost: de login-status

@@ -90,6 +90,36 @@
         om de instaloader-sessie aan te maken en wordt <strong>niet opgeslagen</strong>.
         Gebruik een <strong>burner-account</strong>.
       </p>
+
+      <!-- Fallback: sessionid plakken -->
+      <details id="sidBox" style="margin-top:14px;border-top:1px solid var(--bd);padding-top:12px">
+        <summary style="cursor:pointer;font-size:13px;color:var(--ac)">
+          Lukt inloggen niet? Plak je <strong>sessionid</strong> uit je browser (betrouwbaarst)
+        </summary>
+        <div style="margin-top:10px">
+          <p class="muted" style="font-size:12px;line-height:1.6;margin:0 0 10px">
+            Instagram blokt soms de wachtwoord-login (wel "ingelogd", maar geen sessie).
+            Deze route werkt vrijwel altijd:
+          </p>
+          <ol class="muted" style="font-size:12px;line-height:1.7;margin:0 0 10px;padding-left:18px">
+            <li>Log met je <strong>burner</strong> in op <code>instagram.com</code> in je browser.</li>
+            <li>Open DevTools (<code>F12</code>) → tabblad <strong>Application</strong>
+              (Chrome/Edge) of <strong>Storage</strong> (Firefox).</li>
+            <li>Ga naar <strong>Cookies → https://www.instagram.com</strong>.</li>
+            <li>Kopieer de waarde van de cookie <code>sessionid</code> en plak die hieronder.</li>
+          </ol>
+          <label for="liSid">sessionid-cookie</label>
+          <input id="liSid" type="text" placeholder="bv. 12345678%3AAbCdEf...%3A12%3A..." style="font-family:monospace;font-size:12px">
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+            <button id="liSidGo" class="ghost">Sessionid gebruiken &amp; opslaan</button>
+            <span id="liSidStat" class="muted" style="font-size:12px"></span>
+          </div>
+          <p class="muted" style="font-size:11px;margin:8px 0 0">
+            Gebruikt dezelfde gebruikersnaam als hierboven. De sessionid is een
+            inloggeheim — deel 'm met niemand. Blijft lokaal.
+          </p>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -188,6 +218,26 @@ $('#liGo').addEventListener('click', ()=>{
       }else{
         stat.innerHTML='<span class="err">'+esc(d.error||'Inloggen mislukt')+'</span>';
         if(!d.token) resetTwoFa();
+      }
+    }).catch(e=>{ go.disabled=false; stat.innerHTML='<span class="err">Netwerkfout: '+esc(''+e)+'</span>'; });
+});
+
+// --- Inloggen via geplakte sessionid-cookie ---
+$('#liSidGo').addEventListener('click', ()=>{
+  const stat=$('#liSidStat'), go=$('#liSidGo');
+  const user=$('#liUser').value.trim(), sid=$('#liSid').value.trim();
+  if(!user){ stat.innerHTML='<span class="err">Vul bovenaan je gebruikersnaam in.</span>'; return; }
+  if(!sid){ stat.innerHTML='<span class="err">Plak je sessionid.</span>'; return; }
+  go.disabled=true; stat.textContent='Sessie opslaan…';
+  fetch('/api/login/cookie',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username:user, sessionid:sid})})
+    .then(r=>r.json()).then(d=>{
+      go.disabled=false;
+      if(d.ok){
+        stat.textContent='✓ Sessie opgeslagen.'; $('#liSid').value='';
+        setStatus().then(()=>{ setTimeout(()=>$('#loginForm').classList.add('hide'), 800); });
+      }else{
+        stat.innerHTML='<span class="err">'+esc(d.error||'Mislukt')+'</span>';
       }
     }).catch(e=>{ go.disabled=false; stat.innerHTML='<span class="err">Netwerkfout: '+esc(''+e)+'</span>'; });
 });
