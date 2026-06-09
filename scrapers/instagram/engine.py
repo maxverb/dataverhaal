@@ -5,8 +5,12 @@ Er staan GEEN wachtwoorden in code: de sessie maak je eenmalig aan met
 `instaloader -l USERNAME` (zie README).
 """
 
+import getpass
+import glob
 import os
+import platform
 import re
+import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import timezone
@@ -47,6 +51,25 @@ def resolve_shortcode(url_or_code: str) -> str:
         "Geef een post-URL (bv. https://www.instagram.com/p/DZSz1VDNeID/) "
         "of een kale shortcode (bv. DZSz1VDNeID)."
     )
+
+
+# --- Sessie-detectie ("ben ik al ingelogd?") ---------------------------------
+
+def default_session_dir() -> str:
+    """Map waar instaloader sessiebestanden bewaart (zelfde logica als de CLI)."""
+    if platform.system() == "Windows":
+        localappdata = os.getenv("LOCALAPPDATA")
+        if localappdata:
+            return os.path.join(localappdata, "Instaloader")
+        return os.path.join(tempfile.gettempdir(), ".instaloader-" + getpass.getuser())
+    return os.path.join(
+        os.getenv("XDG_CONFIG_HOME", os.path.expanduser("~/.config")), "instaloader"
+    )
+
+
+def discover_session_files() -> list:
+    """Vind bestaande instaloader-sessies (session-<username>) op de standaardplek."""
+    return sorted(glob.glob(os.path.join(default_session_dir(), "session-*")))
 
 
 # --- Beleefde rate-controller ------------------------------------------------
@@ -119,13 +142,42 @@ class InstagramEngine:
 
     # --- login ---------------------------------------------------------------
 
+    def _resolve_session_file(self) -> str | None:
+        """Vind automatisch een bestaande sessie als er geen pad is opgegeven.
+
+        Zo hoeft de gebruiker niets in te stellen: één keer `instaloader -l`
+        gedraaid = wij vinden en gebruiken die sessie vanzelf.
+        """
+        if self.session_file:
+            return self.session_file
+        found = discover_session_files()
+        if self.username:
+            cand = os.path.join(default_session_dir(), f"session-{self.username}")
+            if os.path.exists(cand):
+                return cand
+        if len(found) == 1:
+            # Eén ingelogd account → leid de username eruit af voor nette output.
+            if not self.username:
+                self.username = os.path.basename(found[0])[len("session-"):] or None
+            return found[0]
+        self._found_sessions = found
+        return None
+
     def login(self) -> None:
         """Laad de instaloader-sessie. Geef een duidelijke instructie als die
         ontbreekt of ongeldig is, in plaats van te crashen met een stacktrace."""
+        self.session_file = self._resolve_session_file()
         if not self.session_file:
+            found = getattr(self, "_found_sessions", [])
+            if len(found) > 1:
+                names = "\n".join("    - " + os.path.basename(f) for f in found)
+                raise SessionError(
+                    "Meerdere ingelogde accounts gevonden in "
+                    f"{default_session_dir()}:\n{names}\n"
+                    "Kies er één via IG_USERNAME in je .env (of --username)."
+                )
             raise SessionError(
-                "Geen sessiebestand opgegeven. Zet IG_SESSION_FILE in je .env "
-                "of geef --session-file mee.\n" + self._login_hint()
+                "Geen ingelogde Instagram-sessie gevonden.\n" + self._login_hint()
             )
         if not os.path.exists(self.session_file):
             raise SessionError(
@@ -204,7 +256,21 @@ class InstagramEngine:
         except Exception:
             return ""
 
-    def scrape_post(self, url_or_code: str) -> ScrapeResult:
+    def scrape_post(self, url_or_code: str, progress=None) -> ScrapeResult:
+        """Scrape comments + replies van één post.
+
+        `progress` is een optionele callback die per stap een dict-event krijgt,
+        zodat een UI een voortgangsbalk kan tonen. Events:
+          {"phase":"meta", "total":<post.comments>, "caption":..., "likes":...}
+          {"phase":"comments", "done":<n>, "total":<n>, "rows":<n>}
+        """
+        def emit(ev):
+            if progress:
+                try:
+                    progress(ev)
+                except Exception:
+                    pass
+
         if not self._logged_in:
             self.login()
 
@@ -233,6 +299,13 @@ class InstagramEngine:
             post_timestamp=self._iso(getattr(post, "date_utc", None)),
             likes_count=post.likes,
         )
+        emit({
+            "phase": "meta",
+            "total": meta.comment_count,
+            "caption": meta.caption,
+            "likes": meta.likes_count,
+            "owner": meta.owner_username,
+        })
 
         rows = []
         comments_iter = self._with_backoff(
@@ -272,6 +345,12 @@ class InstagramEngine:
                     }
                 )
             n += 1
+            emit({
+                "phase": "comments",
+                "done": n,
+                "total": meta.comment_count,
+                "rows": len(rows),
+            })
             if n % 25 == 0:
                 print(f"  …{n} top-level comments verwerkt ({len(rows)} rijen)")
             # Beleefde pauze tussen comments (bovenop de rate-controller).

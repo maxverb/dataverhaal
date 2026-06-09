@@ -8,6 +8,40 @@ Per comment/reply krijg je één rij; replies verwijzen via `parent_comment_id`
 naar hun bovenliggende comment. De Excel heeft twee tabbladen: de platte
 comment-tabel en de post-metadata.
 
+Er zijn twee manieren om 'm te draaien:
+
+- **Lokale web-app** (`server.py`) — plak een URL, zie een voortgangsbalk,
+  krijg de comments + download. Aanbevolen.
+- **CLI** (`scrape.py`) — handig voor scripts of meerdere posts in één run.
+
+Beide detecteren **automatisch of je al ingelogd bent**: zodra je één keer
+`instaloader -l` hebt gedraaid, vinden ze die sessie vanzelf — geen `.env`
+of paden instellen nodig.
+
+---
+
+## Snelste manier: de lokale app
+
+```bash
+cd scrapers/instagram
+pip install -r requirements.txt
+instaloader -l JOUW_BURNER_USERNAME    # eenmalig inloggen (zie hieronder)
+python server.py
+```
+
+`server.py` opent vanzelf <http://127.0.0.1:5000> in je browser. Daar:
+
+1. Bovenaan zie je een groene badge **"Ingelogd als @…"** als je sessie
+   gevonden is (rood + instructie als dat niet zo is).
+2. Plak een post-URL (`https://www.instagram.com/p/DZSz1VDNeID/`) en klik
+   **Scrapen**.
+3. Een **voortgangsbalk** loopt mee terwijl de comments binnenkomen.
+4. Je krijgt een tabel te zien én een **Download Excel**-knop. Hetzelfde
+   bestand staat ook in `output/`.
+
+> De app draait alleen lokaal (127.0.0.1) — je sessie en data verlaten je
+> machine niet.
+
 ---
 
 ## Setup
@@ -16,8 +50,11 @@ comment-tabel en de post-metadata.
 cd scrapers/instagram
 python -m venv .venv && source .venv/bin/activate   # optioneel maar aangeraden
 pip install -r requirements.txt
-cp .env.example .env        # en vul .env in (zie hieronder)
 ```
+
+`.env` is **optioneel**: de tool vindt je instaloader-sessie automatisch. Kopieer
+`cp .env.example .env` alleen als je iets wilt overrulen (bv. een specifiek
+sessiepad, of welk account als je er meerdere hebt via `IG_USERNAME`).
 
 ## Eenmalig inloggen (sessiebestand aanmaken)
 
@@ -38,14 +75,17 @@ sessiebestand, standaard naar:
 - Linux/macOS: `~/.config/instaloader/session-JOUW_BURNER_USERNAME`
 - Windows: `%LOCALAPPDATA%\Instaloader\session-JOUW_BURNER_USERNAME`
 
-Zet dat pad in je `.env`:
+Dat is alles: zowel de app als de CLI vinden dit sessiebestand **automatisch**
+op de standaardplek. Je hoeft niets in te stellen.
+
+Alleen overrulen nodig? Zet het dan in `.env`:
 
 ```ini
 IG_SESSION_FILE=/home/jij/.config/instaloader/session-jouw_burner
-IG_USERNAME=jouw_burner      # optioneel
+IG_USERNAME=jouw_burner      # nodig als je meerdere sessies hebt
 ```
 
-Heb je geen geldige sessie, dan crasht de scraper niet maar print hij precies
+Heb je geen geldige sessie, dan crasht er niets: app én CLI tonen precies
 welk commando je moet draaien.
 
 ## Gebruik
@@ -136,16 +176,17 @@ automatisch gedraaid. Test 'm zo zelf:
 ```bash
 cd scrapers/instagram
 pip install -r requirements.txt
-cp .env.example .env
 
-# 1) eenmalig inloggen met je burner
+# 1) eenmalig inloggen met je burner (sessie wordt automatisch gevonden)
 instaloader -l JOUW_BURNER_USERNAME
-#    zet het sessiebestand-pad in .env (IG_SESSION_FILE)
 
-# 2) scrapen
+# 2a) via de app: open de browser, plak de URL, klik Scrapen
+python server.py
+
+# 2b) of via de CLI:
 python scrape.py https://www.instagram.com/p/DZSz1VDNeID/
 ```
 
 Resultaat: `output/ig_comments_<timestamp>.xlsx`. Open sheet `comments` voor de
 platte tabel en `post_metadata` voor de post-info. Lukt het inloggen niet, dan
-print de scraper exact welk `instaloader -l` commando je moet draaien.
+tonen app én CLI exact welk `instaloader -l` commando je moet draaien.
