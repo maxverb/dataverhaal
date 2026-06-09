@@ -377,8 +377,12 @@ class InstagramEngine:
 
     # --- scrapen -------------------------------------------------------------
 
-    def _with_backoff(self, fn, what: str):
-        """Voer `fn` uit met exponential backoff op 429 / connectiefouten."""
+    def _with_backoff(self, fn, what: str, on_retry=None):
+        """Voer `fn` uit met exponential backoff op 429 / connectiefouten.
+
+        `on_retry(attempt, max_retries, wait, err)` wordt vóór elke wachttijd
+        aangeroepen, zodat een UI kan tonen dat we bezig zijn (geen frozen balk).
+        """
         attempt = 0
         while True:
             try:
@@ -392,6 +396,11 @@ class InstagramEngine:
                     f"  [429/connectie] {what}: {e}. Wacht {wait:.0f}s "
                     f"(poging {attempt}/{self.max_retries})…"
                 )
+                if on_retry:
+                    try:
+                        on_retry(attempt, self.max_retries, wait, e)
+                    except Exception:
+                        pass
                 time.sleep(wait)
 
     @staticmethod
@@ -410,13 +419,15 @@ class InstagramEngine:
         except Exception:
             return ""
 
-    def scrape_post(self, url_or_code: str, progress=None) -> ScrapeResult:
-        """Scrape comments + replies van één post.
+    def scrape_post(self, url_or_code: str, progress=None, include_replies=True) -> ScrapeResult:
+        """Scrape comments (+ optioneel replies) van één post.
 
         `progress` is een optionele callback die per stap een dict-event krijgt,
         zodat een UI een voortgangsbalk kan tonen. Events:
           {"phase":"meta", "total":<post.comments>, "caption":..., "likes":...}
           {"phase":"comments", "done":<n>, "total":<n>, "rows":<n>}
+          {"phase":"retry", "message":..., "wait":...}
+        `include_replies=False` slaat comment.answers over (veel minder requests).
         """
         def emit(ev):
             if progress:
@@ -462,10 +473,6 @@ class InstagramEngine:
         })
 
         rows = []
-        comments_iter = self._with_backoff(
-            lambda: post.get_comments(), what=f"comments {shortcode}"
-        )
-        comments_it = iter(comments_iter)
         total = meta.comment_count or 0
         n = 0
         start = time.monotonic()
@@ -473,9 +480,30 @@ class InstagramEngine:
         warning = ""
         err_streak = 0
 
+        if total == 0:
+            print(f"  Geen comments op {shortcode}.")
+            return ScrapeResult(meta=meta, rows=rows)
+
+        # De ALLEREERSTE comments-aanvraag is waar Instagram bij een throttle
+        # 'something went wrong' geeft. Backoff mét live updates (geen frozen UI),
+        # en bij blijvende blokkade een duidelijke, bruikbare melding.
+        def on_fetch_retry(attempt, mx, wait, err):
+            emit({"phase": "retry", "done": 0, "total": total, "rows": 0,
+                  "wait": round(wait),
+                  "message": f"Comments ophalen lukt nog niet (poging {attempt}/{mx}) — "
+                             f"wacht {wait:.0f}s…"})
+        try:
+            comments_iter = self._with_backoff(
+                lambda: post.get_comments(), what=f"comments {shortcode}",
+                on_retry=on_fetch_retry,
+            )
+            comments_it = iter(comments_iter)
+        except (TooManyRequestsException, ConnectionException) as e:
+            raise ScrapeBlockedError(_blocked_message(e))
+
         def add_comment_rows(c):
             comment_id = str(c.id)
-            answers = list(getattr(c, "answers", []) or [])
+            answers = list(getattr(c, "answers", []) or []) if include_replies else []
             rows.append({
                 "post_url": post_url, "post_shortcode": shortcode,
                 "type": "comment", "comment_id": comment_id,
@@ -552,10 +580,34 @@ class InstagramEngine:
             if self.pause:
                 time.sleep(self.pause)
 
+        # Niets binnengehaald én geblokkeerd → geen leeg Excel, maar een
+        # duidelijke melding met wat je eraan kunt doen.
+        if incomplete and not rows:
+            raise ScrapeBlockedError(_blocked_message(warning or "Instagram blokte de comments-data."))
+
         status = "onvolledig" if incomplete else "klaar"
         print(f"  {status.capitalize()}: {n} comments, {len(rows)} rijen voor {shortcode}")
         return ScrapeResult(meta=meta, rows=rows, incomplete=incomplete, warning=warning)
 
 
+def _blocked_message(detail) -> str:
+    return (
+        "Instagram weigert de comments voor deze post op dit moment "
+        "(\"something went wrong\"). Dit is vrijwel altijd een tijdelijke "
+        "rate-limit of soft-block op je account na te veel pogingen — niet iets "
+        "wat de tool kan forceren.\n\n"
+        "Wat helpt:\n"
+        "• Stop nu even en wacht 30–60 minuten (echt minuten/uren, niet seconden).\n"
+        "• Zet daarna de pauze hoger (8–12s).\n"
+        "• Vink 'replies overslaan' aan — dat scheelt veel requests.\n"
+        "• Werkt het daarna nog niet, gebruik dan een verse burner.\n"
+        f"\n(technisch: {detail})"
+    )
+
+
 class SessionError(RuntimeError):
     """Geen geldige/ingelogde sessie — met een actie-gerichte boodschap."""
+
+
+class ScrapeBlockedError(RuntimeError):
+    """Instagram blokt de comments-data (rate-limit/soft-block) — met advies."""
